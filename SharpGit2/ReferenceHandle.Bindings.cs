@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Server.Scripting.Git;
+namespace SharpGit2;
 
 internal unsafe readonly partial struct ReferenceHandle
 {

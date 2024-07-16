@@ -1,4 +1,4 @@
-﻿namespace Server.Scripting.Git;
+﻿namespace SharpGit2;
 
 public enum GitError : int
 {

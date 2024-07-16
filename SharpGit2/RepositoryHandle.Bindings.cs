@@ -1,7 +1,7 @@
 ﻿using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.Marshalling;
 
-namespace Server.Scripting.Git;
+namespace SharpGit2;
 
 internal unsafe readonly partial struct RepositoryHandle
 {

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Server.Scripting.Git;
+namespace SharpGit2;
 
 internal class Git2Exception : ApplicationException
 {

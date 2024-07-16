@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Server.Scripting.Git;
+namespace SharpGit2;
 internal readonly struct ConfigHandle(nint handle) : IDisposable
 {
     internal readonly nint Handle = handle;

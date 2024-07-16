@@ -2,7 +2,7 @@
 using System.Runtime.InteropServices.Marshalling;
 using System.Xml.Linq;
 
-namespace Server.Scripting.Git;
+namespace SharpGit2;
 
 internal unsafe readonly partial struct RepositoryHandle(nint handle) : IDisposable
 {

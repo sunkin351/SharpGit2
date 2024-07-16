@@ -1,6 +1,6 @@
 ﻿using System.Runtime.InteropServices;
 
-namespace Server.Scripting.Git;
+namespace SharpGit2;
 
 internal static unsafe partial class Git2
 {
