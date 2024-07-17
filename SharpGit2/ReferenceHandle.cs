@@ -8,7 +8,16 @@ using System.Threading.Tasks;
 
 namespace SharpGit2;
 
-internal unsafe readonly partial struct ReferenceHandle(nint handle) : IDisposable
+[Flags]
+public enum GitReferenceType
+{
+    Invalid = 0,
+    Direct = 1,
+    Symbolic = 2,
+    All = Direct | Symbolic
+}
+
+public unsafe readonly partial struct ReferenceHandle(nint handle) : IDisposable
 {
     internal readonly nint Handle = handle;
 

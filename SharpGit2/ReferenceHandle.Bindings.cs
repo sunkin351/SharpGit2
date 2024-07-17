@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace SharpGit2;
 
-internal unsafe readonly partial struct ReferenceHandle
+unsafe readonly partial struct ReferenceHandle
 {
 
     [LibraryImport(Git2.LibraryName)]
@@ -20,7 +20,7 @@ internal unsafe readonly partial struct ReferenceHandle
     internal static partial GitError git_reference_create_matching(ReferenceHandle* reference, nint repository, string name, GitObjectID* id, int force, GitObjectID* currentId, string logMessage);
 
     [LibraryImport(Git2.LibraryName)]
-    internal static partial int git_reference_delete(nint reference);
+    internal static partial GitError git_reference_delete(nint reference);
 
     [LibraryImport(Git2.LibraryName)]
     internal static partial GitError git_reference_dup(ReferenceHandle* duplicant, nint reference);
@@ -61,15 +61,17 @@ internal unsafe readonly partial struct ReferenceHandle
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
     internal static partial int git_reference_is_valid_name(string refname);
 
-    // git_reference_iterator_free()
+    [LibraryImport(Git2.LibraryName)]
+    internal static partial void git_reference_iterator_free(nint iterator);
 
-    // git_reference_iterator_glob_new()
+    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    internal static partial GitError git_reference_iterator_glob_new(nint* iterator, nint repository, string glob);
 
-    // git_reference_iterator_new()
-
-    // git_reference_list()
-
-    // git_reference_lookup() already implemented in RepositoryHandle
+    [LibraryImport(Git2.LibraryName)]
+    internal static partial GitError git_reference_iterator_new(nint* iterator, nint repository);
+    
+    [LibraryImport(Git2.LibraryName)]
+    internal static partial GitError git_reference_list(Git2.git_strarray* list, nint repository);
 
     [LibraryImport(Git2.LibraryName)]
     internal static partial byte* git_reference_name(nint reference);
@@ -77,29 +79,23 @@ internal unsafe readonly partial struct ReferenceHandle
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
     internal static partial GitError git_reference_name_is_valid(int* valid, string referenceName);
 
-    // double check the bindings below
-
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
     internal static partial GitError git_reference_name_to_id(GitObjectID* id, nint repository, string name);
 
-    // git_reference_next()
-
-    // git_reference_next_name()
-
-
-    // This one i wasnt sure about
-    // [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
-    // internal static partial GitError git_reference_normalize_name();
+    [LibraryImport(Git2.LibraryName)]
+    internal static partial GitError git_reference_next(ReferenceHandle* reference, nint iterator);
 
     [LibraryImport(Git2.LibraryName)]
-    internal static partial RepositoryHandle* git_reference_owner(ReferenceHandle* reference);
-
-    // git_object?
-    // [LibraryImport(Git2.LibraryName)]
-    // internal static partial GitError git_reference_peel();
+    internal static partial GitError git_reference_next_name(byte** name, nint iterator);
 
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
-    internal static partial GitError git_reference_remove(nint repository, string name);
+    internal static partial GitError git_reference_normalize_name(byte* buffer_out, nuint buffer_size, byte* name, GitReferenceFormat flags);
+
+    [LibraryImport(Git2.LibraryName)]
+    internal static partial nint git_reference_owner(nint reference);
+
+    [LibraryImport(Git2.LibraryName)]
+    internal static partial GitError git_reference_peel(GitObjectHandle* gitObject, nint reference, GitObjectType type);
 
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
     internal static partial GitError git_reference_rename(ReferenceHandle* newReference, nint reference, string newName, int force, string logMessage);
@@ -110,8 +106,8 @@ internal unsafe readonly partial struct ReferenceHandle
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
     internal static partial GitError git_reference_set_target(ReferenceHandle* newReference, nint reference, GitObjectID* id, string LogMessage);
 
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
-    internal static partial string git_reference_shorthand(nint reference);
+    [LibraryImport(Git2.LibraryName)]
+    internal static partial byte* git_reference_shorthand(nint reference);
 
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
     internal static partial GitError git_reference_symbolic_create(ReferenceHandle* reference, nint repository, string name, string target, int force, string logMessage);
@@ -120,10 +116,10 @@ internal unsafe readonly partial struct ReferenceHandle
     internal static partial GitError git_reference_symbolic_create_matching(ReferenceHandle* reference, nint repository, string name, string target, int force, string currentValue, string logMessage);
 
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
-    internal static partial GitError git_reference_symbolic_set_target(ReferenceHandle* reference, nint repository, string target, string logMessage);
+    internal static partial GitError git_reference_symbolic_set_target(ReferenceHandle* reference, nint refHandle, string target, string logMessage);
 
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
-    internal static partial string git_reference_symbolic_target(nint reference);
+    [LibraryImport(Git2.LibraryName)]
+    internal static partial byte* git_reference_symbolic_target(nint reference);
 
     [LibraryImport(Git2.LibraryName)]
     internal static partial GitObjectID* git_reference_target(nint reference);
@@ -131,7 +127,7 @@ internal unsafe readonly partial struct ReferenceHandle
     [LibraryImport(Git2.LibraryName)]
     internal static partial GitObjectID* git_reference_target_peel(nint reference);
 
-    //[LibraryImport(Git2.LibraryName)]
-    //internal static partial [replace w/ git_reference_t] git_reference_target_typel(nint reference);
+    [LibraryImport(Git2.LibraryName)]
+    internal static partial GitReferenceType git_reference_target_type(nint reference);
 
 }

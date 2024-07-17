@@ -9,6 +9,9 @@ internal static unsafe partial class Git2
     [LibraryImport(Git2.LibraryName)]
     internal static partial void git_commitarray_dispose(git_commitarray* commitarray);
 
+    [LibraryImport(LibraryName)]
+    internal static partial void git_strarray_dispose(git_strarray* strarray);
+
     internal static void ThrowError(GitError code)
     {
         throw new Git2Exception(code);
@@ -34,4 +37,9 @@ internal static unsafe partial class Git2
         public nuint count;
     }
 
+    internal struct git_strarray
+    {
+        public byte** strings;
+        public nuint count;
+    }
 }
