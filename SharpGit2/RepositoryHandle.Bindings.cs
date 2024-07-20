@@ -1,5 +1,9 @@
-﻿using System.Runtime.InteropServices;
+﻿using System.Diagnostics.Metrics;
+using System.Reflection.Emit;
+using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.Marshalling;
+
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace SharpGit2;
 
@@ -79,25 +83,4 @@ unsafe readonly partial struct RepositoryHandle
 
     [LibraryImport(Git2.LibraryName)]
     internal static partial GitError git_repository_state_cleanup(nint repository);
-
-    [LibraryImport(Git2.LibraryName)]
-    internal static partial GitError git_reference_remove(nint repository, byte* name);
-
-    internal static GitError git_reference_remove(nint repository, string name)
-    {
-        scoped Utf8StringMarshaller.ManagedToUnmanagedIn nameIn = new();
-        try
-        {
-            nameIn.FromManaged(name, stackalloc byte[Utf8StringMarshaller.ManagedToUnmanagedIn.BufferSize]);
-
-            return git_reference_remove(repository, nameIn.ToUnmanaged());
-        }
-        finally
-        {
-            nameIn.Free();
-        }
-    }
-
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
-    internal static partial GitError git_reference_lookup(ReferenceHandle* reference, nint repository, string name);
 }
