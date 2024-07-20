@@ -3,7 +3,7 @@ using System.Runtime.InteropServices.Marshalling;
 
 namespace SharpGit2;
 
-internal unsafe readonly partial struct RepositoryHandle
+unsafe readonly partial struct RepositoryHandle
 {
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
     private static partial GitError git_repository_init(RepositoryHandle* repository, string path, uint isBare);

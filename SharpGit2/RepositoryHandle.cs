@@ -4,7 +4,7 @@ using System.Xml.Linq;
 
 namespace SharpGit2;
 
-internal unsafe readonly partial struct RepositoryHandle(nint handle) : IDisposable
+public unsafe readonly partial struct RepositoryHandle(nint handle) : IDisposable
 {
     internal readonly nint Handle = handle;
 

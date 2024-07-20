@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace SharpGit2;
 
-internal readonly struct IndexHandle(nint handle) : IDisposable
+public readonly struct IndexHandle(nint handle) : IDisposable
 {
     internal readonly nint Handle = handle;
 
