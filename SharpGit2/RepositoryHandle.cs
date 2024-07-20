@@ -6,7 +6,7 @@ namespace SharpGit2;
 
 public unsafe readonly partial struct RepositoryHandle(nint handle) : IDisposable
 {
-    internal readonly nint Handle = handle;
+    internal readonly nint NativeHandle = handle;
 
     public static RepositoryHandle Open(string path)
     {
@@ -28,7 +28,7 @@ public unsafe readonly partial struct RepositoryHandle(nint handle) : IDisposabl
     {
         get
         {
-            var code = git_repository_head_detached(Handle);
+            var code = git_repository_head_detached(NativeHandle);
 
             return Git2.ErrorOrBoolean(code);
         }
@@ -38,7 +38,7 @@ public unsafe readonly partial struct RepositoryHandle(nint handle) : IDisposabl
     {
         get
         {
-            var code = git_repository_is_bare(Handle);
+            var code = git_repository_is_bare(NativeHandle);
 
             return Git2.ErrorOrBoolean(code);
         }
@@ -48,18 +48,18 @@ public unsafe readonly partial struct RepositoryHandle(nint handle) : IDisposabl
     {
         get
         {
-            return git_repository_state(Handle);
+            return git_repository_state(NativeHandle);
         }
     }
 
     public void Dispose()
     {
-        git_repository_free(Handle);
+        git_repository_free(NativeHandle);
     }
 
     public void CleanupState()
     {
-        Git2.ThrowIfError(git_repository_state_cleanup(Handle));
+        Git2.ThrowIfError(git_repository_state_cleanup(NativeHandle));
     }
 
     /// <summary>
@@ -70,7 +70,7 @@ public unsafe readonly partial struct RepositoryHandle(nint handle) : IDisposabl
     public ConfigHandle GetConfig()
     {
         ConfigHandle config;
-        Git2.ThrowIfError(git_repository_config(&config, Handle));
+        Git2.ThrowIfError(git_repository_config(&config, NativeHandle));
 
         return config;
     }
@@ -78,7 +78,7 @@ public unsafe readonly partial struct RepositoryHandle(nint handle) : IDisposabl
     public IndexHandle GetIndex()
     {
         IndexHandle index;
-        Git2.ThrowIfError(git_repository_index(&index, Handle));
+        Git2.ThrowIfError(git_repository_index(&index, NativeHandle));
 
         return index;
     }
@@ -86,7 +86,7 @@ public unsafe readonly partial struct RepositoryHandle(nint handle) : IDisposabl
     public GitError GetHead(out ReferenceHandle head)
     {
         ReferenceHandle head_loc;
-        var error = git_repository_head(&head_loc, Handle);
+        var error = git_repository_head(&head_loc, NativeHandle);
 
         switch (error)
         {
@@ -105,21 +105,21 @@ public unsafe readonly partial struct RepositoryHandle(nint handle) : IDisposabl
 
     public void SetHead(string refName)
     {
-        Git2.ThrowIfError(git_repository_set_head(Handle, refName));
+        Git2.ThrowIfError(git_repository_set_head(NativeHandle, refName));
     }
 
     public void SetHead(ReferenceHandle reference)
     {
-        if (reference.Handle == 0)
+        if (reference.NativeHandle == 0)
             throw new NullReferenceException();
 
-        Git2.ThrowIfError(git_repository_set_head(Handle, ReferenceHandle.git_reference_name(reference.Handle)));
+        Git2.ThrowIfError(git_repository_set_head(NativeHandle, ReferenceHandle.git_reference_name(reference.NativeHandle)));
     }
 
     public string GetPath()
     {
         // returned pointer does not need to be freed by the user
-        return Utf8StringMarshaller.ConvertToManaged(git_repository_path(Handle));
+        return Utf8StringMarshaller.ConvertToManaged(git_repository_path(NativeHandle))!;
     }
 
     /// <summary>
@@ -132,13 +132,13 @@ public unsafe readonly partial struct RepositoryHandle(nint handle) : IDisposabl
     public string GetNamespace()
     {
         // returned pointer does not need to be freed by the user
-        return Utf8StringMarshaller.ConvertToManaged(git_repository_get_namespace(Handle));
+        return Utf8StringMarshaller.ConvertToManaged(git_repository_get_namespace(NativeHandle))!;
     }
 
     public RefDBHandle GetRefDB()
     {
         RefDBHandle refDB;
-        Git2.ThrowIfError(git_repository_refdb(&refDB, Handle));
+        Git2.ThrowIfError(git_repository_refdb(&refDB, NativeHandle));
 
         return refDB;
     }
@@ -153,8 +153,9 @@ public unsafe readonly partial struct RepositoryHandle(nint handle) : IDisposabl
     public bool TryLookUp(string name, out ReferenceHandle reference)
     {
         ReferenceHandle refLoc;
+        var result = git_reference_lookup(&refLoc, NativeHandle, name);
 
-        switch (git_reference_lookup(&refLoc, Handle, name))
+        switch (result)
         {
             case GitError.OK:
                 reference = refLoc;
@@ -164,19 +165,19 @@ public unsafe readonly partial struct RepositoryHandle(nint handle) : IDisposabl
                 reference = default;
                 return false;
             default:
-                Git2.ThrowError(git_reference_lookup(&refLoc, Handle, name));
+                Git2.ThrowError(result);
                 goto case GitError.NotFound;
         }
     }
 
     public void RemoveReference(string name)
     {
-        Git2.ThrowIfError(git_reference_remove(Handle, name));
+        Git2.ThrowIfError(git_reference_remove(NativeHandle, name));
     }
 
     public void RemoveReference(ReferenceHandle reference)
     {
-        Git2.ThrowIfError(git_reference_remove(Handle, ReferenceHandle.git_reference_name(reference.Handle)));
+        Git2.ThrowIfError(git_reference_remove(NativeHandle, ReferenceHandle.git_reference_name(reference.NativeHandle)));
     }
 }
 

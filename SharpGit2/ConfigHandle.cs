@@ -8,7 +8,7 @@ namespace SharpGit2;
 
 public readonly struct ConfigHandle(nint handle) : IDisposable
 {
-    internal readonly nint Handle = handle;
+    internal readonly nint NativeHandle = handle;
 
     public void Dispose()
     {

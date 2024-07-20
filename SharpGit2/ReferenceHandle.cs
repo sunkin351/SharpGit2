@@ -19,13 +19,13 @@ public enum GitReferenceType
 
 public unsafe readonly partial struct ReferenceHandle(nint handle) : IDisposable
 {
-    internal readonly nint Handle = handle;
+    internal readonly nint NativeHandle = handle;
 
     public bool IsBranch
     {
         get
         {
-            var code = git_reference_is_branch(Handle);
+            var code = git_reference_is_branch(NativeHandle);
 
             return Git2.ErrorOrBoolean(code);
         }
@@ -35,7 +35,7 @@ public unsafe readonly partial struct ReferenceHandle(nint handle) : IDisposable
     {
         get
         {
-            var code = git_reference_is_note(Handle);
+            var code = git_reference_is_note(NativeHandle);
 
             return Git2.ErrorOrBoolean(code);
         }
@@ -45,7 +45,7 @@ public unsafe readonly partial struct ReferenceHandle(nint handle) : IDisposable
     {
         get
         {
-            var code = git_reference_is_remote(Handle);
+            var code = git_reference_is_remote(NativeHandle);
 
             return Git2.ErrorOrBoolean(code);
         }
@@ -55,7 +55,7 @@ public unsafe readonly partial struct ReferenceHandle(nint handle) : IDisposable
     {
         get
         {
-            var code = git_reference_is_tag(Handle);
+            var code = git_reference_is_tag(NativeHandle);
 
             return Git2.ErrorOrBoolean(code);
         }
@@ -63,23 +63,23 @@ public unsafe readonly partial struct ReferenceHandle(nint handle) : IDisposable
 
     public void Dispose()
     {
-        git_reference_free(Handle);
+        git_reference_free(NativeHandle);
     }
 
     public void Delete()
     {
-        Git2.ThrowIfError(git_reference_delete(Handle));
+        Git2.ThrowIfError(git_reference_delete(NativeHandle));
     }
 
     public string GetName()
     {
-        return Utf8StringMarshaller.ConvertToManaged(git_reference_name(Handle));
+        return Utf8StringMarshaller.ConvertToManaged(git_reference_name(NativeHandle))!;
     }
 
     public ReferenceHandle Duplicate()
     {
         ReferenceHandle reference;
-        Git2.ThrowIfError(git_reference_dup(&reference, Handle));
+        Git2.ThrowIfError(git_reference_dup(&reference, NativeHandle));
 
         return reference;
     }
