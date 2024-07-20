@@ -1,4 +1,8 @@
 ﻿using System;
+using System.Collections;
+using System.Diagnostics;
+using System.Runtime.ExceptionServices;
+using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.Marshalling;
 using System.Xml.Linq;
 
@@ -111,9 +115,9 @@ public unsafe readonly partial struct RepositoryHandle(nint handle) : IDisposabl
     public void SetHead(ReferenceHandle reference)
     {
         if (reference.NativeHandle == 0)
-            throw new NullReferenceException();
+            throw new ArgumentNullException(nameof(reference));
 
-        Git2.ThrowIfError(git_repository_set_head(NativeHandle, ReferenceHandle.git_reference_name(reference.NativeHandle)));
+        Git2.ThrowIfError(git_repository_set_head(NativeHandle, NativeApi.git_reference_name(reference.NativeHandle)));
     }
 
     public string GetPath()
@@ -150,10 +154,17 @@ public unsafe readonly partial struct RepositoryHandle(nint handle) : IDisposabl
     /// <param name="reference">The returned reference handle</param>
     /// <returns>true if successful, false if not or if the reference name is malformed</returns>
     /// <exception cref="Git2Exception"/>
-    public bool TryLookUp(string name, out ReferenceHandle reference)
+    /// <exception cref="ArgumentNullException"/>
+    public bool TryLookupReference(string name, out ReferenceHandle reference)
     {
+        if (name is null)
+        {
+            reference = default;
+            return false;
+        }
+
         ReferenceHandle refLoc;
-        var result = git_reference_lookup(&refLoc, NativeHandle, name);
+        var result = NativeApi.git_reference_lookup(&refLoc, NativeHandle, name);
 
         switch (result)
         {
@@ -165,19 +176,298 @@ public unsafe readonly partial struct RepositoryHandle(nint handle) : IDisposabl
                 reference = default;
                 return false;
             default:
-                Git2.ThrowError(result);
-                goto case GitError.NotFound;
+                throw Git2.ExceptionForError(result);
         }
     }
 
+    /// <summary>
+    /// Remove a reference without generating a reference handle
+    /// </summary>
+    /// <param name="name">The reference to remove</param>
+    /// <remarks>
+    /// This method removes the named reference from the repository without looking at its old value.
+    /// </remarks>
     public void RemoveReference(string name)
     {
-        Git2.ThrowIfError(git_reference_remove(NativeHandle, name));
+        Git2.ThrowIfError(NativeApi.git_reference_remove(NativeHandle, name));
     }
 
-    public void RemoveReference(ReferenceHandle reference)
+    internal GitError ForEachReference(delegate* unmanaged<nint, nint, GitError> callback, nint payload)
     {
-        Git2.ThrowIfError(git_reference_remove(NativeHandle, ReferenceHandle.git_reference_name(reference.NativeHandle)));
+        return NativeApi.git_reference_foreach(NativeHandle, callback, payload);
+    }
+
+    private const GitError ForEachBreak = (GitError)1;
+    private const GitError ForEachException = GitError.User;
+
+    public delegate void ForEachReferenceCallback(ReferenceHandle reference, ref bool breakLoop);
+
+    public void ForEachReference(Func<ReferenceHandle, bool> callback, bool autoDispose = true)
+    {
+        var context = new ForEachContext<Func<ReferenceHandle, bool>>() { Callback = callback, AutoDispose = autoDispose };
+
+        var gcHandle = GCHandle.Alloc(context, GCHandleType.Normal);
+        GitError error;
+
+        try
+        {
+            error = NativeApi.git_reference_foreach(NativeHandle, &_Callback, GCHandle.ToIntPtr(gcHandle));
+        }
+        finally
+        {
+            gcHandle.Free();
+        }
+
+        if (error == ForEachException)
+        {
+            context.ExceptionInfo!.Throw();
+        }
+        else if (error < 0)
+        {
+            Git2.ThrowError(error);
+        }
+
+        [UnmanagedCallersOnly]
+        static GitError _Callback(nint reference, nint payload)
+        {
+            var referenceHandle = new ReferenceHandle(reference);
+
+            var context = (ForEachContext<Func<ReferenceHandle, bool>>)GCHandle.FromIntPtr(payload).Target!;
+
+            try
+            {
+                return context.Callback(referenceHandle) ? GitError.OK : ForEachBreak;
+            }
+            catch (Exception e)
+            {
+                Debug.Assert(context.ExceptionInfo is null);
+                context.ExceptionInfo = ExceptionDispatchInfo.Capture(e);
+
+                return ForEachException;
+            }
+            finally
+            {
+                if (context.AutoDispose)
+                    referenceHandle.Dispose();
+            }
+        }
+    }
+
+    public delegate bool ForEachReferenceUTF8NameCallback(ReadOnlySpan<byte> utf8Name);
+
+    internal GitError ForEachReferenceName(string? glob, delegate* unmanaged<byte*, nint, GitError> callback, nint payload)
+    {
+        GitError error;
+        if (glob is null)
+            error = NativeApi.git_reference_foreach_name(NativeHandle, callback, payload);
+        else
+            error = NativeApi.git_reference_foreach_glob(NativeHandle, glob, callback, payload);
+
+        return error;
+    }
+
+    public void ForEachReferenceName(ForEachReferenceUTF8NameCallback callback, string? glob = null)
+    {
+        var context = new ForEachContext<ForEachReferenceUTF8NameCallback>() { Callback = callback };
+
+        var gcHandle = GCHandle.Alloc(context, GCHandleType.Normal);
+        GitError error;
+
+        try
+        {
+            if (glob is null)
+                error = NativeApi.git_reference_foreach_name(NativeHandle, &_Callback, GCHandle.ToIntPtr(gcHandle));
+            else
+                error = NativeApi.git_reference_foreach_glob(NativeHandle, glob, &_Callback, GCHandle.ToIntPtr(gcHandle));
+        }
+        finally
+        {
+            gcHandle.Free();
+        }
+
+        if (error == ForEachException)
+        {
+            context.ExceptionInfo!.Throw();
+        }
+        else if (error < 0)
+        {
+            Git2.ThrowError(error);
+        }
+
+        [UnmanagedCallersOnly]
+        static GitError _Callback(byte* name, nint payload)
+        {
+            var context = (ForEachContext<ForEachReferenceUTF8NameCallback>)GCHandle.FromIntPtr(payload).Target!;
+
+            try
+            {
+                var span = MemoryMarshal.CreateReadOnlySpanFromNullTerminated(name);
+
+                return context.Callback(span) ? GitError.OK : ForEachBreak;
+            }
+            catch (Exception e)
+            {
+                Debug.Assert(context.ExceptionInfo is null);
+                context.ExceptionInfo = ExceptionDispatchInfo.Capture(e);
+
+                return ForEachException;
+            }
+        }
+    }
+
+    public void ForEachReferenceName(Func<string, bool> callback, string? glob = null)
+    {
+        var context = new ForEachContext<Func<string, bool>>() { Callback = callback };
+
+        var gcHandle = GCHandle.Alloc(context, GCHandleType.Normal);
+        GitError error;
+
+        try
+        {
+            if (glob is null)
+                error = NativeApi.git_reference_foreach_name(NativeHandle, &_Callback, GCHandle.ToIntPtr(gcHandle));
+            else
+                error = NativeApi.git_reference_foreach_glob(NativeHandle, glob, &_Callback, GCHandle.ToIntPtr(gcHandle));
+        }
+        finally
+        {
+            gcHandle.Free();
+        }
+
+        if (error == ForEachException)
+        {
+            context.ExceptionInfo!.Throw();
+        }
+        else if (error < 0)
+        {
+            Git2.ThrowError(error);
+        }
+
+        [UnmanagedCallersOnly]
+        static GitError _Callback(byte* name, nint payload)
+        {
+            var context = (ForEachContext<Func<string, bool>>)GCHandle.FromIntPtr(payload).Target!;
+
+            try
+            {
+                string str = Utf8StringMarshaller.ConvertToManaged(name)!;
+
+                return context.Callback(str) ? GitError.OK : ForEachBreak;
+            }
+            catch (Exception e)
+            {
+                Debug.Assert(context.ExceptionInfo is null);
+                context.ExceptionInfo = ExceptionDispatchInfo.Capture(e);
+
+                return ForEachException;
+            }
+        }
+    }
+
+    public ReferenceEnumerable EnumerateReferences(string? glob = null)
+    {
+        return new ReferenceEnumerable(this, glob);
+    }
+
+    public bool TryGetId(string name, out GitObjectID id)
+    {
+        GitError result;
+
+        // Relatively heavy struct, pin the reference instead of copying for performance
+        fixed (GitObjectID* ptr = &id)
+        {
+            result = NativeApi.git_reference_name_to_id(ptr, NativeHandle, name);
+        }
+
+        switch (result)
+        {
+            case GitError.OK:
+                return true;
+            case GitError.NotFound:
+            case GitError.InvalidSpec:
+                id = default;
+                return false;
+            default:
+                throw Git2.ExceptionForError(result);
+        }
+    }
+
+    private sealed class ForEachContext<TDelegate> where TDelegate : Delegate
+    {
+        public required TDelegate Callback { get; init; }
+
+        public bool AutoDispose { get; init; }
+
+        internal ExceptionDispatchInfo? ExceptionInfo { get; set; }
+    }
+
+    public readonly struct ReferenceEnumerable(RepositoryHandle repo, string? glob) : IEnumerable<ReferenceHandle>
+    {
+        private readonly RepositoryHandle _repository = repo;
+        private readonly string? _glob = glob;
+
+        public ReferenceEnumerator GetEnumerator()
+        {
+            nint handle;
+
+            if (_glob is null)
+            {
+                Git2.ThrowIfError(NativeApi.git_reference_iterator_new(&handle, _repository.NativeHandle));
+            }
+            else
+            {
+                Git2.ThrowIfError(NativeApi.git_reference_iterator_glob_new(&handle, _repository.NativeHandle, _glob));
+            }
+
+            return new ReferenceEnumerator(handle);
+        }
+
+        IEnumerator<ReferenceHandle> IEnumerable<ReferenceHandle>.GetEnumerator() => GetEnumerator();
+
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+    }
+
+    public struct ReferenceEnumerator : IEnumerator<ReferenceHandle>
+    {
+        private nint _iteratorHandle;
+
+        internal ReferenceEnumerator(nint handle) => _iteratorHandle = handle;
+
+        public ReferenceHandle Current { get; private set; }
+
+        public bool MoveNext()
+        {
+            ReferenceHandle handle;
+            var code = NativeApi.git_reference_next(&handle, _iteratorHandle);
+
+            switch (code)
+            {
+                case GitError.OK:
+                    Current = handle;
+                    return true;
+                case GitError.IterationOver:
+                    Current = default;
+                    return false;
+                default:
+                    throw Git2.ExceptionForError(code);
+            }
+        }
+
+        public void Reset()
+        {
+            throw new NotSupportedException();
+        }
+
+        object IEnumerator.Current => throw new NotImplementedException();
+
+        public void Dispose()
+        {
+            if (_iteratorHandle != 0)
+            {
+                NativeApi.git_reference_iterator_free(_iteratorHandle);
+                _iteratorHandle = 0;
+            }
+        }
     }
 }
 

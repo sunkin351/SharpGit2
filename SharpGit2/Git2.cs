@@ -12,9 +12,18 @@ internal static unsafe partial class Git2
     [LibraryImport(LibraryName)]
     internal static partial void git_strarray_dispose(git_strarray* strarray);
 
+    internal static Exception ExceptionForError(GitError error)
+    {
+        return error switch
+        {
+            GitError.InvalidSpec => new ArgumentException("Name/Ref Specification was not followed!"),
+            _ => new Git2Exception(error),
+        };
+    }
+
     internal static void ThrowError(GitError code)
     {
-        throw new Git2Exception(code);
+        throw ExceptionForError(code);
     }
 
     internal static void ThrowIfError(GitError code)
