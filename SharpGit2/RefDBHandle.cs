@@ -6,9 +6,9 @@ using System.Threading.Tasks;
 
 namespace SharpGit2;
 
-internal readonly struct RefDBHandle(nint handle) : IDisposable
+public readonly struct RefDBHandle(nint handle) : IDisposable
 {
-    internal readonly nint Handle = handle;
+    internal readonly nint NativeHandle = handle;
 
     public void Dispose()
     {
