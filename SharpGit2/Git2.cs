@@ -3,11 +3,19 @@ using System.Runtime.InteropServices.Marshalling;
 
 namespace SharpGit2;
 
-internal static unsafe partial class Git2
+public static unsafe partial class Git2
 {
     internal const string LibraryName = "";
 
+    public static int Initialize()
+    {
+        return NativeApi.git_libgit2_init();
+    }
 
+    public static int Shutdown()
+    {
+        return NativeApi.git_libgit2_shutdown();
+    }
 
     internal static Exception ExceptionForError(GitError error)
     {
