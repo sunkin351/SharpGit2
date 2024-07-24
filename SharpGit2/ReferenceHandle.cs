@@ -1,11 +1,14 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.Marshalling;
+using System.Runtime.Intrinsics;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -77,6 +80,11 @@ public unsafe readonly partial struct ReferenceHandle(nint handle) : IDisposable
     public void Dispose()
     {
         NativeApi.git_reference_free(NativeHandle);
+    }
+
+    public override string ToString()
+    {
+        return NativeHandle == 0 ? "< NULL >" : GetName();
     }
 
     public int CompareTo(ReferenceHandle other)
@@ -220,5 +228,180 @@ public unsafe readonly partial struct ReferenceHandle(nint handle) : IDisposable
         int code = NativeApi.git_reference_is_valid_name(referenceName);
 
         return code != 0;
+    }
+
+    private static readonly SearchValues<char> _invalidChars = SearchValues.Create("~^:\\?[");
+
+    /// <summary>
+    /// Managed implementation of <see cref="NativeApi.git_reference_normalize_name(byte*, nuint, byte*, GitReferenceFormat)"/>.
+    /// Only allows Ascii.
+    /// </summary>
+    /// <param name="referenceName"></param>
+    /// <param name="format">Flags to constrain name validation rules</param>
+    /// <returns></returns>
+    /// <exception cref="ArgumentException"/>
+    /// <exception cref="ArgumentNullException"/>
+    public static string NormalizeReferenceName(string referenceName, GitReferenceFormat format)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(referenceName);
+
+        const string GenericErrorMessage = "Provided reference name is invalid!";
+
+        ReadOnlySpan<char> source = referenceName;
+
+        if (!Ascii.IsValid(source)) // Potentially unnecessary, needs further research
+            ThrowInvalidSpec("Reference name must use only Ascii characters!");
+
+        source = source.TrimStart('/');
+
+        if (source[^1] == '/')
+            ThrowInvalidSpec("Reference name cannot end with '/'");
+
+        if (source[^1] == '.')
+            ThrowInvalidSpec("Reference name cannot end with '.'");
+
+        if (source.IndexOfAny(_invalidChars) >= 0 || source.IndexOfAnyInRange('\0', ' ') >= 0)
+            ThrowInvalidSpec("Reference name has invalid characters!");
+
+        int globCount = source.Count('*');
+
+        if ((format & GitReferenceFormat.RefSpecPattern) != 0)
+        {
+            if (globCount > 1)
+            {
+                ThrowInvalidSpec("Reference name contains more than 1 glob! (A glob being '*')");
+            }
+        }
+        else
+        {
+            if (globCount > 0)
+            {
+                ThrowInvalidSpec("Reference name is not allowed to be a glob pattern! (Not allowed to contain '*')");
+            }
+        }
+
+        if (source.Contains("..", StringComparison.Ordinal)
+            || source.Contains("@{", StringComparison.Ordinal))
+        {
+            ThrowInvalidSpec("Reference name cannot contain the sequences \"..\" or \"@{\"");
+        }
+
+        int segment_count = source.Count('/') + 1;
+
+        Span<Range> segments = segment_count > 16 ? new Range[segment_count] : stackalloc Range[segment_count];
+
+        segment_count = source.Split(segments, '/', StringSplitOptions.RemoveEmptyEntries);
+
+        if (segment_count == 1)
+        {
+            if ((format & GitReferenceFormat.AllowOneLevel) == 0)
+                ThrowInvalidSpec("'One level' reference names are not allowed!");
+
+            if ((format & GitReferenceFormat.RefSpecShorthand) == 0
+                && !(IsAllCapsAndUnderscore(source) || ((format & GitReferenceFormat.RefSpecPattern) != 0 && source.SequenceEqual("*"))))
+            {
+                // TODO: Figure out what to say here
+                ThrowInvalidSpec(GenericErrorMessage);
+            }
+        }
+        else // segment_count > 1
+        {
+            Debug.Assert(segment_count > 1);
+
+            // The first segment is checked
+            if (IsAllCapsAndUnderscore(source[segments[0]]))
+            {
+                // TODO: Figure out what to say here
+                ThrowInvalidSpec(GenericErrorMessage);
+            }
+        }
+
+        segments = segments[..segment_count];
+
+        var builder = new StringBuilder();
+
+        for (int i = 0; i < segments.Length; ++i)
+        {
+            ReadOnlySpan<char> segment = source[segments[i]];
+
+            if (segment.EndsWith(".lock"))
+            {
+                ThrowInvalidSpec("Reference name segment cannot end with \".lock\"");
+            }
+
+            if (segment[^1] == '.')
+            {
+                ThrowInvalidSpec("Reference name segment cannot end with '.'");
+            }
+
+            if (builder.Length > 0)
+                builder.Append('/');
+
+            builder.Append(segment);
+        }
+
+        return builder.ToString();
+
+        static bool IsAllCapsAndUnderscore(ReadOnlySpan<char> span)
+        {
+            if (span[0] == '_' || span[^1] == '_')
+                return false;
+
+            // Vectorized code
+            if (Vector128.IsHardwareAccelerated && span.Length >= Vector128<ushort>.Count)
+            {
+                ref readonly ushort data = ref Unsafe.As<char, ushort>(ref MemoryMarshal.GetReference(span));
+                int lenMinusOneVec = span.Length - Vector128<ushort>.Count;
+
+                var min = Vector128.Create((ushort)'A');
+                var max = Vector128.Create((ushort)('Z' - 'A'));
+                var underscore = Vector128.Create((ushort)'_');
+                Vector128<ushort> value, cmp;
+
+                int i = 0;
+                while (i < lenMinusOneVec)
+                {
+                    value = Vector128.LoadUnsafe(in data, (nuint)i);
+                    
+                    cmp = Vector128.LessThanOrEqual(value - min, max);
+                    cmp |= Vector128.Equals(value, underscore);
+
+                    if (Vector128.EqualsAny(cmp, Vector128<ushort>.Zero))
+                        return false;
+
+                    i += Vector128<ushort>.Count;
+                }
+
+                value = Vector128.LoadUnsafe(in data, (nuint)lenMinusOneVec);
+
+                cmp = Vector128.LessThanOrEqual(value - min, max);
+                cmp |= Vector128.Equals(value, underscore);
+
+                if (Vector128.EqualsAny(cmp, Vector128<ushort>.Zero))
+                    return false;
+
+                return true;
+            }
+
+            // Scalar code
+            for (int i = 0; i < span.Length; ++i)
+            {
+                var c = span[i];
+
+                // The original code only expected Ascii with seemingly very limited support for unicode
+                if (!char.IsAsciiLetterUpper(c) && c != '_')
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        [DoesNotReturn]
+        static void ThrowInvalidSpec(string message)
+        {
+            throw new ArgumentException(message, nameof(referenceName));
+        }
     }
 }
