@@ -64,9 +64,15 @@ public unsafe readonly partial struct ReferenceHandle(nint handle) : IDisposable
         }
     }
 
-    public GitReferenceType TargetType => NativeApi.git_reference_target_type(NativeHandle);
+    internal byte* NativeName => NativeApi.git_reference_name(NativeHandle);
+
+    internal byte* NativeShorthand => NativeApi.git_reference_shorthand(NativeHandle);
+
+    internal byte* NativeSymbolicTarget => NativeApi.git_reference_symbolic_target(NativeHandle);
 
     public RepositoryHandle Owner => new(NativeApi.git_reference_owner(NativeHandle));
+
+    public GitReferenceType TargetType => NativeApi.git_reference_target_type(NativeHandle);
 
     public void Dispose()
     {
@@ -89,17 +95,31 @@ public unsafe readonly partial struct ReferenceHandle(nint handle) : IDisposable
         Git2.ThrowIfError(NativeApi.git_reference_delete(NativeHandle));
     }
 
-    public string GetName()
-    {
-        return Utf8StringMarshaller.ConvertToManaged(NativeApi.git_reference_name(NativeHandle))!;
-    }
-
     public ReferenceHandle Duplicate()
     {
         ReferenceHandle reference;
         Git2.ThrowIfError(NativeApi.git_reference_dup(&reference, NativeHandle));
 
         return reference;
+    }
+
+    public string GetName()
+    {
+        return Utf8StringMarshaller.ConvertToManaged(this.NativeName)!;
+    }
+
+    public string GetShorthand()
+    {
+        return Utf8StringMarshaller.ConvertToManaged(this.NativeShorthand)!;
+    }
+
+    /// <summary>
+    /// Gets the symbolic target of this reference.
+    /// </summary>
+    /// <returns>The name of the symbolic target, or <see langword="null"/> if this isn't a symbolic reference</returns>
+    public string? GetSymbolicTarget()
+    {
+        return Utf8StringMarshaller.ConvertToManaged(this.NativeSymbolicTarget);
     }
 
     public GitObjectHandle Peel(GitObjectType type)
@@ -159,33 +179,12 @@ public unsafe readonly partial struct ReferenceHandle(nint handle) : IDisposable
         return newReference;
     }
 
-    public string? GetShorthand()
-    {
-        return Utf8StringMarshaller.ConvertToManaged(NativeApi.git_reference_shorthand(NativeHandle));
-    }
-
     public ReferenceHandle SetSymbolicTarget(string target, string? logMessage)
     {
         ReferenceHandle newReference;
         Git2.ThrowIfError(NativeApi.git_reference_symbolic_set_target(&newReference, NativeHandle, target, logMessage));
 
         return newReference;
-    }
-
-    //public ReferenceHandle SetSymbolicTarget(ReferenceHandle target, string? logMessage)
-    //{
-    //    ReferenceHandle newReference;
-    //    byte* name = git_reference_name(target.NativeHandle);
-
-    //    Git2.ThrowIfError(git_reference_symbolic_set_target(&newReference, NativeHandle, name, logMessage));
-    //    return newReference;
-    //}
-
-    public bool TryGetSymbolicTarget([NotNullWhen(true)] out string? target)
-    {
-        var ptr = NativeApi.git_reference_symbolic_target(NativeHandle);
-
-        return (target = Utf8StringMarshaller.ConvertToManaged(ptr)) is not null;
     }
 
     public bool TryGetTarget(out GitObjectID id)
@@ -214,5 +213,12 @@ public unsafe readonly partial struct ReferenceHandle(nint handle) : IDisposable
 
         id = default;
         return false;
+    }
+
+    public static bool IsValidReferenceName(string referenceName)
+    {
+        int code = NativeApi.git_reference_is_valid_name(referenceName);
+
+        return code != 0;
     }
 }

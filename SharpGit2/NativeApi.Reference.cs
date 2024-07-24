@@ -85,7 +85,7 @@ internal static unsafe partial class NativeApi
     /// It will return <see cref="GitError.Modified"/> if the reference's value at the time of updating does not match the one passed through <paramref name="currentId"/> (i.e. if the ref has changed since the user read it).
     /// </remarks>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
-    internal static partial GitError git_reference_create_matching(ReferenceHandle* reference, nint repository, string name, GitObjectID* id, int force, GitObjectID* currentId, string logMessage);
+    internal static partial GitError git_reference_create_matching(ReferenceHandle* reference, nint repository, string name, GitObjectID* id, int force, GitObjectID* currentId, string? logMessage);
 
     /// <summary>
     /// Delete an existing reference.
@@ -280,7 +280,7 @@ internal static unsafe partial class NativeApi
     /// <remarks>
     /// The string array will be filled with the names of all references;
     /// these values are owned by the user and should be free'd manually when no longer needed,
-    /// using <see cref="Git2.git_strarray_dispose(Git2.git_strarray*)"/>.
+    /// using <see cref="git_strarray_dispose(Git2.git_strarray*)"/>.
     /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     internal static partial GitError git_reference_list(Git2.git_strarray* list, nint repository);

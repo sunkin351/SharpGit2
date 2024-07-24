@@ -66,130 +66,72 @@ public unsafe readonly partial struct RepositoryHandle(nint handle) : IDisposabl
         Git2.ThrowIfError(git_repository_state_cleanup(NativeHandle));
     }
 
-    /// <summary>
-    /// Get the configuration file for this repository.
-    /// Needs disposal when no longer needed.
-    /// </summary>
-    /// <returns>The git config file object.</returns>
-    public ConfigHandle GetConfig()
+    public ReferenceHandle CreateReference(string name, GitObjectID id, bool force, string? logMessage)
     {
-        ConfigHandle config;
-        Git2.ThrowIfError(git_repository_config(&config, NativeHandle));
+        ReferenceHandle result;
+        Git2.ThrowIfError(NativeApi.git_reference_create(&result, NativeHandle, name, &id, force ? 1 : 0, logMessage));
 
-        return config;
+        return result;
     }
 
-    public IndexHandle GetIndex()
+    public ReferenceHandle CreateReference(string name, in GitObjectID id, bool force, string? logMessage)
     {
-        IndexHandle index;
-        Git2.ThrowIfError(git_repository_index(&index, NativeHandle));
+        ReferenceHandle result;
+        GitError error;
 
-        return index;
-    }
-
-    public GitError GetHead(out ReferenceHandle head)
-    {
-        ReferenceHandle head_loc;
-        var error = git_repository_head(&head_loc, NativeHandle);
-
-        switch (error)
+        fixed (GitObjectID* ptr = &id)
         {
-            case GitError.OK:
-            case GitError.UnbornBranch:
-                head = head_loc;
-                return error;
-            case GitError.NotFound:
-                head = default;
-                return error;
-            default:
-                Git2.ThrowError(error);
-                goto case GitError.NotFound;
-        }
-    }
-
-    public void SetHead(string refName)
-    {
-        Git2.ThrowIfError(git_repository_set_head(NativeHandle, refName));
-    }
-
-    public void SetHead(ReferenceHandle reference)
-    {
-        if (reference.NativeHandle == 0)
-            throw new ArgumentNullException(nameof(reference));
-
-        Git2.ThrowIfError(git_repository_set_head(NativeHandle, NativeApi.git_reference_name(reference.NativeHandle)));
-    }
-
-    public string GetPath()
-    {
-        // returned pointer does not need to be freed by the user
-        return Utf8StringMarshaller.ConvertToManaged(git_repository_path(NativeHandle))!;
-    }
-
-    /// <summary>
-    /// 
-    /// </summary>
-    /// <remarks>
-    /// Always allocates a new string.
-    /// </remarks>
-    /// <returns></returns>
-    public string GetNamespace()
-    {
-        // returned pointer does not need to be freed by the user
-        return Utf8StringMarshaller.ConvertToManaged(git_repository_get_namespace(NativeHandle))!;
-    }
-
-    public RefDBHandle GetRefDB()
-    {
-        RefDBHandle refDB;
-        Git2.ThrowIfError(git_repository_refdb(&refDB, NativeHandle));
-
-        return refDB;
-    }
-
-    /// <summary>
-    /// Looks up a reference from the repository
-    /// </summary>
-    /// <param name="name">Name of the reference object</param>
-    /// <param name="reference">The returned reference handle</param>
-    /// <returns>true if successful, false if not or if the reference name is malformed</returns>
-    /// <exception cref="Git2Exception"/>
-    /// <exception cref="ArgumentNullException"/>
-    public bool TryLookupReference(string name, out ReferenceHandle reference)
-    {
-        if (name is null)
-        {
-            reference = default;
-            return false;
+            error = NativeApi.git_reference_create(&result, NativeHandle, name, ptr, force ? 1 : 0, logMessage);
         }
 
-        ReferenceHandle refLoc;
-        var result = NativeApi.git_reference_lookup(&refLoc, NativeHandle, name);
+        Git2.ThrowIfError(error);
 
-        switch (result)
-        {
-            case GitError.OK:
-                reference = refLoc;
-                return true;
-            case GitError.NotFound:
-            case GitError.InvalidSpec:
-                reference = default;
-                return false;
-            default:
-                throw Git2.ExceptionForError(result);
-        }
+        return result;
     }
 
-    /// <summary>
-    /// Remove a reference without generating a reference handle
-    /// </summary>
-    /// <param name="name">The reference to remove</param>
-    /// <remarks>
-    /// This method removes the named reference from the repository without looking at its old value.
-    /// </remarks>
-    public void RemoveReference(string name)
+    public ReferenceHandle CreateMatchingReference(string name, GitObjectID id, bool force, GitObjectID currendId, string? logMessage)
     {
-        Git2.ThrowIfError(NativeApi.git_reference_remove(NativeHandle, name));
+        ReferenceHandle result;
+        Git2.ThrowIfError(NativeApi.git_reference_create_matching(&result, NativeHandle, name, &id, force ? 1 : 0, &currendId, logMessage));
+
+        return result;
+    }
+
+    public ReferenceHandle CreateMatchingReference(string name, in GitObjectID id, bool force, in GitObjectID currentId, string? logMessage)
+    {
+        ReferenceHandle result;
+        fixed (GitObjectID* idPtr = &id, currentIdPtr = &currentId)
+        {
+            Git2.ThrowIfError(NativeApi.git_reference_create_matching(&result, NativeHandle, name, idPtr, force ? 1 : 0, currentIdPtr, logMessage));
+        }
+
+        return result;
+    }
+
+    public ReferenceHandle CreateSymbolicReference(string name, string target, bool force, string? logMessage)
+    {
+        ReferenceHandle result;
+        Git2.ThrowIfError(NativeApi.git_reference_symbolic_create(&result, NativeHandle, name, target, force ? 1 : 0, logMessage));
+
+        return result;
+    }
+
+    public ReferenceHandle CreateSymbolicReferenceMatching(string name, string target, bool force, string? currentValue, string? logMessage)
+    {
+        ReferenceHandle result;
+        Git2.ThrowIfError(NativeApi.git_reference_symbolic_create_matching(&result, NativeHandle, name, target, force ? 1 : 0, currentValue, logMessage));
+
+        return result;
+    }
+
+    public ReferenceEnumerable EnumerateReferences(string? glob = null)
+    {
+        return new ReferenceEnumerable(this, glob);
+    }
+
+    public ReferenceNameEnumerable EnumerateReferenceNames(string? glob = null)
+    {
+        return new ReferenceNameEnumerable(this, glob);
     }
 
     internal GitError ForEachReference(delegate* unmanaged<nint, nint, GitError> callback, nint payload)
@@ -364,19 +306,181 @@ public unsafe readonly partial struct RepositoryHandle(nint handle) : IDisposabl
         }
     }
 
-    public ReferenceEnumerable EnumerateReferences(string? glob = null)
+    /// <summary>
+    /// Get the configuration file for this repository.
+    /// Needs disposal when no longer needed.
+    /// </summary>
+    /// <returns>The git config file object.</returns>
+    public ConfigHandle GetConfig()
     {
-        return new ReferenceEnumerable(this, glob);
+        ConfigHandle config;
+        Git2.ThrowIfError(git_repository_config(&config, NativeHandle));
+
+        return config;
     }
 
-    public bool TryGetId(string name, out GitObjectID id)
+    public GitError GetHead(out ReferenceHandle head)
+    {
+        ReferenceHandle head_loc;
+        var error = git_repository_head(&head_loc, NativeHandle);
+
+        switch (error)
+        {
+            case GitError.OK:
+            case GitError.UnbornBranch:
+                head = head_loc;
+                return error;
+            case GitError.NotFound:
+                head = default;
+                return error;
+            default:
+                throw Git2.ExceptionForError(error);
+        }
+    }
+
+    public IndexHandle GetIndex()
+    {
+        IndexHandle index;
+        Git2.ThrowIfError(git_repository_index(&index, NativeHandle));
+
+        return index;
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <remarks>
+    /// Always allocates a new string.
+    /// </remarks>
+    /// <returns></returns>
+    public string GetNamespace()
+    {
+        // returned pointer does not need to be freed by the user
+        return Utf8StringMarshaller.ConvertToManaged(git_repository_get_namespace(NativeHandle))!;
+    }
+
+    public string GetPath()
+    {
+        // returned pointer does not need to be freed by the user
+        return Utf8StringMarshaller.ConvertToManaged(git_repository_path(NativeHandle))!;
+    }
+
+    public RefDBHandle GetRefDB()
+    {
+        RefDBHandle refDB;
+        Git2.ThrowIfError(git_repository_refdb(&refDB, NativeHandle));
+
+        return refDB;
+    }
+
+    public string[] GetReferenceNameList()
+    {
+        Git2.git_strarray nativeArray = default;
+
+        Git2.ThrowIfError(NativeApi.git_reference_list(&nativeArray, NativeHandle));
+
+        try
+        {
+            return nativeArray.ToManaged();
+        }
+        finally
+        {
+            NativeApi.git_strarray_dispose(&nativeArray);
+        }
+    }
+
+    public bool HasLog(string referenceName)
+    {
+        var code = NativeApi.git_reference_has_log(NativeHandle, referenceName);
+
+        return Git2.ErrorOrBoolean(code);
+    }
+
+    /// <summary>
+    /// Remove a reference without generating a reference handle
+    /// </summary>
+    /// <param name="name">The reference to remove</param>
+    /// <remarks>
+    /// This method removes the named reference from the repository without creating a reference handle.
+    /// </remarks>
+    public void RemoveReference(string name)
+    {
+        Git2.ThrowIfError(NativeApi.git_reference_remove(NativeHandle, name));
+    }
+
+    public void SetHead(string refName)
+    {
+        Git2.ThrowIfError(git_repository_set_head(NativeHandle, refName));
+    }
+
+    public void SetHead(ReferenceHandle reference)
+    {
+        if (reference.NativeHandle == 0)
+            throw new ArgumentNullException(nameof(reference));
+
+        Git2.ThrowIfError(git_repository_set_head(NativeHandle, reference.NativeName));
+    }
+
+    /// <summary>
+    /// Looks up a reference from the repository
+    /// </summary>
+    /// <param name="name">Name of the reference object</param>
+    /// <param name="reference">The returned reference handle</param>
+    /// <returns>true if successful, false if not or if the reference name is malformed</returns>
+    /// <exception cref="Git2Exception"/>
+    /// <exception cref="ArgumentNullException"/>
+    public bool TryLookupReference(string name, out ReferenceHandle reference)
+    {
+        if (name is null)
+        {
+            reference = default;
+            return false;
+        }
+
+        ReferenceHandle refLoc;
+        var result = NativeApi.git_reference_lookup(&refLoc, NativeHandle, name);
+
+        switch (result)
+        {
+            case GitError.OK:
+                reference = refLoc;
+                return true;
+            case GitError.NotFound:
+            case GitError.InvalidSpec:
+                reference = default;
+                return false;
+            default:
+                throw Git2.ExceptionForError(result);
+        }
+    }
+
+    public bool TryGetReferenceByShorthand(string shorthand, out ReferenceHandle reference)
+    {
+        ReferenceHandle result;
+        var error = NativeApi.git_reference_dwim(&result, NativeHandle, shorthand);
+
+        switch (error)
+        {
+            case GitError.OK:
+                reference = result;
+                return true;
+            case GitError.NotFound:
+            case GitError.InvalidSpec:
+                reference = default;
+                return false;
+            default:
+                throw Git2.ExceptionForError(error);
+        }
+    }
+
+    public bool TryGetId(string referenceName, out GitObjectID id)
     {
         GitError result;
 
         // Relatively heavy struct, pin the reference instead of copying for performance
         fixed (GitObjectID* ptr = &id)
         {
-            result = NativeApi.git_reference_name_to_id(ptr, NativeHandle, name);
+            result = NativeApi.git_reference_name_to_id(ptr, NativeHandle, referenceName);
         }
 
         switch (result)
@@ -459,6 +563,74 @@ public unsafe readonly partial struct RepositoryHandle(nint handle) : IDisposabl
         }
 
         object IEnumerator.Current => throw new NotImplementedException();
+
+        public void Dispose()
+        {
+            if (_iteratorHandle != 0)
+            {
+                NativeApi.git_reference_iterator_free(_iteratorHandle);
+                _iteratorHandle = 0;
+            }
+        }
+    }
+    public readonly struct ReferenceNameEnumerable(RepositoryHandle repo, string? glob) : IEnumerable<string>
+    {
+        private readonly RepositoryHandle _repository = repo;
+        private readonly string? _glob = glob;
+
+        public ReferenceNameEnumerator GetEnumerator()
+        {
+            nint handle;
+
+            if (_glob is null)
+            {
+                Git2.ThrowIfError(NativeApi.git_reference_iterator_new(&handle, _repository.NativeHandle));
+            }
+            else
+            {
+                Git2.ThrowIfError(NativeApi.git_reference_iterator_glob_new(&handle, _repository.NativeHandle, _glob));
+            }
+
+            return new(handle);
+        }
+
+        IEnumerator<string> IEnumerable<string>.GetEnumerator() => GetEnumerator();
+
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+    }
+
+    public struct ReferenceNameEnumerator : IEnumerator<string>
+    {
+        private nint _iteratorHandle;
+
+        internal ReferenceNameEnumerator(nint handle) => _iteratorHandle = handle;
+
+        public string Current { readonly get; private set; } = null!;
+
+        public bool MoveNext()
+        {
+            byte* name;
+            var code = NativeApi.git_reference_next_name(&name, _iteratorHandle);
+
+            switch (code)
+            {
+                case GitError.OK:
+                    Current = Utf8StringMarshaller.ConvertToManaged(name)!;
+                    return true;
+                case GitError.IterationOver:
+                    Current = default!;
+                    return false;
+                default:
+                    throw Git2.ExceptionForError(code);
+            }
+        }
+
+        public void Reset()
+        {
+            throw new NotSupportedException();
+        }
+
+        object IEnumerator.Current => this.Current;
 
         public void Dispose()
         {

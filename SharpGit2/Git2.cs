@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+﻿using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices.Marshalling;
 
 namespace SharpGit2;
 
@@ -6,11 +7,7 @@ internal static unsafe partial class Git2
 {
     internal const string LibraryName = "";
 
-    [LibraryImport(Git2.LibraryName)]
-    internal static partial void git_commitarray_dispose(git_commitarray* commitarray);
 
-    [LibraryImport(LibraryName)]
-    internal static partial void git_strarray_dispose(git_strarray* strarray);
 
     internal static Exception ExceptionForError(GitError error)
     {
@@ -34,12 +31,13 @@ internal static unsafe partial class Git2
 
     internal static bool ErrorOrBoolean(int code)
     {
-        if ((uint)code > 1u)
+        if (code < 0)
             ThrowError((GitError)code);
 
-        return code == 1;
+        return code != 0;
     }
 
+#pragma warning disable IDE1006
     internal struct git_commitarray
     {
         public void* commits;
@@ -50,5 +48,23 @@ internal static unsafe partial class Git2
     {
         public byte** strings;
         public nuint count;
+
+        public readonly string[] ToManaged()
+        {
+            if (count > int.MaxValue)
+                throw new InvalidOperationException("Too many strings in native string array!");
+
+            var span = new ReadOnlySpan<nint>(strings, (int)count);
+
+            var managedArray = new string[span.Length];
+
+            for (int i = 0; i < span.Length; ++i)
+            {
+                managedArray[i] = Utf8StringMarshaller.ConvertToManaged((byte*)span[i])!;
+            }
+
+            return managedArray;
+        }
     }
+#pragma warning restore IDE1006
 }
