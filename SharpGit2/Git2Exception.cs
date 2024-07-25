@@ -10,7 +10,7 @@ internal class Git2Exception : ApplicationException
 {
     public GitError ErrorCode { get; }
 
-    public Git2Exception(GitError code)
+    public Git2Exception(GitError code, string message) : base(message)
     {
         ErrorCode = code;
     }

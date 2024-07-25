@@ -1,4 +1,5 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices.Marshalling;
 
 namespace SharpGit2;
@@ -17,13 +18,20 @@ public static unsafe partial class Git2
         return NativeApi.git_libgit2_shutdown();
     }
 
-    internal static Exception ExceptionForError(GitError error)
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    internal static Exception ExceptionForError(GitError error, string? message = null)
     {
-        return error switch
+        if (message is null)
         {
-            GitError.InvalidSpec => new ArgumentException("Name/Ref Specification was not followed!"),
-            _ => new Git2Exception(error),
-        };
+            var err = NativeApi.git_error_last();
+
+            Debug.Assert(err != null);
+            Debug.Assert(err->@class == (int)error);
+
+            message = Utf8StringMarshaller.ConvertToManaged(err->Message)!;
+        }
+
+        return new Git2Exception(error, message);
     }
 
     internal static void ThrowError(GitError code)
@@ -73,6 +81,12 @@ public static unsafe partial class Git2
 
             return managedArray;
         }
+    }
+
+    internal struct Error
+    {
+        public byte* Message;
+        public int @class;
     }
 #pragma warning restore IDE1006
 }
