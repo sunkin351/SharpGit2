@@ -134,15 +134,13 @@ public unsafe readonly partial struct RepositoryHandle(nint handle) : IDisposabl
         return new ReferenceNameEnumerable(this, glob);
     }
 
-    internal GitError ForEachReference(delegate* unmanaged<nint, nint, GitError> callback, nint payload)
-    {
-        return NativeApi.git_reference_foreach(NativeHandle, callback, payload);
-    }
-
     private const GitError ForEachBreak = (GitError)1;
     private const GitError ForEachException = GitError.User;
 
-    public delegate void ForEachReferenceCallback(ReferenceHandle reference, ref bool breakLoop);
+    internal GitError ForEachReference(delegate* unmanaged[Cdecl]<nint, nint, GitError> callback, nint payload)
+    {
+        return NativeApi.git_reference_foreach(NativeHandle, callback, payload);
+    }
 
     public void ForEachReference(Func<ReferenceHandle, bool> callback, bool autoDispose = true)
     {
@@ -169,7 +167,7 @@ public unsafe readonly partial struct RepositoryHandle(nint handle) : IDisposabl
             Git2.ThrowError(error);
         }
 
-        [UnmanagedCallersOnly]
+        [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
         static GitError _Callback(nint reference, nint payload)
         {
             var referenceHandle = new ReferenceHandle(reference);
@@ -197,7 +195,7 @@ public unsafe readonly partial struct RepositoryHandle(nint handle) : IDisposabl
 
     public delegate bool ForEachReferenceUTF8NameCallback(ReadOnlySpan<byte> utf8Name);
 
-    internal GitError ForEachReferenceName(string? glob, delegate* unmanaged<byte*, nint, GitError> callback, nint payload)
+    internal GitError ForEachReferenceName(string? glob, delegate* unmanaged[Cdecl]<byte*, nint, GitError> callback, nint payload)
     {
         GitError error;
         if (glob is null)
@@ -236,7 +234,7 @@ public unsafe readonly partial struct RepositoryHandle(nint handle) : IDisposabl
             Git2.ThrowError(error);
         }
 
-        [UnmanagedCallersOnly]
+        [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
         static GitError _Callback(byte* name, nint payload)
         {
             var context = (ForEachContext<ForEachReferenceUTF8NameCallback>)GCHandle.FromIntPtr(payload).Target!;
@@ -285,7 +283,7 @@ public unsafe readonly partial struct RepositoryHandle(nint handle) : IDisposabl
             Git2.ThrowError(error);
         }
 
-        [UnmanagedCallersOnly]
+        [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
         static GitError _Callback(byte* name, nint payload)
         {
             var context = (ForEachContext<Func<string, bool>>)GCHandle.FromIntPtr(payload).Target!;

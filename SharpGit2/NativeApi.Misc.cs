@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
@@ -10,9 +11,11 @@ namespace SharpGit2;
 internal unsafe static partial class NativeApi
 {
     [LibraryImport(Git2.LibraryName)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial int git_libgit2_init();
 
     [LibraryImport(Git2.LibraryName)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial int git_libgit2_shutdown();
 
     // Needs to be determined how best to handle variadic parameters
@@ -35,12 +38,15 @@ internal unsafe static partial class NativeApi
     /// The memory for this object is managed by libgit2. It should not be freed.
     /// </remarks>
     [LibraryImport(Git2.LibraryName)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial Git2.Error* git_error_last();
     
     [LibraryImport(Git2.LibraryName)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial void git_commitarray_dispose(Git2.git_commitarray* commitarray);
 
     [LibraryImport(Git2.LibraryName)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial void git_strarray_dispose(Git2.git_strarray* strarray);
 
 }

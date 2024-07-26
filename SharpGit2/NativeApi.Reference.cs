@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
@@ -16,6 +17,7 @@ internal static unsafe partial class NativeApi
     /// <param name="reference2">The second reference</param>
     /// <returns>0 if the same, else a stable but meaningless ordering.</returns>
     [LibraryImport(Git2.LibraryName)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial int git_reference_cmp(nint reference1, nint reference2);
 
     /// <summary>
@@ -47,6 +49,7 @@ internal static unsafe partial class NativeApi
     /// and it does not have a reflog.
     /// </remarks>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial GitError git_reference_create(ReferenceHandle* reference, nint repository, string name, GitObjectID* id, int force, string? logMessage);
 
 
@@ -85,6 +88,7 @@ internal static unsafe partial class NativeApi
     /// It will return <see cref="GitError.Modified"/> if the reference's value at the time of updating does not match the one passed through <paramref name="currentId"/> (i.e. if the ref has changed since the user read it).
     /// </remarks>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial GitError git_reference_create_matching(ReferenceHandle* reference, nint repository, string name, GitObjectID* id, int force, GitObjectID* currentId, string? logMessage);
 
     /// <summary>
@@ -98,6 +102,7 @@ internal static unsafe partial class NativeApi
     /// This function will return an error if the reference has changed from the time it was looked up.
     /// </remarks>
     [LibraryImport(Git2.LibraryName)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial GitError git_reference_delete(nint reference);
 
     /// <summary>
@@ -108,6 +113,7 @@ internal static unsafe partial class NativeApi
     /// <returns>0 or an error code</returns>
     /// <remarks>Call <see cref="git_reference_free(nint)"/> to free the data.</remarks>
     [LibraryImport(Git2.LibraryName)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial GitError git_reference_dup(ReferenceHandle* duplicant, nint reference);
 
     /// <summary>
@@ -119,6 +125,7 @@ internal static unsafe partial class NativeApi
     /// <returns>0 or an error code</returns>
     /// <remarks>Apply the git precedence rules to the given shorthand to determine which reference the user is referring to.</remarks>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial GitError git_reference_dwim(ReferenceHandle* reference, nint repository, string shorthand);
 
     /// <summary>
@@ -133,6 +140,7 @@ internal static unsafe partial class NativeApi
     /// Make sure that successive updates to the reference will append to its log.
     /// </remarks>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial GitError git_reference_ensure_log(nint repository, string referenceName);
 
     /// <summary>
@@ -149,7 +157,8 @@ internal static unsafe partial class NativeApi
     /// Note that the callback function is responsible to call <see cref="ReferenceHandle.git_reference_free(nint)"/> on each reference passed to it.
     /// </remarks>
     [LibraryImport(Git2.LibraryName)]
-    internal static partial GitError git_reference_foreach(nint repository, delegate* unmanaged<nint, nint, GitError> callback, nint payload);
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    internal static partial GitError git_reference_foreach(nint repository, delegate* unmanaged[Cdecl]<nint, nint, GitError> callback, nint payload);
 
     /// <summary>
     /// Perform a callback on each reference in the repository whose name matches the given pattern.
@@ -167,7 +176,8 @@ internal static unsafe partial class NativeApi
     /// and square brackets can be used to define character ranges (such as "[0-9]" for digits).
     /// </remarks>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
-    internal static partial GitError git_reference_foreach_glob(nint repository, string glob, delegate* unmanaged<byte*, nint, GitError> callback, nint payload);
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    internal static partial GitError git_reference_foreach_glob(nint repository, string glob, delegate* unmanaged[Cdecl]<byte*, nint, GitError> callback, nint payload);
 
     /// <summary>
     /// Perform a callback on the fully-qualified name of each reference.
@@ -182,13 +192,15 @@ internal static unsafe partial class NativeApi
     /// Returning a non-zero value from the callback will terminate the iteration.
     /// </remarks>
     [LibraryImport(Git2.LibraryName)]
-    internal static partial GitError git_reference_foreach_name(nint repository, delegate* unmanaged<byte*, nint, GitError> callback, nint payload);
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    internal static partial GitError git_reference_foreach_name(nint repository, delegate* unmanaged[Cdecl]<byte*, nint, GitError> callback, nint payload);
 
     /// <summary>
     /// Free the given reference.
     /// </summary>
     /// <param name="reference">The reference</param>
     [LibraryImport(Git2.LibraryName)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial void git_reference_free(nint reference);
 
     /// <summary>
@@ -198,6 +210,7 @@ internal static unsafe partial class NativeApi
     /// <param name="referenceName">the reference's name</param>
     /// <returns>0 when no reflog can be found, 1 when it exists; otherwise an error code from <see cref="GitError"/>.</returns>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial int git_reference_has_log(nint repository, string referenceName);
 
     /// <summary>
@@ -206,6 +219,7 @@ internal static unsafe partial class NativeApi
     /// <param name="reference">A git reference</param>
     /// <returns>1 when the reference lives in the refs/heads namespace; 0 otherwise.</returns>
     [LibraryImport(Git2.LibraryName)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial int git_reference_is_branch(nint reference);
 
     /// <summary>
@@ -214,6 +228,7 @@ internal static unsafe partial class NativeApi
     /// <param name="reference">A git reference</param>
     /// <returns>1 when the reference lives in the refs/notes namespace; 0 otherwise.</returns>
     [LibraryImport(Git2.LibraryName)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial int git_reference_is_note(nint reference);
 
     /// <summary>
@@ -222,6 +237,7 @@ internal static unsafe partial class NativeApi
     /// <param name="reference">A git reference</param>
     /// <returns>1 when the reference lives in the refs/notes namespace; 0 otherwise.</returns>
     [LibraryImport(Git2.LibraryName)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial int git_reference_is_remote(nint reference);
 
     /// <summary>
@@ -230,6 +246,7 @@ internal static unsafe partial class NativeApi
     /// <param name="reference">A git reference</param>
     /// <returns>1 when the reference lives in the refs/tags namespace; 0 otherwise.</returns>
     [LibraryImport(Git2.LibraryName)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial int git_reference_is_tag(nint reference);
 
     /// <summary>
@@ -243,6 +260,7 @@ internal static unsafe partial class NativeApi
     /// 2. Names prefixed with "refs/" can be almost anything. You must avoid the characters '~', '^', ':', '\', '?', '[', and '*', and the sequences ".." and "@{" which have special meaning to revparse.
     /// </remarks>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial int git_reference_is_valid_name(string refname);
 
     /// <summary>
@@ -250,6 +268,7 @@ internal static unsafe partial class NativeApi
     /// </summary>
     /// <param name="iterator">the iterator to free</param>
     [LibraryImport(Git2.LibraryName)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial void git_reference_iterator_free(nint iterator);
 
     /// <summary>
@@ -260,6 +279,7 @@ internal static unsafe partial class NativeApi
     /// <param name="glob">the glob to match against the reference names</param>
     /// <returns>0 or an error code</returns>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial GitError git_reference_iterator_glob_new(nint* iterator, nint repository, string glob);
 
     /// <summary>
@@ -269,6 +289,7 @@ internal static unsafe partial class NativeApi
     /// <param name="repository">the repository</param>
     /// <returns>0 or an error code</returns>
     [LibraryImport(Git2.LibraryName)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial GitError git_reference_iterator_new(nint* iterator, nint repository);
 
     /// <summary>
@@ -283,6 +304,7 @@ internal static unsafe partial class NativeApi
     /// using <see cref="git_strarray_dispose(Git2.git_strarray*)"/>.
     /// </remarks>
     [LibraryImport(Git2.LibraryName)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial GitError git_reference_list(Git2.git_strarray* list, nint repository);
 
     /// <summary>
@@ -300,6 +322,7 @@ internal static unsafe partial class NativeApi
     /// The name will be checked for validity. See <see cref="ReferenceHandle.git_reference_is_valid_name(string)"/> for rules about valid names.
     /// </remarks>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial GitError git_reference_lookup(ReferenceHandle* reference, nint repository, string name);
 
     /// <summary>
@@ -311,6 +334,7 @@ internal static unsafe partial class NativeApi
     /// See <see cref="git_reference_name_is_valid(int*, string)"/> for rules about valid names.
     /// </remarks>
     [LibraryImport(Git2.LibraryName)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial byte* git_reference_name(nint reference);
 
     /// <summary>
@@ -323,6 +347,7 @@ internal static unsafe partial class NativeApi
     /// See <see cref="git_reference_is_valid_name(string)"/> for rules about valid names.
     /// </remarks>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial GitError git_reference_name_is_valid(int* valid, string referenceName);
 
     /// <summary>
@@ -341,10 +366,12 @@ internal static unsafe partial class NativeApi
     /// The name will be checked for validity. See <see cref="git_reference_is_valid_name(string)"/> for rules about valid names.
     /// </remarks>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial GitError git_reference_name_to_id(GitObjectID* id, nint repository, string name);
 
     ///<inheritdoc cref="git_reference_name_to_id(GitObjectID*, nint, string)"/>
     [LibraryImport(Git2.LibraryName)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial GitError git_reference_name_to_id(GitObjectID* id, nint repository, byte* name);
 
     /// <summary>
@@ -354,6 +381,7 @@ internal static unsafe partial class NativeApi
     /// <param name="iterator">the iterator</param>
     /// <returns>0, <see cref="GitError.IterationOver"/> if there are no more; or an error code</returns>
     [LibraryImport(Git2.LibraryName)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial GitError git_reference_next(ReferenceHandle* reference, nint iterator);
 
     /// <summary>
@@ -367,6 +395,7 @@ internal static unsafe partial class NativeApi
     /// as it avoids the allocation of the <see cref="ReferenceHandle"/> object which <see cref="git_reference_next(ReferenceHandle*, nint)"/> needs.
     /// </remarks>
     [LibraryImport(Git2.LibraryName)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial GitError git_reference_next_name(byte** name, nint iterator);
 
     /// <summary>
@@ -385,6 +414,7 @@ internal static unsafe partial class NativeApi
     /// See <see cref="git_reference_is_valid_name(string)"/> for rules about valid names.
     /// </remarks>
     [LibraryImport(Git2.LibraryName)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial GitError git_reference_normalize_name(byte* buffer_out, nuint buffer_size, byte* name, GitReferenceFormat flags);
 
     /// <summary>
@@ -393,6 +423,7 @@ internal static unsafe partial class NativeApi
     /// <param name="reference">The reference</param>
     /// <returns>a pointer to the repo</returns>
     [LibraryImport(Git2.LibraryName)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial nint git_reference_owner(nint reference);
 
     /// <summary>
@@ -408,6 +439,7 @@ internal static unsafe partial class NativeApi
     /// If you pass <see cref="GitObjectType.Any"/> as the target type, then the object will be peeled until a non-tag object is met.
     /// </remarks>
     [LibraryImport(Git2.LibraryName)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial GitError git_reference_peel(GitObjectHandle* gitObject, nint reference, GitObjectType type);
 
     /// <summary>
@@ -420,6 +452,7 @@ internal static unsafe partial class NativeApi
     /// This method removes the named reference from the repository without looking at its old value.
     /// </remarks>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial GitError git_reference_remove(nint repository, string name);
 
     /// <summary>
@@ -443,6 +476,7 @@ internal static unsafe partial class NativeApi
     /// IMPORTANT: The user needs to write a proper reflog entry if the reflog is enabled for the repository. We only rename the reflog if it exists.
     /// </remarks>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial GitError git_reference_rename(ReferenceHandle* newReference, nint reference, string newName, int force, string? logMessage);
 
     /// <summary>
@@ -459,6 +493,7 @@ internal static unsafe partial class NativeApi
     /// If a direct reference is passed as an argument, a copy of that reference is returned. This copy must be manually freed too.
     /// </remarks>
     [LibraryImport(Git2.LibraryName)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial GitError git_reference_resolve(ReferenceHandle* resolvedRef, nint reference);
 
     /// <summary>
@@ -476,6 +511,7 @@ internal static unsafe partial class NativeApi
     /// The new reference will be written to disk, overwriting the given reference.
     /// </remarks>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial GitError git_reference_set_target(ReferenceHandle* newReference, nint reference, GitObjectID* id, string? LogMessage);
 
     /// <summary>
@@ -488,6 +524,7 @@ internal static unsafe partial class NativeApi
     /// The memory is owned by the reference and must not be freed.
     /// </remarks>
     [LibraryImport(Git2.LibraryName)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial byte* git_reference_shorthand(nint reference);
 
     /// <summary>
@@ -524,6 +561,7 @@ internal static unsafe partial class NativeApi
     /// and it does not have a reflog.
     /// </remarks>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial GitError git_reference_symbolic_create(ReferenceHandle* reference, nint repository, string name, string target, int force, string? logMessage);
 
     /// <summary>
@@ -547,6 +585,7 @@ internal static unsafe partial class NativeApi
     /// If <paramref name="currentValue"/> is null, this function will return <see cref="GitError.Modified"/> if the ref already exists.
     /// </remarks>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial GitError git_reference_symbolic_create_matching(ReferenceHandle* reference, nint repository, string name, string target, int force, string? currentValue, string? logMessage);
 
     /// <summary>
@@ -565,10 +604,12 @@ internal static unsafe partial class NativeApi
     /// The message for the reflog will be ignored if the reference does not belong in the standard set (HEAD, branches and remote-tracking branches) and it does not have a reflog.
     /// </remarks>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial GitError git_reference_symbolic_set_target(ReferenceHandle* reference, nint refHandle, string target, string? logMessage);
 
     /// <inheritdoc cref="git_reference_symbolic_set_target(ReferenceHandle*, nint, string, string?)"/>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial GitError git_reference_symbolic_set_target(ReferenceHandle* reference, nint refHandle, byte* target, string? logMessage);
 
     /// <summary>
@@ -578,6 +619,7 @@ internal static unsafe partial class NativeApi
     /// <returns>a pointer to the name if available, NULL otherwise</returns>
     /// <remarks>Only available if the reference is symbolic.</remarks>
     [LibraryImport(Git2.LibraryName)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial byte* git_reference_symbolic_target(nint reference);
 
     /// <summary>
@@ -590,6 +632,7 @@ internal static unsafe partial class NativeApi
     /// To find the OID of a symbolic ref, call <see cref="git_reference_resolve(ReferenceHandle*, nint)"/> and then this function(or maybe use <see cref="git_reference_name_to_id(GitObjectID*, nint, byte*)"/> to directly resolve a reference name all the way through to an OID)
     /// </remarks>
     [LibraryImport(Git2.LibraryName)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial GitObjectID* git_reference_target(nint reference);
 
     /// <summary>
@@ -601,6 +644,7 @@ internal static unsafe partial class NativeApi
     /// This peeled OID only applies to direct references that point to a hard Tag object: it is the result of peeling such Tag.
     /// </remarks>
     [LibraryImport(Git2.LibraryName)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial GitObjectID* git_reference_target_peel(nint reference);
 
     /// <summary>
@@ -612,6 +656,7 @@ internal static unsafe partial class NativeApi
     /// Either <see cref="GitReferenceType.Direct"/> or <see cref="GitReferenceType.Symbolic"/>
     /// </remarks>
     [LibraryImport(Git2.LibraryName)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial GitReferenceType git_reference_target_type(nint reference);
 
 }
