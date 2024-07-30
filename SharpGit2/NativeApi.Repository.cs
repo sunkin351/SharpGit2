@@ -1,12 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices.Marshalling;
+﻿using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
-using System.Drawing;
+using System.Runtime.InteropServices.Marshalling;
 
 namespace SharpGit2;
 
@@ -100,16 +94,13 @@ internal static unsafe partial class NativeApi
     /// If true, then the lookup will not stop when a filesystem device change is detected while exploring parent directories.
     /// </param>
     /// <param name="ceilingDirs">
-    /// A GIT_PATH_LIST_SEPARATOR separated list of absolute symbolic link free paths.
+    /// A <see cref="Git2.PathListSeparator"/> separated list of absolute symbolic link free paths.
     /// The lookup will stop when any of this paths is reached. Note that the lookup
     /// always performs on <paramref name="startPath"/> no matter <paramref name="startPath"/>
     /// appears in <paramref name="ceilingDirs"/>. <paramref name="ceilingDirs"/> might be
     /// <see langword="null"/> (which is equivalent to an empty string).
     /// </param>
     /// <returns>0 or an error code</returns>
-    /// <remarks>
-    /// The method will automatically detect if the repository is bare (if there is a repository).
-    /// </remarks>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial GitError git_repository_discover(Git2.Buffer* @out, string startPath, int acrossFS, string? ceilingDirs);

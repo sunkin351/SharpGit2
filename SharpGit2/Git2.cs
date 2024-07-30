@@ -25,6 +25,133 @@ public static unsafe partial class Git2
         }
     }
 
+    ///<inheritdoc cref="Discover(string, bool, string?)"/>
+    public static string? Discover(string startPath)
+    {
+        return Discover(startPath, true, null);
+    }
+
+    ///<inheritdoc cref="Discover(string, bool, string?)"/>
+    public static string? Discover(string startPath, bool acrossFileSystems)
+    {
+        return Discover(startPath, acrossFileSystems, null);
+    }
+
+    /// <summary>
+    /// Look for a Git repository and return it's path as a string.
+    /// Starts searching from <paramref name="startPath"/> and if
+    /// it doesn't find a repository, searches each parent directory
+    /// until it finds one.
+    /// </summary>
+    /// <param name="startPath">The base path where the lookup starts</param>
+    /// <param name="acrossFileSystems">
+    /// If true, then the lookup will not stop when a filesystem device change is detected while exploring parent directories.
+    /// </param>
+    /// <param name="ceilingDirs">
+    /// A <see cref="Git2.PathListSeparator"/> separated list of absolute symbolic link free paths.
+    /// The lookup will stop when any of this paths is reached. Note that the lookup
+    /// always performs on <paramref name="startPath"/> no matter <paramref name="startPath"/>
+    /// appears in <paramref name="ceilingDirs"/>. <paramref name="ceilingDirs"/> might be
+    /// <see langword="null"/> (which is equivalent to an empty string).
+    /// </param>
+    /// <returns>
+    /// Returns the found git repository path, or <see langword="null"/> is one isn't found.
+    /// </returns>
+    public static string? Discover(string startPath, bool acrossFileSystems, string? ceilingDirs)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(startPath);
+
+        Git2.Buffer buffer = default;
+
+        var error = NativeApi.git_repository_discover(&buffer, startPath, acrossFileSystems ? 1 : 0, ceilingDirs);
+
+        switch (error)
+        {
+            case GitError.OK:
+                try
+                {
+                    return Encoding.UTF8.GetString(buffer.Ptr, checked((int)buffer.Size));
+                }
+                finally
+                {
+                    NativeApi.git_buf_dispose(&buffer);
+                }
+            case GitError.NotFound:
+                return null;
+            default:
+                throw Git2.ExceptionForError(error);
+        }
+    }
+
+    public static RepositoryHandle InitRepository(string path)
+    {
+        return InitRepository(path, false);
+    }
+
+    public static RepositoryHandle InitRepository(string path, bool isBare)
+    {
+        RepositoryHandle handle;
+        Git2.ThrowIfError(NativeApi.git_repository_init(&handle, path, isBare ? 1u : 0u));
+
+        return handle;
+    }
+
+    public static RepositoryHandle InitRepository(string path, RepositoryInitOptions options)
+    {
+        RepositoryHandle handle;
+        GitError error;
+
+        fixed (RepositoryInitOptions.Unmanaged* pOptions = &options._structure)
+        {
+            error = NativeApi.git_repository_init_ext(&handle, path, pOptions);
+        }
+
+        Git2.ThrowIfError(error);
+
+        return handle;
+    }
+
+    public static RepositoryHandle OpenRepository(string path)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(path);
+
+        RepositoryHandle repository;
+        Git2.ThrowIfError(NativeApi.git_repository_open(&repository, path));
+
+        return repository;
+    }
+
+    public static RepositoryHandle OpenRepository(string? path, RepositoryOpenFlags flags, string? ceiling_dirs)
+    {
+        if ((flags & RepositoryOpenFlags.FromEnvironment) == 0)
+            ArgumentException.ThrowIfNullOrEmpty(path);
+
+        RepositoryHandle repository;
+        Git2.ThrowIfError(NativeApi.git_repository_open_ext(&repository, path, flags, ceiling_dirs));
+
+        return repository;
+    }
+
+    public static RepositoryHandle OpenBareRepository(string path)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(path);
+
+        RepositoryHandle repository;
+        Git2.ThrowIfError(NativeApi.git_repository_open_bare(&repository, path));
+
+        return repository;
+    }
+
+    public static RepositoryHandle OpenRepositoryFromWorktree(WorkTreeHandle worktree)
+    {
+        ArgumentNullException.ThrowIfNull(worktree.NativeHandle);
+
+        RepositoryHandle repository;
+        Git2.ThrowIfError(NativeApi.git_repository_open_from_worktree(&repository, worktree.NativeHandle));
+
+        return repository;
+    }
+
     [MethodImpl(MethodImplOptions.NoInlining)]
     internal static Exception ExceptionForError(GitError error, string? message = null)
     {
