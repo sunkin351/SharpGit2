@@ -8,9 +8,14 @@ using System.Text;
 
 namespace SharpGit2;
 
-public unsafe readonly partial struct RepositoryHandle(nint handle) : IDisposable
+public unsafe readonly partial struct RepositoryHandle : IDisposable
 {
-    internal readonly nint NativeHandle = handle;
+    internal readonly Git2.Repository* NativeHandle;
+
+    internal RepositoryHandle(Git2.Repository* handle)
+    {
+        NativeHandle = handle;
+    }
 
     public static RepositoryHandle Init(string path)
     {
@@ -396,7 +401,7 @@ public unsafe readonly partial struct RepositoryHandle(nint handle) : IDisposabl
         }
     }
 
-    internal GitError ForEachReference(delegate* unmanaged[Cdecl]<nint, nint, GitError> callback, nint payload)
+    internal GitError ForEachReference(delegate* unmanaged[Cdecl]<Git2.Reference*, nint, GitError> callback, nint payload)
     {
         return NativeApi.git_reference_foreach(NativeHandle, callback, payload);
     }
@@ -427,7 +432,7 @@ public unsafe readonly partial struct RepositoryHandle(nint handle) : IDisposabl
         }
 
         [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
-        static GitError _Callback(nint reference, nint payload)
+        static GitError _Callback(Git2.Reference* reference, nint payload)
         {
             var referenceHandle = new ReferenceHandle(reference);
 
@@ -721,9 +726,9 @@ public unsafe readonly partial struct RepositoryHandle(nint handle) : IDisposabl
         return Utf8StringMarshaller.ConvertToManaged(NativeApi.git_repository_path(NativeHandle))!;
     }
 
-    public RefDBHandle GetRefDB()
+    public ReferenceDatabaseHandle GetRefDB()
     {
-        RefDBHandle refDB;
+        ReferenceDatabaseHandle refDB;
         Git2.ThrowIfError(NativeApi.git_repository_refdb(&refDB, NativeHandle));
 
         return refDB;
@@ -731,7 +736,7 @@ public unsafe readonly partial struct RepositoryHandle(nint handle) : IDisposabl
 
     public string[] GetReferenceNameList()
     {
-        Git2.git_strarray nativeArray = default;
+        Git2.StringArray nativeArray = default;
 
         Git2.ThrowIfError(NativeApi.git_reference_list(&nativeArray, NativeHandle));
 
@@ -918,7 +923,7 @@ public unsafe readonly partial struct RepositoryHandle(nint handle) : IDisposabl
 
         public ReferenceEnumerator GetEnumerator()
         {
-            nint handle;
+            Git2.Iterator* handle;
 
             if (_glob is null)
             {
@@ -929,7 +934,7 @@ public unsafe readonly partial struct RepositoryHandle(nint handle) : IDisposabl
                 Git2.ThrowIfError(NativeApi.git_reference_iterator_glob_new(&handle, _repository.NativeHandle, _glob));
             }
 
-            return new ReferenceEnumerator(handle);
+            return new(handle);
         }
 
         IEnumerator<ReferenceHandle> IEnumerable<ReferenceHandle>.GetEnumerator() => GetEnumerator();
@@ -939,9 +944,9 @@ public unsafe readonly partial struct RepositoryHandle(nint handle) : IDisposabl
 
     public struct ReferenceEnumerator : IEnumerator<ReferenceHandle>
     {
-        private nint _iteratorHandle;
+        private Git2.Iterator* _iteratorHandle;
 
-        internal ReferenceEnumerator(nint handle) => _iteratorHandle = handle;
+        internal ReferenceEnumerator(Git2.Iterator* handle) => _iteratorHandle = handle;
 
         public ReferenceHandle Current { get; private set; }
 
@@ -972,13 +977,14 @@ public unsafe readonly partial struct RepositoryHandle(nint handle) : IDisposabl
 
         public void Dispose()
         {
-            if (_iteratorHandle != 0)
+            if (_iteratorHandle is not null)
             {
                 NativeApi.git_reference_iterator_free(_iteratorHandle);
-                _iteratorHandle = 0;
+                _iteratorHandle = null;
             }
         }
     }
+
     public readonly struct ReferenceNameEnumerable(RepositoryHandle repo, string? glob) : IEnumerable<string>
     {
         private readonly RepositoryHandle _repository = repo;
@@ -986,7 +992,7 @@ public unsafe readonly partial struct RepositoryHandle(nint handle) : IDisposabl
 
         public ReferenceNameEnumerator GetEnumerator()
         {
-            nint handle;
+            Git2.Iterator* handle;
 
             if (_glob is null)
             {
@@ -1007,9 +1013,9 @@ public unsafe readonly partial struct RepositoryHandle(nint handle) : IDisposabl
 
     public struct ReferenceNameEnumerator : IEnumerator<string>
     {
-        private nint _iteratorHandle;
+        private Git2.Iterator* _iteratorHandle;
 
-        internal ReferenceNameEnumerator(nint handle) => _iteratorHandle = handle;
+        internal ReferenceNameEnumerator(Git2.Iterator* handle) => _iteratorHandle = handle;
 
         public string Current { readonly get; private set; } = null!;
 
@@ -1040,10 +1046,10 @@ public unsafe readonly partial struct RepositoryHandle(nint handle) : IDisposabl
 
         public void Dispose()
         {
-            if (_iteratorHandle != 0)
+            if (_iteratorHandle is not null)
             {
                 NativeApi.git_reference_iterator_free(_iteratorHandle);
-                _iteratorHandle = 0;
+                _iteratorHandle = null;
             }
         }
     }

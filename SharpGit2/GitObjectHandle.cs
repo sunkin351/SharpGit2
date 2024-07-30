@@ -42,9 +42,14 @@ public enum GitObjectType
     REF_Delta = 7
 }
 
-public readonly partial struct GitObjectHandle(nint nativeHandle) : IDisposable
+public unsafe readonly struct GitObjectHandle : IDisposable
 {
-    internal readonly nint NativeHandle = nativeHandle;
+    internal readonly Git2.Object* NativeHandle;
+
+    internal GitObjectHandle(Git2.Object* nativeHandle)
+    {
+        NativeHandle = nativeHandle;
+    }
 
     public void Dispose()
     {

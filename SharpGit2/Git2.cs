@@ -112,7 +112,14 @@ public static unsafe partial class Git2
         pointer = (byte*)Unsafe.AsPointer(ref MemoryMarshal.GetArrayDataReference(memory));
     }
 
-#pragma warning disable IDE1006
+    /// <summary>
+    /// An array of commit objects returned by libgit2.
+    /// </summary>
+    /// <remarks>
+    /// Lifetime of containing Commit objects is tied to the lifetime of the array.
+    /// <br/>
+    /// Do not dispose of the underlying objects, and only dispose of the array when you are done with all objects in the array.
+    /// </remarks>
     public struct CommitArray : IDisposable
     {
         internal Git2.Commit** commits;
@@ -133,7 +140,7 @@ public static unsafe partial class Git2
         }
     }
 
-    internal struct git_strarray
+    internal struct StringArray
     {
         public byte** strings;
         public nuint count;
@@ -174,6 +181,8 @@ public static unsafe partial class Git2
 	    /// not including a NUL terminator.
         /// </summary>
         public nuint Size;
+
+        public readonly ReadOnlySpan<byte> Span => new(Ptr, checked((int)Size));
     }
 
     internal struct Error
@@ -186,7 +195,31 @@ public static unsafe partial class Git2
     {
     }
 
+    internal struct Config
+    {
+    }
+
+    internal struct Index
+    {
+    }
+
+    internal struct Iterator
+    {
+    }
+
+    internal struct Object
+    {
+    }
+
+    internal struct ObjectDatabase
+    {
+    }
+
     internal struct Reference
+    {
+    }
+
+    internal struct ReferenceDatabase
     {
     }
 
@@ -197,5 +230,4 @@ public static unsafe partial class Git2
     internal struct Worktree
     {
     }
-#pragma warning restore IDE1006
 }

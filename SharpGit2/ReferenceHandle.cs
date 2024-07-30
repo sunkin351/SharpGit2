@@ -23,9 +23,14 @@ public enum GitReferenceType
     All = Direct | Symbolic
 }
 
-public unsafe readonly partial struct ReferenceHandle(nint handle) : IDisposable, IComparable<ReferenceHandle>
+public unsafe readonly partial struct ReferenceHandle : IDisposable, IComparable<ReferenceHandle>
 {
-    internal readonly nint NativeHandle = handle;
+    internal readonly Git2.Reference* NativeHandle;
+
+    internal ReferenceHandle(Git2.Reference* handle)
+    {
+        NativeHandle = handle;
+    }
 
     public bool IsBranch
     {
@@ -84,7 +89,7 @@ public unsafe readonly partial struct ReferenceHandle(nint handle) : IDisposable
 
     public override string ToString()
     {
-        return NativeHandle == 0 ? "< NULL >" : GetName();
+        return NativeHandle == null ? "< NULL >" : GetName();
     }
 
     public int CompareTo(ReferenceHandle other)
@@ -191,6 +196,14 @@ public unsafe readonly partial struct ReferenceHandle(nint handle) : IDisposable
     {
         ReferenceHandle newReference;
         Git2.ThrowIfError(NativeApi.git_reference_symbolic_set_target(&newReference, NativeHandle, target, logMessage));
+
+        return newReference;
+    }
+
+    public ReferenceHandle SetSymbolicTarget(ReferenceHandle target, string? logMessage)
+    {
+        ReferenceHandle newReference;
+        Git2.ThrowIfError(NativeApi.git_reference_symbolic_set_target(&newReference, NativeHandle, target.NativeName, logMessage));
 
         return newReference;
     }

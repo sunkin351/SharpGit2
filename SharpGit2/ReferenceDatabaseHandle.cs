@@ -6,13 +6,13 @@ using System.Threading.Tasks;
 
 namespace SharpGit2;
 
-public unsafe readonly struct IndexHandle : IDisposable
+public unsafe readonly struct ReferenceDatabaseHandle : IDisposable
 {
-    internal readonly Git2.Index* NativeHandle;
+    internal readonly Git2.ReferenceDatabase* NativeHandle;
 
-    internal IndexHandle(Git2.Index* nativeHandle)
+    internal ReferenceDatabaseHandle(Git2.ReferenceDatabase* handle)
     {
-        NativeHandle = nativeHandle;
+        NativeHandle = handle;
     }
 
     public void Dispose()

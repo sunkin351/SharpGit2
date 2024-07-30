@@ -22,7 +22,7 @@ internal static unsafe partial class NativeApi
     /// <returns>0 or an error code</returns>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_repository_commit_parents(Git2.CommitArray* commits, nint repository);
+    internal static partial GitError git_repository_commit_parents(Git2.CommitArray* commits, Git2.Repository* repository);
 
     /// <summary>
     /// Get the path of the shared common directory for this repository.
@@ -36,7 +36,7 @@ internal static unsafe partial class NativeApi
     /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial byte* git_repository_commondir(nint repository);
+    internal static partial byte* git_repository_commondir(Git2.Repository* repository);
 
     /// <summary>
     /// Get the configuration file for this repository.
@@ -52,7 +52,7 @@ internal static unsafe partial class NativeApi
     /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_repository_config(ConfigHandle* config, nint repository);
+    internal static partial GitError git_repository_config(ConfigHandle* config, Git2.Repository* repository);
 
     /// <summary>
     /// Get a snapshot of the repository's configuration
@@ -67,7 +67,7 @@ internal static unsafe partial class NativeApi
     /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_repository_config_snapshot(ConfigHandle* config, nint repository);
+    internal static partial GitError git_repository_config_snapshot(ConfigHandle* config, Git2.Repository* repository);
 
     /// <summary>
     /// Detach the HEAD.
@@ -85,7 +85,7 @@ internal static unsafe partial class NativeApi
     /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_repository_detach_head(nint repository);
+    internal static partial GitError git_repository_detach_head(Git2.Repository* repository);
 
     /// <summary>
     /// Look for a git repository and copy its path in the given buffer.
@@ -130,7 +130,7 @@ internal static unsafe partial class NativeApi
     /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_repository_fetchhead_foreach(nint repository, delegate* unmanaged[Cdecl]<byte*, byte*, GitObjectID*, uint, nint, GitError> callback, nint payload);
+    internal static partial GitError git_repository_fetchhead_foreach(Git2.Repository* repository, delegate* unmanaged[Cdecl]<byte*, byte*, GitObjectID*, uint, nint, GitError> callback, nint payload);
 
     /// <summary>
     /// Free a previously allocated repository
@@ -143,7 +143,7 @@ internal static unsafe partial class NativeApi
     /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial void git_repository_free(nint repository);
+    internal static partial void git_repository_free(Git2.Repository* repository);
 
     /// <summary>
     /// Get the currently active namespace for this repository
@@ -152,7 +152,7 @@ internal static unsafe partial class NativeApi
     /// <returns>the active namespace, or NULL if there isn't one</returns>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial byte* git_repository_get_namespace(nint repository);
+    internal static partial byte* git_repository_get_namespace(Git2.Repository* repository);
 
     /// <summary>
     /// Calculate hash of file using repository filtering rules.
@@ -188,7 +188,7 @@ internal static unsafe partial class NativeApi
     /// </remarks>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_repository_hashfile(GitObjectID* @out, nint repository, string path, GitObjectType type, string asPath);
+    internal static partial GitError git_repository_hashfile(GitObjectID* @out, Git2.Repository* repository, string path, GitObjectType type, string asPath);
 
     /// <summary>
     /// Retrieve and resolve the reference pointed at by HEAD.
@@ -206,7 +206,7 @@ internal static unsafe partial class NativeApi
     /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_repository_head(ReferenceHandle* head, nint repository);
+    internal static partial GitError git_repository_head(ReferenceHandle* head, Git2.Repository* repository);
 
     /// <summary>
     /// Check if a repository's HEAD is detached
@@ -220,7 +220,7 @@ internal static unsafe partial class NativeApi
     /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial int git_repository_head_detached(nint repository);
+    internal static partial int git_repository_head_detached(Git2.Repository* repository);
 
     /// <summary>
     /// Check if a worktree's HEAD is detached
@@ -233,7 +233,7 @@ internal static unsafe partial class NativeApi
     /// </remarks>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial int git_repository_head_detached_for_worktree(nint repository, string worktreeName);
+    internal static partial int git_repository_head_detached_for_worktree(Git2.Repository* repository, string worktreeName);
 
     /// <summary>
     /// Check if the current branch is unborn
@@ -249,7 +249,7 @@ internal static unsafe partial class NativeApi
     /// </remarks>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial int git_repository_head_unborn(nint repository);
+    internal static partial int git_repository_head_unborn(Git2.Repository* repository);
 
     /// <summary>
     /// Retrieve the configured identity to use for reflogs
@@ -263,7 +263,7 @@ internal static unsafe partial class NativeApi
     /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_repository_ident(byte** name, byte** email, nint repository);
+    internal static partial GitError git_repository_ident(byte** name, byte** email, Git2.Repository* repository);
 
     /// <summary>
     /// Get the Index file for this repository.
@@ -278,7 +278,7 @@ internal static unsafe partial class NativeApi
     /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_repository_index(IndexHandle* index, nint repository);
+    internal static partial GitError git_repository_index(IndexHandle* index, Git2.Repository* repository);
 
     /// <summary>
     /// Creates a new Git repository in the given folder.
@@ -321,7 +321,7 @@ internal static unsafe partial class NativeApi
     /// <returns>1 if the repository is bare, 0 otherwise.</returns>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial int git_repository_is_bare(nint repository);
+    internal static partial int git_repository_is_bare(Git2.Repository* repository);
 
     /// <summary>
     /// Check if a repository is empty
@@ -335,7 +335,7 @@ internal static unsafe partial class NativeApi
     /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial int git_repository_is_empty(nint repository);
+    internal static partial int git_repository_is_empty(Git2.Repository* repository);
 
     /// <summary>
     /// Determine if the repository was a shallow clone
@@ -344,7 +344,7 @@ internal static unsafe partial class NativeApi
     /// <returns>1 if shallow, zero if not</returns>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial int git_repository_is_shallow(nint repository);
+    internal static partial int git_repository_is_shallow(Git2.Repository* repository);
 
     /// <summary>
     /// Check if a repository is a linked work tree
@@ -353,7 +353,7 @@ internal static unsafe partial class NativeApi
     /// <returns>1 if the repository is a linked work tree, 0 otherwise.</returns>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial int git_repository_is_worktree(nint repository);
+    internal static partial int git_repository_is_worktree(Git2.Repository* repository);
 
     /// <summary>
     /// Get the location of a specific repository file or directory
@@ -364,7 +364,7 @@ internal static unsafe partial class NativeApi
     /// <returns>0, <see cref="GitError.NotFound"/> if the path cannot exist or an error code</returns>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_repository_item_path(Git2.Buffer* @out, nint repository, GitRepositoryItemType itemType);
+    internal static partial GitError git_repository_item_path(Git2.Buffer* @out, Git2.Repository* repository, GitRepositoryItemType itemType);
 
     /// <summary>
     /// If a merge is in progress, invoke 'callback' for each commit ID in the MERGE_HEAD file.
@@ -378,7 +378,7 @@ internal static unsafe partial class NativeApi
     /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_repository_mergehead_foreach(nint repository, delegate* unmanaged[Cdecl]<GitObjectID*, nint, GitError> callback, nint payload);
+    internal static partial GitError git_repository_mergehead_foreach(Git2.Repository* repository, delegate* unmanaged[Cdecl]<GitObjectID*, nint, GitError> callback, nint payload);
 
     /// <summary>
     /// Retrieve git's prepared message
@@ -396,7 +396,7 @@ internal static unsafe partial class NativeApi
     /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_repository_message(Git2.Buffer* @out, nint repository);
+    internal static partial GitError git_repository_message(Git2.Buffer* @out, Git2.Repository* repository);
 
     /// <summary>
     /// Remove git's prepared message.
@@ -404,11 +404,11 @@ internal static unsafe partial class NativeApi
     /// <param name="repository">Repository to remove prepared message from.</param>
     /// <returns>0 or an error code.</returns>
     /// <remarks>
-    /// Remove the message that <seealso cref="git_repository_message(Git2.Buffer*, nint)"/> retrieves.
+    /// Remove the message that <seealso cref="git_repository_message(Git2.Buffer*, Git2.Repository*)"/> retrieves.
     /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_repository_message_remove(nint repository);
+    internal static partial GitError git_repository_message_remove(Git2.Repository* repository);
 
     /// <summary>
     /// Get the Object Database for this repository.
@@ -423,7 +423,7 @@ internal static unsafe partial class NativeApi
     /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_repository_odb(ObjectDatabaseHandle* @out, nint repository);
+    internal static partial GitError git_repository_odb(ObjectDatabaseHandle* @out, Git2.Repository* repository);
 
 #if SHA256_OBJECT_ID
     /// <summary>
@@ -515,7 +515,7 @@ internal static unsafe partial class NativeApi
     /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial byte* git_repository_path(nint repository);
+    internal static partial byte* git_repository_path(Git2.Repository* repository);
 
     /// <summary>
     /// Get the Reference Database Backend for this repository.
@@ -525,7 +525,7 @@ internal static unsafe partial class NativeApi
     /// <returns>0 or an error code</returns>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_repository_refdb(RefDBHandle* refDB, nint repository);
+    internal static partial GitError git_repository_refdb(ReferenceDatabaseHandle* refDB, Git2.Repository* repository);
 
     /// <summary>
     /// Make the repository HEAD point to the specified reference.
@@ -544,10 +544,10 @@ internal static unsafe partial class NativeApi
     /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_repository_set_head(nint repository, byte* refname);
+    internal static partial GitError git_repository_set_head(Git2.Repository* repository, byte* refname);
 
     ///<inheritdoc cref="git_repository_set_head(nint, byte*)"/>
-    internal static GitError git_repository_set_head(nint repository, string refname)
+    internal static GitError git_repository_set_head(Git2.Repository* repository, string refname)
     {
         scoped Utf8StringMarshaller.ManagedToUnmanagedIn refNameIn = new();
         try
@@ -577,7 +577,7 @@ internal static unsafe partial class NativeApi
     /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_repository_set_head_detached(nint repository, GitObjectID* committish);
+    internal static partial GitError git_repository_set_head_detached(Git2.Repository* repository, GitObjectID* committish);
 
     /// <summary>
     /// Make the repository HEAD directly point to the Commit.
@@ -586,13 +586,13 @@ internal static unsafe partial class NativeApi
     /// <param name="committish"></param>
     /// <returns></returns>
     /// <remarks>
-    /// This behaves like <see cref="git_repository_set_head_detached(nint, GitObjectID*)"/>
+    /// This behaves like <see cref="git_repository_set_head_detached(Git2.Repository*, GitObjectID*)"/>
     /// but takes an annotated commit, which lets you specify which extended sha syntax string
     /// was specified by a user, allowing for more exact reflog messages.
     /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_repository_set_head_detached_from_annotated(nint repository, nint committish); // TODO: Needs to be exposed
+    internal static partial GitError git_repository_set_head_detached_from_annotated(Git2.Repository* repository, nint committish); // TODO: Needs to be exposed
 
     /// <summary>
     /// Set the identity to be used for writing reflogs
@@ -607,7 +607,7 @@ internal static unsafe partial class NativeApi
     /// </remarks>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_repository_set_ident(nint repository, string? name, string? email);
+    internal static partial GitError git_repository_set_ident(Git2.Repository* repository, string? name, string? email);
 
     /// <summary>
     /// Sets the active namespace for this Git Repository
@@ -622,7 +622,7 @@ internal static unsafe partial class NativeApi
     /// </remarks>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_repository_set_namespace(nint repository, string @namespace);
+    internal static partial GitError git_repository_set_namespace(Git2.Repository* repository, string @namespace);
 
     /// <summary>
     /// Set the path to the working directory for this repository
@@ -643,7 +643,7 @@ internal static unsafe partial class NativeApi
     /// </remarks>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_repository_set_workdir(nint repository, string workdir, int updateGitlink);
+    internal static partial GitError git_repository_set_workdir(Git2.Repository* repository, string workdir, int updateGitlink);
 
     /// <summary>
     /// Determines the status of a git repository - ie, whether an operation (merge, cherry-pick, etc) is in progress.
@@ -652,7 +652,7 @@ internal static unsafe partial class NativeApi
     /// <returns>The state of the repository</returns>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitRepositoryState git_repository_state(nint repository);
+    internal static partial GitRepositoryState git_repository_state(Git2.Repository* repository);
 
     /// <summary>
     /// Remove all the metadata associated with an ongoing command like merge, revert, cherry-pick, etc. For example: MERGE_HEAD, MERGE_MSG, etc.
@@ -661,7 +661,7 @@ internal static unsafe partial class NativeApi
     /// <returns>0 on success, or an error code</returns>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_repository_state_cleanup(nint repository);
+    internal static partial GitError git_repository_state_cleanup(Git2.Repository* repository);
 
     /// <summary>
     /// Get the path of the working directory for this repository
@@ -670,6 +670,6 @@ internal static unsafe partial class NativeApi
     /// <returns>The path to the working directory if it exists, or <see langword="null"/> if it does not.</returns>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial byte* git_repository_workdir(nint repository);
+    internal static partial byte* git_repository_workdir(Git2.Repository* repository);
 
 }

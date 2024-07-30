@@ -6,9 +6,14 @@ using System.Threading.Tasks;
 
 namespace SharpGit2;
 
-public readonly struct ConfigHandle(nint handle) : IDisposable
+public unsafe readonly struct ConfigHandle : IDisposable
 {
-    internal readonly nint NativeHandle = handle;
+    internal readonly Git2.Config* NativeHandle;
+
+    internal ConfigHandle(Git2.Config* handle)
+    {
+        NativeHandle = handle;
+    }
 
     public void Dispose()
     {
