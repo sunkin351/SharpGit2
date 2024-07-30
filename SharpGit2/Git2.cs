@@ -8,7 +8,7 @@ namespace SharpGit2;
 
 public static unsafe partial class Git2
 {
-    internal const string LibraryName = "";
+    internal const string LibraryName = "git2";
 
     public static int Initialize()
     {
