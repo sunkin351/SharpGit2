@@ -6,87 +6,92 @@ namespace SharpGit2;
 
 internal unsafe partial class NativeApi
 {
+    private static readonly nint _libraryHandle;
+
     static NativeApi()
     {
-        NativeLibrary.SetDllImportResolver(typeof(NativeApi).Assembly, (libraryName, assembly, searchPath) =>
+        string runtimesDirectory = Path.Join(AppContext.BaseDirectory, "runtimes");
+
+        if (Directory.Exists(runtimesDirectory))
         {
-            nint handle;
+            string arch = RuntimeInformation.ProcessArchitecture.ToString().ToLowerInvariant();
 
-            if (libraryName == Git2.LibraryName)
+            List<string> possibleDirectories = [];
+
+            if (OperatingSystem.IsWindows())
             {
-                var runtimesDirectory = Path.Join(AppContext.BaseDirectory, "runtimes");
+                var path = Path.Combine(runtimesDirectory, $"win-{arch}", "native");
+                if (Directory.Exists(path))
+                    possibleDirectories.Add(path);
+            }
+            else if (OperatingSystem.IsMacOSVersionAtLeast(10))
+            {
+                var path = Path.Combine(runtimesDirectory, $"osx-{arch}", "native");
+                if (Directory.Exists(path))
+                    possibleDirectories.Add(path);
+            }
+            else if (OperatingSystem.IsLinux())
+            {
+                arch = "-" + arch;
 
-                if (!Directory.Exists(runtimesDirectory))
+                var enumerable = new FileSystemEnumerable<string>(runtimesDirectory, (ref FileSystemEntry entry) =>
                 {
-                    goto Skip;
-                }
-
-                string arch = RuntimeInformation.ProcessArchitecture.ToString().ToLowerInvariant();
-
-                List<string> possibleDirectories = [];
-
-                if (OperatingSystem.IsWindows())
+                    return Path.Join(entry.Directory, entry.FileName, "native");
+                })
                 {
-                    var path = Path.Combine(runtimesDirectory, $"win-{arch}", "native");
-                    if (Directory.Exists(path))
-                        possibleDirectories.Add(path);
-                }
-                else if (OperatingSystem.IsMacOSVersionAtLeast(10))
-                {
-                    var path = Path.Combine(runtimesDirectory, $"osx-{arch}", "native");
-                    if (Directory.Exists(path))
-                        possibleDirectories.Add(path);
-                }
-                else if (OperatingSystem.IsLinux())
-                {
-                    arch = "-" + arch;
-
-                    var enumerable = new FileSystemEnumerable<string>(runtimesDirectory, (ref FileSystemEntry entry) =>
+                    ShouldIncludePredicate = (ref FileSystemEntry entry) =>
                     {
-                        return Path.Join(entry.Directory, entry.FileName, "native");
-                    })
-                    {
-                        ShouldIncludePredicate = (ref FileSystemEntry entry) =>
-                        {
-                            if (!entry.IsDirectory)
-                                return false;
+                        if (!entry.IsDirectory)
+                            return false;
 
-                            var name = entry.FileName;
+                        var name = entry.FileName;
 
-                            return name.StartsWith("linux-") && name.EndsWith(arch);
-                        }
-                    };
-
-                    possibleDirectories.AddRange(enumerable);
-                }
-
-                if (possibleDirectories.Count > 0)
-                {
-                    foreach (var dir in possibleDirectories)
-                    {
-                        foreach (var file in Directory.EnumerateFiles(dir))
-                        {
-                            var filename = Path.GetFileName(file.AsSpan());
-
-                            // We are relying on LibGit2Sharp's native binary package,
-                            // which has an odd naming scheme for it's native library
-                            // files. (e.g. the partial git commit hash at the end
-                            // just before the extension) Because we can't know what
-                            // the file name will be ahead of time, we use a regex to
-                            // match any possible libgit2 native library file name.
-                            if (FileNameRegex().IsMatch(filename)
-                                && NativeLibrary.TryLoad(file, out handle))
-                            {
-                                return handle;
-                            }
-                        }
+                        return name.StartsWith("linux-") && name.EndsWith(arch);
                     }
-                }
+                };
+
+                possibleDirectories.AddRange(enumerable);
             }
 
-        Skip:
+            if (possibleDirectories.Count > 0)
+            {
+                bool found = false;
+
+                foreach (var dir in possibleDirectories)
+                {
+                    foreach (var file in Directory.EnumerateFiles(dir))
+                    {
+                        var filename = Path.GetFileName(file.AsSpan());
+
+                        // We are relying on LibGit2Sharp's native binary package,
+                        // which has an odd naming scheme for it's native library
+                        // files. (e.g. the partial git commit hash at the end
+                        // just before the extension) Because we can't know what
+                        // the file name will be ahead of time, we use a regex to
+                        // match any possible libgit2 native library file name.
+                        if (FileNameRegex().IsMatch(filename)
+                            && NativeLibrary.TryLoad(file, out _libraryHandle))
+                        {
+                            found = true;
+                            break;
+                        }
+                    }
+
+                    if (found)
+                        break;
+                }
+            }
+        }
+
+        NativeLibrary.SetDllImportResolver(typeof(NativeApi).Assembly, (libraryName, assembly, searchPath) =>
+        {
+            if (libraryName == Git2.LibraryName && _libraryHandle != 0)
+            {
+                return _libraryHandle;
+            }
+
             // Fallback to the default search behavior
-            if (NativeLibrary.TryLoad(libraryName, assembly, searchPath, out handle))
+            if (NativeLibrary.TryLoad(libraryName, assembly, searchPath, out nint handle))
             {
                 return handle;
             }
