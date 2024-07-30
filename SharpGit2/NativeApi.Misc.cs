@@ -43,10 +43,13 @@ internal unsafe static partial class NativeApi
     
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial void git_commitarray_dispose(Git2.git_commitarray* commitarray);
+    internal static partial void git_commitarray_dispose(Git2.CommitArray* commitarray);
 
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial void git_strarray_dispose(Git2.git_strarray* strarray);
 
+    [LibraryImport(Git2.LibraryName)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    internal static partial void git_buf_dispose(Git2.Buffer* buffer);
 }

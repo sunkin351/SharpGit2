@@ -1,10 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SharpGit2;
 
@@ -34,17 +29,17 @@ internal static unsafe partial class NativeApi
     /// A direct reference (also called an object id reference) refers directly to a specific object id (a.k.a. OID or SHA) in the repository.
     /// The id permanently refers to the object (although the reference itself can be moved).
     /// For example, in libgit2 the direct ref "refs/tags/v0.17.0" refers to OID 5b9fac39d8a76b9139667c26a63e6b3f204b3977.
-    /// 
+    /// <br/><br/>
     /// The direct reference will be created in the repository and written to the disk.
     /// The generated reference object must be freed by the user.
-    /// 
-    /// Valid reference names must follow one of two patterns:
-    /// 1. Top-level names must contain only capital letters and underscores, and must begin and end with a letter. (e.g. "HEAD", "ORIG_HEAD").
+    /// <br/><br/>
+    /// Valid reference names must follow one of two patterns:<br/>
+    /// 1. Top-level names must contain only capital letters and underscores, and must begin and end with a letter. (e.g. "HEAD", "ORIG_HEAD").<br/>
     /// 2. Names prefixed with "refs/" can be almost anything.You must avoid the characters '~', '^', ':', '\', '?', '[', and '*', and the sequences ".." and "@{" which have special meaning to revparse.
-    /// 
+    /// <br/><br/>
     /// This function will return an error if a reference already exists with the given name unless <paramref name="force"/> is true,
     /// in which case it will be overwritten.
-    /// 
+    /// <br/><br/>
     /// The message for the reflog will be ignored if the reference does not belong in the standard set (HEAD, branches and remote-tracking branches)
     /// and it does not have a reflog.
     /// </remarks>
@@ -71,20 +66,20 @@ internal static unsafe partial class NativeApi
     /// A direct reference (also called an object id reference) refers directly to a specific object id (a.k.a. OID or SHA) in the repository.
     /// The id permanently refers to the object (although the reference itself can be moved).
     /// For example, in libgit2 the direct ref "refs/tags/v0.17.0" refers to OID 5b9fac39d8a76b9139667c26a63e6b3f204b3977.
-    /// 
+    /// <br/><br/>
     /// The direct reference will be created in the repository and written to the disk.
     /// The generated reference object must be freed by the user.
-    /// 
-    /// Valid reference names must follow one of two patterns:
-    /// 1. Top-level names must contain only capital letters and underscores, and must begin and end with a letter. (e.g. "HEAD", "ORIG_HEAD").
+    /// <br/><br/>
+    /// Valid reference names must follow one of two patterns:<br/>
+    /// 1. Top-level names must contain only capital letters and underscores, and must begin and end with a letter. (e.g. "HEAD", "ORIG_HEAD").<br/>
     /// 2. Names prefixed with "refs/" can be almost anything.You must avoid the characters '~', '^', ':', '\', '?', '[', and '*', and the sequences ".." and "@{" which have special meaning to revparse.
-    /// 
+    /// <br/><br/>
     /// This function will return an error if a reference already exists with the given name unless <paramref name="force"/> is true,
     /// in which case it will be overwritten.
-    /// 
+    /// <br/><br/>
     /// The message for the reflog will be ignored if the reference does not belong in the standard set (HEAD, branches and remote-tracking branches)
     /// and it does not have a reflog.
-    /// 
+    /// <br/><br/>
     /// It will return <see cref="GitError.Modified"/> if the reference's value at the time of updating does not match the one passed through <paramref name="currentId"/> (i.e. if the ref has changed since the user read it).
     /// </remarks>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
@@ -98,7 +93,8 @@ internal static unsafe partial class NativeApi
     /// <returns>0, <see cref="GitError.Modified"/> or an error code</returns>
     /// <remarks>
     /// This method works for both direct and symbolic references.
-    /// The reference will be immediately removed on disk but the memory will not be freed. Callers must call <see cref="git_reference_free(nint)"/>.
+    /// The reference will be immediately removed on disk but the memory will not be freed.
+    /// Callers must call <see cref="git_reference_free(nint)"/>.
     /// This function will return an error if the reference has changed from the time it was looked up.
     /// </remarks>
     [LibraryImport(Git2.LibraryName)]
