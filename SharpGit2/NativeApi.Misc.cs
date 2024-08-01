@@ -39,6 +39,14 @@ internal unsafe static partial class NativeApi
     internal static partial int git_libgit2_shutdown();
 
     /// <summary>
+    /// Query compile time options for libgit2.
+    /// </summary>
+    /// <returns></returns>
+    [LibraryImport(Git2.LibraryName)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    internal static partial GitFeatures git_libgit2_features();
+
+    /// <summary>
     /// Return the version of the libgit2 library being currently used.
     /// </summary>
     /// <param name="major">Store the major version number</param>

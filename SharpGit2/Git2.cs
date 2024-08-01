@@ -24,6 +24,8 @@ public static unsafe partial class Git2
         return new Version(major, minor, rev);
     }
 
+    public static GitFeatures NativeLibraryFeatures { get; } = NativeApi.git_libgit2_features();
+
     public static string PathListSeparator
     {
         get
