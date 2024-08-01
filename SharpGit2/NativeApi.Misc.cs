@@ -5,10 +5,35 @@ namespace SharpGit2;
 
 internal unsafe static partial class NativeApi
 {
+    /// <summary>
+    /// Init the global state
+    /// </summary>
+    /// <returns>
+    /// The number of initializations of the library, or an error code.
+    /// </returns>
+    /// <remarks>
+    /// This function must be called before any other libgit2 function
+    /// in order to set up global state and threading.
+    /// <br/><br/>
+    /// This function may be called multiple times - it will return the
+    /// number of times the initialization has been called (including
+    /// this one) that have not subsequently been shutdown.
+    /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial int git_libgit2_init();
 
+    /// <summary>
+    /// Shutdown the global state
+    /// </summary>
+    /// <returns>
+    /// The number of remaining initializations of the library, or an error code.
+    /// </returns>
+    /// <remarks>
+    /// Clean up the global state and threading context after calling it as many
+    /// times as <see cref="git_libgit2_init"/> was called - it will return the
+    /// number of remainining initializations that have not been shutdown (after this one).
+    /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial int git_libgit2_shutdown();

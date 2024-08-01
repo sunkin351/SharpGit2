@@ -10,16 +10,6 @@ public static unsafe partial class Git2
 {
     internal const string LibraryName = "git2";
 
-    public static int Initialize()
-    {
-        return NativeApi.git_libgit2_init();
-    }
-
-    public static int Shutdown()
-    {
-        return NativeApi.git_libgit2_shutdown();
-    }
-
     public static string PathListSeparator
     {
         get

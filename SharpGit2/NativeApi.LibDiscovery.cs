@@ -7,6 +7,7 @@ namespace SharpGit2;
 internal unsafe partial class NativeApi
 {
     private static readonly nint _libraryHandle;
+    private static readonly NativeLibraryLifetimeObject _lifetime;
 
     static NativeApi()
     {
@@ -98,8 +99,23 @@ internal unsafe partial class NativeApi
 
             return 0;
         });
+
+        // Init the native library
+        var code = git_libgit2_init();
+        if (code < 0)
+            Git2.ThrowError((GitError)code);
+
+        _lifetime = new();
     }
 
     [GeneratedRegex("^(lib)?git2-[0-9a-f]+\\.(dll|so|dylib)$")]
     private static partial Regex FileNameRegex();
+
+    private sealed class NativeLibraryLifetimeObject
+    {
+        ~NativeLibraryLifetimeObject()
+        {
+            _ = git_libgit2_shutdown();
+        }
+    }
 }
