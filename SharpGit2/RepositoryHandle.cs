@@ -183,9 +183,6 @@ public unsafe readonly partial struct RepositoryHandle : IDisposable
         Git2.ThrowIfError(NativeApi.git_reference_ensure_log(NativeHandle, referenceName));
     }
 
-    private const GitError ForEachBreak = (GitError)1;
-    private const GitError ForEachException = GitError.User;
-
     internal GitError ForEachFetchHead(delegate* unmanaged[Cdecl]<byte*, byte*, GitObjectID*, uint, nint, GitError> callback, nint payload)
     {
         return NativeApi.git_repository_fetchhead_foreach(NativeHandle, callback, payload);
@@ -195,7 +192,7 @@ public unsafe readonly partial struct RepositoryHandle : IDisposable
 
     public void ForEachFetchHead(ForEachFetchHeadCallback callback)
     {
-        var context = new ForEachContext<ForEachFetchHeadCallback>() { Callback = callback };
+        var context = new Git2.ForEachContext<ForEachFetchHeadCallback>() { Callback = callback };
 
         var gcHandle = GCHandle.Alloc(context, GCHandleType.Normal);
         GitError error;
@@ -209,7 +206,7 @@ public unsafe readonly partial struct RepositoryHandle : IDisposable
             gcHandle.Free();
         }
 
-        if (error == ForEachException)
+        if (error == Git2.ForEachException)
         {
             context.ExceptionInfo!.Throw();
         }
@@ -221,20 +218,20 @@ public unsafe readonly partial struct RepositoryHandle : IDisposable
         [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
         static GitError _Callback(byte* ref_name, byte* remote_url, GitObjectID* oid, uint is_merge, nint payload)
         {
-            var context = (ForEachContext<ForEachFetchHeadCallback>)((GCHandle)payload).Target!;
+            var context = (Git2.ForEachContext<ForEachFetchHeadCallback>)((GCHandle)payload).Target!;
 
             try
             {
                 string referenceName = Utf8StringMarshaller.ConvertToManaged(ref_name)!;
                 string remoteUrl = Utf8StringMarshaller.ConvertToManaged(remote_url)!;
 
-                return context.Callback(referenceName, remoteUrl, in *oid, is_merge != 0) ? GitError.OK : ForEachBreak;
+                return context.Callback(referenceName, remoteUrl, in *oid, is_merge != 0) ? GitError.OK : Git2.ForEachBreak;
             }
             catch (Exception e)
             {
                 Debug.Assert(context.ExceptionInfo is null);
                 context.ExceptionInfo = ExceptionDispatchInfo.Capture(e);
-                return ForEachException;
+                return Git2.ForEachException;
             }
         }
     }
@@ -257,7 +254,7 @@ public unsafe readonly partial struct RepositoryHandle : IDisposable
     /// <param name="callback"></param>
     public void ForEachMergeHead(ForEachMergeHeadCallback callback)
     {
-        var context = new ForEachContext<ForEachMergeHeadCallback>() { Callback = callback };
+        var context = new Git2.ForEachContext<ForEachMergeHeadCallback>() { Callback = callback };
 
         var gcHandle = GCHandle.Alloc(callback, GCHandleType.Normal);
         GitError error;
@@ -271,7 +268,7 @@ public unsafe readonly partial struct RepositoryHandle : IDisposable
             gcHandle.Free();
         }
 
-        if (error == ForEachException)
+        if (error == Git2.ForEachException)
         {
             context.ExceptionInfo!.Throw();
         }
@@ -283,17 +280,17 @@ public unsafe readonly partial struct RepositoryHandle : IDisposable
         [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
         static GitError _Callback(GitObjectID* objectId, nint payload)
         {
-            var context = (ForEachContext<ForEachMergeHeadCallback>)((GCHandle)payload).Target!;
+            var context = (Git2.ForEachContext<ForEachMergeHeadCallback>)((GCHandle)payload).Target!;
 
             try
             {
-                return context.Callback(in *objectId) ? GitError.OK : ForEachBreak;
+                return context.Callback(in *objectId) ? GitError.OK : Git2.ForEachBreak;
             }
             catch (Exception e)
             {
                 Debug.Assert(context.ExceptionInfo is null);
                 context.ExceptionInfo = ExceptionDispatchInfo.Capture(e);
-                return ForEachException;
+                return Git2.ForEachException;
             }
         }
     }
@@ -305,7 +302,7 @@ public unsafe readonly partial struct RepositoryHandle : IDisposable
 
     public void ForEachReference(Func<ReferenceHandle, bool> callback, bool autoDispose = true)
     {
-        var context = new ForEachContext<Func<ReferenceHandle, bool>>() { Callback = callback, AutoDispose = autoDispose };
+        var context = new ForEachReferenceContext() { Callback = callback, AutoDispose = autoDispose };
 
         var gcHandle = GCHandle.Alloc(context, GCHandleType.Normal);
         GitError error;
@@ -319,7 +316,7 @@ public unsafe readonly partial struct RepositoryHandle : IDisposable
             gcHandle.Free();
         }
 
-        if (error == ForEachException)
+        if (error == Git2.ForEachException)
         {
             context.ExceptionInfo!.Throw();
         }
@@ -333,18 +330,18 @@ public unsafe readonly partial struct RepositoryHandle : IDisposable
         {
             var referenceHandle = new ReferenceHandle(reference);
 
-            var context = (ForEachContext<Func<ReferenceHandle, bool>>)GCHandle.FromIntPtr(payload).Target!;
+            var context = (ForEachReferenceContext)GCHandle.FromIntPtr(payload).Target!;
 
             try
             {
-                return context.Callback(referenceHandle) ? GitError.OK : ForEachBreak;
+                return context.Callback(referenceHandle) ? GitError.OK : Git2.ForEachBreak;
             }
             catch (Exception e)
             {
                 Debug.Assert(context.ExceptionInfo is null);
                 context.ExceptionInfo = ExceptionDispatchInfo.Capture(e);
 
-                return ForEachException;
+                return Git2.ForEachException;
             }
             finally
             {
@@ -369,7 +366,7 @@ public unsafe readonly partial struct RepositoryHandle : IDisposable
 
     public void ForEachReferenceName(ForEachReferenceUTF8NameCallback callback, string? glob = null)
     {
-        var context = new ForEachContext<ForEachReferenceUTF8NameCallback>() { Callback = callback };
+        var context = new Git2.ForEachContext<ForEachReferenceUTF8NameCallback>() { Callback = callback };
 
         var gcHandle = GCHandle.Alloc(context, GCHandleType.Normal);
         GitError error;
@@ -386,7 +383,7 @@ public unsafe readonly partial struct RepositoryHandle : IDisposable
             gcHandle.Free();
         }
 
-        if (error == ForEachException)
+        if (error == Git2.ForEachException)
         {
             context.ExceptionInfo!.Throw();
         }
@@ -398,27 +395,27 @@ public unsafe readonly partial struct RepositoryHandle : IDisposable
         [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
         static GitError _Callback(byte* name, nint payload)
         {
-            var context = (ForEachContext<ForEachReferenceUTF8NameCallback>)GCHandle.FromIntPtr(payload).Target!;
+            var context = (Git2.ForEachContext<ForEachReferenceUTF8NameCallback>)GCHandle.FromIntPtr(payload).Target!;
 
             try
             {
                 var span = MemoryMarshal.CreateReadOnlySpanFromNullTerminated(name);
 
-                return context.Callback(span) ? GitError.OK : ForEachBreak;
+                return context.Callback(span) ? GitError.OK : Git2.ForEachBreak;
             }
             catch (Exception e)
             {
                 Debug.Assert(context.ExceptionInfo is null);
                 context.ExceptionInfo = ExceptionDispatchInfo.Capture(e);
 
-                return ForEachException;
+                return Git2.ForEachException;
             }
         }
     }
 
     public void ForEachReferenceName(Func<string, bool> callback, string? glob = null)
     {
-        var context = new ForEachContext<Func<string, bool>>() { Callback = callback };
+        var context = new Git2.ForEachContext<Func<string, bool>>() { Callback = callback };
 
         var gcHandle = GCHandle.Alloc(context, GCHandleType.Normal);
         GitError error;
@@ -435,7 +432,7 @@ public unsafe readonly partial struct RepositoryHandle : IDisposable
             gcHandle.Free();
         }
 
-        if (error == ForEachException)
+        if (error == Git2.ForEachException)
         {
             context.ExceptionInfo!.Throw();
         }
@@ -447,20 +444,20 @@ public unsafe readonly partial struct RepositoryHandle : IDisposable
         [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
         static GitError _Callback(byte* name, nint payload)
         {
-            var context = (ForEachContext<Func<string, bool>>)GCHandle.FromIntPtr(payload).Target!;
+            var context = (Git2.ForEachContext<Func<string, bool>>)GCHandle.FromIntPtr(payload).Target!;
 
             try
             {
                 string str = Utf8StringMarshaller.ConvertToManaged(name)!;
 
-                return context.Callback(str) ? GitError.OK : ForEachBreak;
+                return context.Callback(str) ? GitError.OK : Git2.ForEachBreak;
             }
             catch (Exception e)
             {
                 Debug.Assert(context.ExceptionInfo is null);
                 context.ExceptionInfo = ExceptionDispatchInfo.Capture(e);
 
-                return ForEachException;
+                return Git2.ForEachException;
             }
         }
     }
@@ -804,13 +801,9 @@ public unsafe readonly partial struct RepositoryHandle : IDisposable
         }
     }
 
-    private sealed class ForEachContext<TDelegate> where TDelegate : Delegate
+    private sealed class ForEachReferenceContext : Git2.ForEachContext<Func<ReferenceHandle, bool>>
     {
-        public required TDelegate Callback { get; init; }
-
         public bool AutoDispose { get; init; }
-
-        internal ExceptionDispatchInfo? ExceptionInfo { get; set; }
     }
 
     public readonly struct ReferenceEnumerable(RepositoryHandle repo, string? glob) : IEnumerable<ReferenceHandle>

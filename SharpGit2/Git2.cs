@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.Marshalling;
 using System.Text;
@@ -9,6 +10,9 @@ namespace SharpGit2;
 public static unsafe partial class Git2
 {
     internal const string LibraryName = "git2";
+
+    internal const GitError ForEachBreak = (GitError)1;
+    internal const GitError ForEachException = GitError.User;
 
     public static Version NativeLibraryVersion { get; } = GetVersion();
 
@@ -162,6 +166,34 @@ public static unsafe partial class Git2
         return repository;
     }
 
+    public static string? GlobalConfigFile { get; } = GetPathFromFunction(&NativeApi.git_config_find_global);
+    public static string? ProgramDataConfigFile { get; } = GetPathFromFunction(&NativeApi.git_config_find_programdata);
+    public static string? SystemConfigFile { get; } = GetPathFromFunction(&NativeApi.git_config_find_system);
+    public static string? XDGConfigFile { get; } = GetPathFromFunction(&NativeApi.git_config_find_xdg);
+
+    private static string? GetPathFromFunction(delegate* managed<Git2.Buffer*, GitError> func)
+    {
+        Git2.Buffer buffer = default;
+        var error = func(&buffer);
+
+        switch (error)
+        {
+            case GitError.OK:
+                try
+                {
+                    return Encoding.UTF8.GetString(buffer.Ptr, checked((int)buffer.Size));
+                }
+                finally
+                {
+                    NativeApi.git_buf_dispose(&buffer);
+                }
+            case GitError.NotFound:
+                return null;
+            default:
+                throw ExceptionForError(error);
+        }
+    }
+
     [MethodImpl(MethodImplOptions.NoInlining)]
     internal static Exception ExceptionForError(GitError error, string? message = null)
     {
@@ -310,6 +342,15 @@ public static unsafe partial class Git2
         public nuint Size;
 
         public readonly ReadOnlySpan<byte> Span => new(Ptr, checked((int)Size));
+
+        /// <summary>
+        /// Interprets the buffer as a UTF8 string and converts it to a managed string
+        /// </summary>
+        /// <returns>The managed string</returns>
+        public readonly string AsString()
+        {
+            return Encoding.UTF8.GetString(Ptr, checked((int)Size));
+        }
     }
 
     internal struct Error
@@ -324,6 +365,33 @@ public static unsafe partial class Git2
 
     internal struct Config
     {
+    }
+
+    internal struct ConfigBackend
+    {
+    }
+
+    internal struct ConfigEntry
+    {
+    }
+
+    internal struct ConfigIterator
+    {
+    }
+
+    internal enum ConfigMapType
+    {
+        False,
+        True,
+        Int32,
+        String
+    }
+
+    internal struct ConfigMap
+    {
+        public ConfigMapType Type;
+        public byte* StringMatch;
+        public int MapValue;
     }
 
     internal struct Index
@@ -356,6 +424,13 @@ public static unsafe partial class Git2
 
     internal struct Worktree
     {
+    }
+
+    internal class ForEachContext<TDelegate> where TDelegate : Delegate
+    {
+        public required TDelegate Callback { get; init; }
+
+        internal ExceptionDispatchInfo? ExceptionInfo { get; set; }
     }
 
     public readonly record struct Version : IComparable<Version>, ISpanFormattable
