@@ -10,6 +10,16 @@ public static unsafe partial class Git2
 {
     internal const string LibraryName = "git2";
 
+    public static Version NativeLibraryVersion { get; } = GetVersion();
+
+    private static Version GetVersion()
+    {
+        int major, minor, rev;
+        Git2.ThrowIfError(NativeApi.git_libgit2_version(&major, &minor, &rev));
+
+        return new Version(major, minor, rev);
+    }
+
     public static string PathListSeparator
     {
         get
@@ -346,5 +356,70 @@ public static unsafe partial class Git2
 
     internal struct Worktree
     {
+    }
+
+    public readonly record struct Version : IComparable<Version>, ISpanFormattable
+    {
+        public int Major { get; }
+        public int Minor { get; }
+        public int Revision { get; }
+
+        public Version(int major, int minor, int revision)
+        {
+            ArgumentOutOfRangeException.ThrowIfNegative(major);
+            ArgumentOutOfRangeException.ThrowIfNegative(minor);
+            ArgumentOutOfRangeException.ThrowIfNegative(revision);
+
+            Major = major;
+            Minor = minor;
+            Revision = revision;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int CompareTo(Version other)
+        {
+            if (Major != other.Major)
+                return Major.CompareTo(other.Major);
+
+            if (Minor != other.Minor)
+                return Minor.CompareTo(other.Minor);
+
+            return Revision.CompareTo(other.Revision);
+        }
+
+        public static bool operator <(Version a, Version b)
+        {
+            return a.CompareTo(b) < 0;
+        }
+
+        public static bool operator >(Version a, Version b)
+        {
+            return a.CompareTo(b) > 0;
+        }
+
+        public static bool operator <=(Version a, Version b)
+        {
+            return a.CompareTo(b) <= 0;
+        }
+
+        public static bool operator >=(Version a, Version b)
+        {
+            return a.CompareTo(b) >= 0;
+        }
+
+        public bool TryFormat(Span<char> destination, out int charsWritten, ReadOnlySpan<char> format, IFormatProvider? provider)
+        {
+            return destination.TryWrite($"v{Major}.{Minor}.{Revision}", out charsWritten);
+        }
+
+        public string ToString(string? format, IFormatProvider? formatProvider)
+        {
+            return $"v{Major}.{Minor}.{Revision}";
+        }
+
+        public override string ToString()
+        {
+            return ToString(null, null);
+        }
     }
 }

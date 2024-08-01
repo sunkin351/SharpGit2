@@ -38,6 +38,17 @@ internal unsafe static partial class NativeApi
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial int git_libgit2_shutdown();
 
+    /// <summary>
+    /// Return the version of the libgit2 library being currently used.
+    /// </summary>
+    /// <param name="major">Store the major version number</param>
+    /// <param name="minor">Store the minor version number</param>
+    /// <param name="rev">Store the revision (patch) number</param>
+    /// <returns>0 on success or an error code on failure</returns>
+    [LibraryImport(Git2.LibraryName)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    internal static partial GitError git_libgit2_version(int* major, int* minor, int* rev);
+
     // Needs to be determined how best to handle variadic parameters
     //[LibraryImport(Git2.LibraryName)]
     //internal static partial int git_libgit2_opts(int option, ...);
