@@ -204,12 +204,15 @@ public static unsafe partial class Git2
             var err = NativeApi.git_error_last();
 
             Debug.Assert(err != null);
-            Debug.Assert(err->@class == (int)error);
 
             message = Utf8StringMarshaller.ConvertToManaged(err->Message)!;
         }
 
-        return new Git2Exception(error, message);
+        return error switch
+        {
+            GitError.NotSupported => new NotSupportedException(message),
+            _ => new Git2Exception(error, message),
+        };
     }
 
     internal static void ThrowError(GitError code)
