@@ -594,12 +594,14 @@ public unsafe readonly partial struct RepositoryHandle : IDisposable
     }
 
     /// <summary>
-    /// 
+    /// Gets the currently active namespace for this repository.
     /// </summary>
     /// <remarks>
     /// Always allocates a new string.
     /// </remarks>
-    /// <returns></returns>
+    /// <returns>
+    /// The namespace string, or <see langword="null"/> if there isn't one.
+    /// </returns>
     public string? GetNamespace()
     {
         // returned pointer does not need to be freed by the user
@@ -813,7 +815,7 @@ public unsafe readonly partial struct RepositoryHandle : IDisposable
 
         public ReferenceEnumerator GetEnumerator()
         {
-            Git2.Iterator* handle;
+            Git2.ReferenceIterator* handle;
 
             if (_glob is null)
             {
@@ -834,9 +836,9 @@ public unsafe readonly partial struct RepositoryHandle : IDisposable
 
     public struct ReferenceEnumerator : IEnumerator<ReferenceHandle>
     {
-        private Git2.Iterator* _iteratorHandle;
+        private Git2.ReferenceIterator* _iteratorHandle;
 
-        internal ReferenceEnumerator(Git2.Iterator* handle) => _iteratorHandle = handle;
+        internal ReferenceEnumerator(Git2.ReferenceIterator* handle) => _iteratorHandle = handle;
 
         public ReferenceHandle Current { get; private set; }
 
@@ -882,7 +884,7 @@ public unsafe readonly partial struct RepositoryHandle : IDisposable
 
         public ReferenceNameEnumerator GetEnumerator()
         {
-            Git2.Iterator* handle;
+            Git2.ReferenceIterator* handle;
 
             if (_glob is null)
             {
@@ -903,9 +905,9 @@ public unsafe readonly partial struct RepositoryHandle : IDisposable
 
     public struct ReferenceNameEnumerator : IEnumerator<string>
     {
-        private Git2.Iterator* _iteratorHandle;
+        private Git2.ReferenceIterator* _iteratorHandle;
 
-        internal ReferenceNameEnumerator(Git2.Iterator* handle) => _iteratorHandle = handle;
+        internal ReferenceNameEnumerator(Git2.ReferenceIterator* handle) => _iteratorHandle = handle;
 
         public string Current { readonly get; private set; } = null!;
 

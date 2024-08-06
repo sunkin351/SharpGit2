@@ -304,17 +304,14 @@ public static unsafe partial class Git2
         }
     }
 
-    internal struct StringArray
+    internal struct StringArray(byte** strings, nuint count)
     {
-        public byte** strings;
-        public nuint count;
+        public byte** Strings = strings;
+        public nuint Count = count;
 
         public readonly string[] ToManaged()
         {
-            if (count > int.MaxValue)
-                throw new InvalidOperationException("Too many strings in native string array!");
-
-            var span = new ReadOnlySpan<nint>(strings, (int)count);
+            var span = new ReadOnlySpan<nint>(Strings, checked((int)Count));
 
             var managedArray = new string[span.Length];
 
@@ -403,7 +400,11 @@ public static unsafe partial class Git2
     {
     }
 
-    internal struct Iterator
+    internal struct IndexConflictIterator
+    {
+    }
+
+    internal struct IndexIterator
     {
     }
 
@@ -419,11 +420,23 @@ public static unsafe partial class Git2
     {
     }
 
+    internal struct ReferenceIterator
+    {
+    }
+
     internal struct ReferenceDatabase
     {
     }
 
     internal struct Repository
+    {
+    }
+
+    internal struct Transaction
+    {
+    }
+
+    internal struct Tree
     {
     }
 

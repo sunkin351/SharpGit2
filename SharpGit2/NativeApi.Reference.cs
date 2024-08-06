@@ -265,7 +265,7 @@ internal static unsafe partial class NativeApi
     /// <param name="iterator">the iterator to free</param>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial void git_reference_iterator_free(Git2.Iterator* iterator);
+    internal static partial void git_reference_iterator_free(Git2.ReferenceIterator* iterator);
 
     /// <summary>
     /// Create an iterator for the repo's references that match the specified glob
@@ -276,7 +276,7 @@ internal static unsafe partial class NativeApi
     /// <returns>0 or an error code</returns>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_reference_iterator_glob_new(Git2.Iterator** iterator, Git2.Repository* repository, string glob);
+    internal static partial GitError git_reference_iterator_glob_new(Git2.ReferenceIterator** iterator, Git2.Repository* repository, string glob);
 
     /// <summary>
     /// Create an iterator for the repo's references
@@ -286,7 +286,7 @@ internal static unsafe partial class NativeApi
     /// <returns>0 or an error code</returns>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_reference_iterator_new(Git2.Iterator** iterator, Git2.Repository* repository);
+    internal static partial GitError git_reference_iterator_new(Git2.ReferenceIterator** iterator, Git2.Repository* repository);
 
     /// <summary>
     /// Fill a list with all the references that can be found in a repository.
@@ -378,7 +378,7 @@ internal static unsafe partial class NativeApi
     /// <returns>0, <see cref="GitError.IterationOver"/> if there are no more; or an error code</returns>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_reference_next(ReferenceHandle* reference, Git2.Iterator* iterator);
+    internal static partial GitError git_reference_next(ReferenceHandle* reference, Git2.ReferenceIterator* iterator);
 
     /// <summary>
     /// Get the next reference's name
@@ -392,7 +392,7 @@ internal static unsafe partial class NativeApi
     /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_reference_next_name(byte** name, Git2.Iterator* iterator);
+    internal static partial GitError git_reference_next_name(byte** name, Git2.ReferenceIterator* iterator);
 
     /// <summary>
     /// Normalize reference name and check validity.

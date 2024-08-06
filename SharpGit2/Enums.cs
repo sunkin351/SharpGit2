@@ -198,3 +198,72 @@ public enum GitFeatures
     /// </summary>
     NSEC = 1 << 3
 }
+
+[Flags]
+public enum GitIndexEntryFlags
+{
+    Extended = 1,
+    Valid = 2
+}
+
+public enum GitIndexStageFlags
+{
+    /// <summary>
+    /// Match any index stage.
+    /// </summary>
+    /// <remarks>
+    /// Some index APIs take a stage to match; pass this value to match
+    /// any entry matching the path regardless of stage.
+    /// </remarks>
+    Any = -1,
+
+    /// <summary>
+    /// A normal staged file in the index.
+    /// </summary>
+    Normal = 0,
+
+    /// <summary>
+    /// The ancestor side of a conflict.
+    /// </summary>
+    Ancestor = 1,
+
+    /// <summary>
+    /// The "ours" side of a conflict.
+    /// </summary>
+    Ours = 2,
+
+    /// <summary>
+    /// The "theirs" side of a conflict.
+    /// </summary>
+    Theirs = 3
+}
+
+[Flags]
+public enum GitIndexEntryExtendedFlags
+{
+    UpToDate = 1 << 2,
+    IntentToAdd = 1 << 13,
+    SkipWorktree = 1 << 14,
+    ExtendedFlags = IntentToAdd | SkipWorktree
+}
+
+[Flags]
+public enum GitIndexAddOptions
+{
+    Default = 0,
+    Force = 1,
+    DisablePathspecMatch = 1 << 1,
+    CheckPathspec = 1 << 2
+}
+
+/// <summary>
+/// Capabilities of system that affect index actions.
+/// </summary>
+[Flags]
+public enum GitIndexCapabilities
+{
+    IgnoreCase = 1,
+    NoFilemode = 2,
+    NoSymlinks = 4,
+    FromOwner = -1
+}
