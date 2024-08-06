@@ -234,48 +234,6 @@ public static unsafe partial class Git2
         return code != 0;
     }
 
-    internal static void MarshalToStructure(ref byte* pointer, ref byte[]? pinnedMemory, ref string? storedValue, string? value)
-    {
-        Debug.Assert((pointer is null) == (pinnedMemory is null));
-        Debug.Assert((pointer is null) == (storedValue is null));
-
-        if (storedValue == value)
-            return;
-
-        if (value is null)
-        {
-            pointer = null;
-            pinnedMemory = null;
-            storedValue = null;
-            return;
-        }
-
-        Span<byte> buffer = pinnedMemory;
-        if (!buffer.IsEmpty)
-        {
-            Debug.Assert(pointer != null);
-            Debug.Assert(Unsafe.AreSame(ref Unsafe.AsRef<byte>(pointer), ref MemoryMarshal.GetReference(buffer)), "pointer does not reference the given pinned array!");
-
-            if (Encoding.UTF8.TryGetBytes(value, buffer[..^1], out int written))
-            {
-                buffer[written] = 0;
-                storedValue = value;
-                return;
-            }
-        }
-
-        int byteCount = Encoding.UTF8.GetByteCount(value) + 1;
-
-        byte[] memory = GC.AllocateArray<byte>(byteCount, pinned: true);
-        
-        Encoding.UTF8.GetBytes(value, memory.AsSpan(0, byteCount - 1));
-
-        storedValue = value;
-        pinnedMemory = memory;
-        // Array is allocated on the pinned object heap, so this is safe (because the array is guarenteed to never move)
-        pointer = (byte*)Unsafe.AsPointer(ref MemoryMarshal.GetArrayDataReference(memory));
-    }
-
     /// <summary>
     /// An array of commit objects returned by libgit2.
     /// </summary>
@@ -513,6 +471,84 @@ public static unsafe partial class Git2
         public override string ToString()
         {
             return ToString(null, null);
+        }
+    }
+
+    /// <summary>
+    /// Unmanaged string allocated on the pinned object heap
+    /// </summary>
+    internal struct UnmanagedString
+    {
+        public string? Value { get; private set; }
+        private byte[]? _memory;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="initialCapacity">UTF8 byte count</param>
+        public UnmanagedString(int initialCapacity)
+        {
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(initialCapacity);
+
+            _memory = GC.AllocateUninitializedArray<byte>(initialCapacity, pinned: true);
+            _memory[0] = 0;
+        }
+
+        public readonly byte* NativePointer
+        {
+            get
+            {
+                if (Value is null)
+                    return null;
+
+                return (byte*)Unsafe.AsPointer(ref MemoryMarshal.GetArrayDataReference(_memory!));
+            }
+        }
+
+        /// <summary>
+        /// Sets the value of the unmanaged string.
+        /// </summary>
+        /// <param name="value">The new value</param>
+        /// <returns><see langword="true"/> if the NativePointer property changed, <see langword="false"/> if not.</returns>
+        public bool SetValue(string? value, bool reusableAllocation)
+        {
+            string? currentValue = this.Value;
+            if (currentValue == value)
+                return false;
+
+            if (string.IsNullOrEmpty(value))
+            {
+                Value = null;
+                return true;
+            }
+
+            const int MaxUtf8BytesPerChar = 3;
+
+            Span<byte> buffer = _memory;
+            bool allocationChanged = currentValue is null;
+
+            if (value.Length * MaxUtf8BytesPerChar >= buffer.Length)
+            {
+                int byteCount = checked(Encoding.UTF8.GetByteCount(value) + 1);
+
+                if (byteCount > buffer.Length)
+                {
+                    if (reusableAllocation)
+                    {
+                        // Saturates down to int.MaxValue if ever exceeded
+                        byteCount = int.CreateSaturating(BitOperations.RoundUpToPowerOf2((uint)byteCount));
+                    }
+
+                    buffer = (_memory = GC.AllocateUninitializedArray<byte>(byteCount, pinned: true));
+                    allocationChanged = true;
+                }
+            }
+
+            int written = Encoding.UTF8.GetBytes(value, buffer[..^1]);
+            buffer[written] = 0;
+
+            Value = value;
+            return allocationChanged;
         }
     }
 }

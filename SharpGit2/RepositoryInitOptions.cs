@@ -1,21 +1,20 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Runtime.InteropServices;
 
 namespace SharpGit2;
 
 public unsafe sealed class RepositoryInitOptions
 {
     internal Unmanaged _structure;
+    private readonly bool _reusable;
 
     public RepositoryInitOptions()
     {
         _structure.Version = 1;
+    }
+
+    public RepositoryInitOptions(bool reusable) : this()
+    {
+        _reusable = reusable;
     }
 
     public RepositoryInitFlags Flags
@@ -30,64 +29,73 @@ public unsafe sealed class RepositoryInitOptions
         set => _structure.Mode = value;
     }
 
-    private string? _workingDirectory;
-    private byte[]? _workingDirectoryMemory;
+    private Git2.UnmanagedString _workingDirectory;
 
     public string? WorkingDirectory
     {
-        get => _workingDirectory;
+        get => _workingDirectory.Value;
         set
         {
-            Git2.MarshalToStructure(ref _structure.WorkingDirectory, ref _workingDirectoryMemory, ref _workingDirectory, value);
+            if (_workingDirectory.SetValue(value, _reusable))
+            {
+                _structure.WorkingDirectory = _workingDirectory.NativePointer;
+            }
         }
     }
 
-    private string? _description;
-    private byte[]? _descriptionMemory;
+    private Git2.UnmanagedString _description;
 
     public string? Description
     {
-        get => _description;
+        get => _description.Value;
         set
         {
-            Git2.MarshalToStructure(ref _structure.Description, ref _descriptionMemory, ref _description, value);
+            if (_description.SetValue(value, _reusable))
+            {
+                _structure.Description = _description.NativePointer;
+            }
         }
     }
 
-
-    private string? _templatePath;
-    private byte[]? _templatePathMemory;
+    private Git2.UnmanagedString _templatePath;
 
     public string? TemplatePath
     {
-        get => _templatePath;
+        get => _templatePath.Value;
         set
         {
-            Git2.MarshalToStructure(ref _structure.TemplatePath, ref _templatePathMemory, ref _templatePath, value);
+            if (_templatePath.SetValue(value, _reusable))
+            {
+                _structure.TemplatePath = _templatePath.NativePointer;
+            }
         }
     }
 
-    private string? _initialHead;
-    private byte[]? _initialHeadMemory;
+    private Git2.UnmanagedString _initialHead;
 
     public string? InitialHead
     {
-        get => _initialHead;
+        get => _initialHead.Value;
         set
         {
-            Git2.MarshalToStructure(ref _structure.InitialHead, ref _initialHeadMemory, ref _initialHead, value);
+            if (_initialHead.SetValue(value, _reusable))
+            {
+                _structure.InitialHead = _initialHead.NativePointer;
+            }
         }
     }
 
-    private string? _originUrl;
-    private byte[]? _originUrlMemory;
+    private Git2.UnmanagedString _originUrl;
 
     public string? OriginUrl
     {
-        get => _originUrl;
+        get => _originUrl.Value;
         set
         {
-            Git2.MarshalToStructure(ref _structure.OriginUrl, ref _originUrlMemory, ref _originUrl, value);
+            if (_originUrl.SetValue(value, _reusable))
+            {
+                _structure.OriginUrl = _originUrl.NativePointer;
+            }
         }
     }
 
