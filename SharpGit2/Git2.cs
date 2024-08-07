@@ -5,6 +5,8 @@ using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.Marshalling;
 using System.Text;
 
+[assembly: DisableRuntimeMarshalling]
+
 namespace SharpGit2;
 
 public static unsafe partial class Git2
