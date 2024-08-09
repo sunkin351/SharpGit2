@@ -45,7 +45,7 @@ internal static unsafe partial class NativeApi
     /// </remarks>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_reference_create(ReferenceHandle* reference, Git2.Repository* repository, string name, GitObjectID* id, int force, string? logMessage);
+    internal static partial GitError git_reference_create(Git2.Reference** reference, Git2.Repository* repository, string name, GitObjectID* id, int force, string? logMessage);
 
 
     /// <summary>
@@ -84,7 +84,7 @@ internal static unsafe partial class NativeApi
     /// </remarks>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_reference_create_matching(ReferenceHandle* reference, Git2.Repository* repository, string name, GitObjectID* id, int force, GitObjectID* currentId, string? logMessage);
+    internal static partial GitError git_reference_create_matching(Git2.Reference** reference, Git2.Repository* repository, string name, GitObjectID* id, int force, GitObjectID* currentId, string? logMessage);
 
     /// <summary>
     /// Delete an existing reference.
@@ -110,7 +110,7 @@ internal static unsafe partial class NativeApi
     /// <remarks>Call <see cref="git_reference_free(Git2.Reference*)"/> to free the data.</remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_reference_dup(ReferenceHandle* duplicant, Git2.Reference* reference);
+    internal static partial GitError git_reference_dup(Git2.Reference** duplicant, Git2.Reference* reference);
 
     /// <summary>
     /// Lookup a reference by DWIMing its short name
@@ -122,7 +122,7 @@ internal static unsafe partial class NativeApi
     /// <remarks>Apply the git precedence rules to the given shorthand to determine which reference the user is referring to.</remarks>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_reference_dwim(ReferenceHandle* reference, Git2.Repository* repository, string shorthand);
+    internal static partial GitError git_reference_dwim(Git2.Reference** reference, Git2.Repository* repository, string shorthand);
 
     /// <summary>
     /// Ensure there is a reflog for a particular reference.
@@ -315,11 +315,11 @@ internal static unsafe partial class NativeApi
     /// <remarks>
     /// The returned reference must be freed by the user.
     /// 
-    /// The name will be checked for validity. See <see cref="ReferenceHandle.git_reference_is_valid_name(string)"/> for rules about valid names.
+    /// The name will be checked for validity. See <see cref="GitReference.git_reference_is_valid_name(string)"/> for rules about valid names.
     /// </remarks>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_reference_lookup(ReferenceHandle* reference, Git2.Repository* repository, string name);
+    internal static partial GitError git_reference_lookup(Git2.Reference** reference, Git2.Repository* repository, string name);
 
     /// <summary>
     /// Get the full name of a reference.
@@ -357,7 +357,7 @@ internal static unsafe partial class NativeApi
     /// </returns>
     /// <remarks>
     /// This function provides a quick way to resolve a reference name straight through to the object id that it refers to.
-    /// This avoids having to allocate or free any <see cref="ReferenceHandle"/> objects for simple situations.
+    /// This avoids having to allocate or free any <see cref="GitReference"/> objects for simple situations.
     /// 
     /// The name will be checked for validity. See <see cref="git_reference_is_valid_name(string)"/> for rules about valid names.
     /// </remarks>
@@ -378,7 +378,7 @@ internal static unsafe partial class NativeApi
     /// <returns>0, <see cref="GitError.IterationOver"/> if there are no more; or an error code</returns>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_reference_next(ReferenceHandle* reference, Git2.ReferenceIterator* iterator);
+    internal static partial GitError git_reference_next(Git2.Reference** reference, Git2.ReferenceIterator* iterator);
 
     /// <summary>
     /// Get the next reference's name
@@ -388,7 +388,7 @@ internal static unsafe partial class NativeApi
     /// <returns>0, <see cref="GitError.IterationOver"/> if there are no more; or an error code</returns>
     /// <remarks>
     /// This function is provided for convenience in case only the names are interesting
-    /// as it avoids the allocation of the <see cref="ReferenceHandle"/> object which <see cref="git_reference_next(ReferenceHandle*, nint)"/> needs.
+    /// as it avoids the allocation of the <see cref="GitReference"/> object which <see cref="git_reference_next(Git2.Reference**, nint)"/> needs.
     /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
@@ -425,7 +425,7 @@ internal static unsafe partial class NativeApi
     /// <summary>
     /// Recursively peel reference until object of the specified type is found.
     /// </summary>
-    /// <param name="gitObject">Pointer to the peeled <see cref="GitObjectHandle"/></param>
+    /// <param name="gitObject">Pointer to the peeled <see cref="GitObject"/></param>
     /// <param name="reference">The reference to be processed</param>
     /// <param name="type">The type of the requested object (<see cref="GitObjectType.Commit"/>, <see cref="GitObjectType.Tag"/>, <see cref="GitObjectType.Tree"/>, <see cref="GitObjectType.Blob"/> or <see cref="GitObjectType.Any"/>).</param>
     /// <returns>0 on success, <see cref="GitError.Ambiguous"/>, <see cref="GitError.NotFound"/> or an error code</returns>
@@ -436,7 +436,7 @@ internal static unsafe partial class NativeApi
     /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_reference_peel(GitObjectHandle* gitObject, Git2.Reference* reference, GitObjectType type);
+    internal static partial GitError git_reference_peel(Git2.Object** gitObject, Git2.Reference* reference, GitObjectType type);
 
     /// <summary>
     /// Delete an existing reference by name
@@ -473,7 +473,7 @@ internal static unsafe partial class NativeApi
     /// </remarks>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_reference_rename(ReferenceHandle* newReference, Git2.Reference* reference, string newName, int force, string? logMessage);
+    internal static partial GitError git_reference_rename(Git2.Reference** newReference, Git2.Reference* reference, string newName, int force, string? logMessage);
 
     /// <summary>
     /// Resolve a symbolic reference to a direct reference.
@@ -490,7 +490,7 @@ internal static unsafe partial class NativeApi
     /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_reference_resolve(ReferenceHandle* resolvedRef, Git2.Reference* reference);
+    internal static partial GitError git_reference_resolve(Git2.Reference** resolvedRef, Git2.Reference* reference);
 
     /// <summary>
     /// Conditionally create a new reference with the same name as the given reference but a different OID target.
@@ -508,7 +508,7 @@ internal static unsafe partial class NativeApi
     /// </remarks>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_reference_set_target(ReferenceHandle* newReference, Git2.Reference* reference, GitObjectID* id, string? LogMessage);
+    internal static partial GitError git_reference_set_target(Git2.Reference** newReference, Git2.Reference* reference, GitObjectID* id, string? LogMessage);
 
     /// <summary>
     /// Get the reference's short name
@@ -558,7 +558,7 @@ internal static unsafe partial class NativeApi
     /// </remarks>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_reference_symbolic_create(ReferenceHandle* reference, Git2.Repository* repository, string name, string target, int force, string? logMessage);
+    internal static partial GitError git_reference_symbolic_create(Git2.Reference** reference, Git2.Repository* repository, string name, string target, int force, string? logMessage);
 
     /// <summary>
     /// Conditionally create a new symbolic reference.
@@ -572,7 +572,7 @@ internal static unsafe partial class NativeApi
     /// <param name="logMessage">The one line long message to be appended to the reflog</param>
     /// <returns>0 on success, <see cref="GitError.Exists"/>, <see cref="GitError.InvalidSpec"/>, <see cref="GitError.Modified"/> or an error code</returns>
     /// <remarks>
-    /// Similar to <see cref="git_reference_symbolic_create(ReferenceHandle*, Git2.Repository*, string, string, int, string?)"/>.
+    /// Similar to <see cref="git_reference_symbolic_create(Git2.Reference**, Git2.Repository*, string, string, int, string?)"/>.
     /// 
     /// It will return <see cref="GitError.Modified"/> if the reference's value at
     /// the time of updating does not match the one passed through current_value
@@ -582,7 +582,7 @@ internal static unsafe partial class NativeApi
     /// </remarks>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_reference_symbolic_create_matching(ReferenceHandle* reference, Git2.Repository* repository, string name, string target, int force, string? currentValue, string? logMessage);
+    internal static partial GitError git_reference_symbolic_create_matching(Git2.Reference** reference, Git2.Repository* repository, string name, string target, int force, string? currentValue, string? logMessage);
 
     /// <summary>
     /// Create a new reference with the same name as the given reference but a different symbolic target. The reference must be a symbolic reference, otherwise this will fail.
@@ -601,12 +601,12 @@ internal static unsafe partial class NativeApi
     /// </remarks>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_reference_symbolic_set_target(ReferenceHandle* newReference, Git2.Reference* currentReference, string target, string? logMessage);
+    internal static partial GitError git_reference_symbolic_set_target(Git2.Reference** newReference, Git2.Reference* currentReference, string target, string? logMessage);
 
-    /// <inheritdoc cref="git_reference_symbolic_set_target(ReferenceHandle*, nint, string, string?)"/>
+    /// <inheritdoc cref="git_reference_symbolic_set_target(Git2.Reference**, nint, string, string?)"/>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_reference_symbolic_set_target(ReferenceHandle* newReference, Git2.Reference* currentReference, byte* target, string? logMessage);
+    internal static partial GitError git_reference_symbolic_set_target(Git2.Reference** newReference, Git2.Reference* currentReference, byte* target, string? logMessage);
 
     /// <summary>
     /// Get full name to the reference pointed to by a symbolic reference.
@@ -625,7 +625,7 @@ internal static unsafe partial class NativeApi
     /// <returns>a pointer to the oid if available, NULL otherwise</returns>
     /// <remarks>
     /// Only available if the reference is direct (i.e. an object id reference, not a symbolic one).
-    /// To find the OID of a symbolic ref, call <see cref="git_reference_resolve(ReferenceHandle*, Git2.Reference*)"/>
+    /// To find the OID of a symbolic ref, call <see cref="git_reference_resolve(Git2.Reference**, Git2.Reference*)"/>
     /// and then this function(or maybe use <see cref="git_reference_name_to_id(GitObjectID*, Git2.Repository*, string)"/>
     /// to directly resolve a reference name all the way through to an OID)
     /// </remarks>

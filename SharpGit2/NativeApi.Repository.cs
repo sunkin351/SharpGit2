@@ -46,7 +46,7 @@ internal static unsafe partial class NativeApi
     /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_repository_config(ConfigHandle* config, Git2.Repository* repository);
+    internal static partial GitError git_repository_config(Git2.Config** config, Git2.Repository* repository);
 
     /// <summary>
     /// Get a snapshot of the repository's configuration
@@ -61,7 +61,7 @@ internal static unsafe partial class NativeApi
     /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_repository_config_snapshot(ConfigHandle* config, Git2.Repository* repository);
+    internal static partial GitError git_repository_config_snapshot(Git2.Config** config, Git2.Repository* repository);
 
     /// <summary>
     /// Detach the HEAD.
@@ -191,13 +191,13 @@ internal static unsafe partial class NativeApi
     /// <see cref="GitError.NotFound"/> when HEAD is missing, or an error code otherwise
     /// </returns>
     /// <remarks>
-    /// The returned <see cref="ReferenceHandle"/> will be owned by caller and
-    /// <see cref="ReferenceHandle.Dispose"/> must be called when done with it
+    /// The returned <see cref="GitReference"/> will be owned by caller and
+    /// <see cref="GitReference.Dispose"/> must be called when done with it
     /// to release the allocated memory and prevent a leak.
     /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_repository_head(ReferenceHandle* head, Git2.Repository* repository);
+    internal static partial GitError git_repository_head(Git2.Reference** head, Git2.Repository* repository);
 
     /// <summary>
     /// Check if a repository's HEAD is detached
@@ -265,11 +265,11 @@ internal static unsafe partial class NativeApi
     /// <remarks>
     /// If a custom index has not been set, the default index for the repository will be returned (the one located in .git/index).
     /// <br/><br/>
-    /// The index must be freed with <see cref="IndexHandle.Dispose"/> once it's no longer being used by the user.
+    /// The index must be freed with <see cref="GitIndex.Dispose"/> once it's no longer being used by the user.
     /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_repository_index(IndexHandle* index, Git2.Repository* repository);
+    internal static partial GitError git_repository_index(Git2.Index** index, Git2.Repository* repository);
 
     /// <summary>
     /// Creates a new Git repository in the given folder.
@@ -287,7 +287,7 @@ internal static unsafe partial class NativeApi
     /// <returns>0 or an error code</returns>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_repository_init(RepositoryHandle* repository, string path, uint isBare);
+    internal static partial GitError git_repository_init(Git2.Repository** repository, string path, uint isBare);
 
     /// <summary>
     /// Create a new Git repository in the given folder with extended controls.
@@ -303,7 +303,7 @@ internal static unsafe partial class NativeApi
     /// </remarks>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_repository_init_ext(RepositoryHandle* repository, string path, RepositoryInitOptions.Unmanaged* options);
+    internal static partial GitError git_repository_init_ext(Git2.Repository** repository, string path, RepositoryInitOptions.Unmanaged* options);
 
     /// <summary>
     /// Check if a repository is bare
@@ -404,7 +404,7 @@ internal static unsafe partial class NativeApi
     /// <summary>
     /// Get the Object Database for this repository.
     /// </summary>
-    /// <param name="out">Pointer to store the loaded ODB</param>
+    /// <param name="db_out">Pointer to store the loaded ODB</param>
     /// <param name="repository">A repository object</param>
     /// <returns>0, or an error code</returns>
     /// <remarks>
@@ -414,7 +414,7 @@ internal static unsafe partial class NativeApi
     /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_repository_odb(ObjectDatabaseHandle* @out, Git2.Repository* repository);
+    internal static partial GitError git_repository_odb(Git2.ObjectDatabase** db_out, Git2.Repository* repository);
 
 #if SHA256_OBJECT_ID
     /// <summary>
@@ -424,7 +424,7 @@ internal static unsafe partial class NativeApi
     /// <returns>the object id type</returns>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitObjectType git_repository_oid_type(nint repository);
+    internal static partial GitObjectType git_repository_oid_type(Git2.Repository* repository);
 #endif
 
     /// <summary>
@@ -440,7 +440,7 @@ internal static unsafe partial class NativeApi
     /// </remarks>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_repository_open(RepositoryHandle* repository, string path);
+    internal static partial GitError git_repository_open(Git2.Repository** repository, string path);
 
     /// <summary>
     /// Open a bare repository on the serverside.
@@ -453,7 +453,7 @@ internal static unsafe partial class NativeApi
     /// </remarks>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_repository_open_bare(RepositoryHandle* repository, string path);
+    internal static partial GitError git_repository_open_bare(Git2.Repository** repository, string path);
 
     /// <summary>
     /// Find and open a repository with extended controls.
@@ -480,7 +480,7 @@ internal static unsafe partial class NativeApi
     /// </returns>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_repository_open_ext(RepositoryHandle* repository, string? path, RepositoryOpenFlags flags, string? ceiling_dirs);
+    internal static partial GitError git_repository_open_ext(Git2.Repository** repository, string? path, RepositoryOpenFlags flags, string? ceiling_dirs);
 
     /// <summary>
     /// Open working tree as a repository
@@ -493,7 +493,7 @@ internal static unsafe partial class NativeApi
     /// </remarks>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_repository_open_from_worktree(RepositoryHandle* repository, Git2.Worktree* worktree);
+    internal static partial GitError git_repository_open_from_worktree(Git2.Repository** repository, Git2.Worktree* worktree);
 
     /// <summary>
     /// Get the path of this repository
@@ -516,7 +516,7 @@ internal static unsafe partial class NativeApi
     /// <returns>0 or an error code</returns>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_repository_refdb(ReferenceDatabaseHandle* refDB, Git2.Repository* repository);
+    internal static partial GitError git_repository_refdb(Git2.ReferenceDatabase** refDB, Git2.Repository* repository);
 
     /// <summary>
     /// Make the repository HEAD point to the specified reference.
@@ -562,7 +562,7 @@ internal static unsafe partial class NativeApi
     /// <remarks>
     /// If the provided committish cannot be found in the repository, the HEAD is unaltered and <see cref="GitError.NotFound"/> is returned.
     /// <br/><br/>
-    /// If the provided committish cannot be peeled into a commit, the HEAD is unaltered and -1 (<see cref="GitError.Error"/>) is returned.
+    /// If the provided committish cannot be peeled into a commit, the HEAD is unaltered and -1 (<see cref="GitError.GenericError"/>) is returned.
     /// <br/><br/>
     /// Otherwise, the HEAD will eventually be detached and will directly point to the peeled Commit.
     /// </remarks>

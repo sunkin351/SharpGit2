@@ -9,11 +9,11 @@ using System.Runtime.InteropServices;
 
 namespace SharpGit2;
 
-public unsafe readonly struct ConfigHandle : IDisposable
+public unsafe readonly struct GitConfig : IDisposable
 {
     internal readonly Git2.Config* NativeHandle;
 
-    internal ConfigHandle(Git2.Config* handle)
+    internal GitConfig(Git2.Config* handle)
     {
         NativeHandle = handle;
     }
@@ -23,7 +23,7 @@ public unsafe readonly struct ConfigHandle : IDisposable
         NativeApi.git_config_free(NativeHandle);
     }
 
-    public void AddFile(string path, GitConfigLevel level, RepositoryHandle repository, bool force)
+    public void AddFile(string path, GitConfigLevel level, GitRepository repository, bool force)
     {
         Git2.ThrowIfError(NativeApi.git_config_add_file_ondisk(NativeHandle, path, level, repository.NativeHandle, force ? 1 : 0));
     }
@@ -201,12 +201,12 @@ public unsafe readonly struct ConfigHandle : IDisposable
         }
     }
 
-    public ConfigHandle GetSnapshot()
+    public GitConfig GetSnapshot()
     {
-        ConfigHandle result;
-        Git2.ThrowIfError(NativeApi.git_config_snapshot(&result, NativeHandle));
+        Git2.Config* config;
+        Git2.ThrowIfError(NativeApi.git_config_snapshot(&config, NativeHandle));
 
-        return result;
+        return new(config);
     }
 
     public string GetString(string name)
@@ -251,10 +251,10 @@ public unsafe readonly struct ConfigHandle : IDisposable
 
     public readonly struct Enumerable : IEnumerable<GitConfigEntry>
     {
-        private readonly ConfigHandle _handle;
+        private readonly GitConfig _handle;
         private readonly string? _regex;
 
-        internal Enumerable(ConfigHandle handle, string? regex)
+        internal Enumerable(GitConfig handle, string? regex)
         {
             _handle = handle;
             _regex = regex;
@@ -278,11 +278,11 @@ public unsafe readonly struct ConfigHandle : IDisposable
 
     public readonly struct MultiVariableEnumerable : IEnumerable<GitConfigEntry>
     {
-        private readonly ConfigHandle _handle;
+        private readonly GitConfig _handle;
         private readonly string _name;
         private readonly string? _regex;
 
-        internal MultiVariableEnumerable(ConfigHandle handle, string name, string? regex)
+        internal MultiVariableEnumerable(GitConfig handle, string name, string? regex)
         {
             _handle = handle;
             _name = name;

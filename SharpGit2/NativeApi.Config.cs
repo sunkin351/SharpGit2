@@ -428,7 +428,7 @@ internal unsafe static partial class NativeApi
     /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_config_new(ConfigHandle* @out);
+    internal static partial GitError git_config_new(Git2.Config** @out);
 
     /// <summary>
     /// Return the current entry and advance the iterator
@@ -455,7 +455,7 @@ internal unsafe static partial class NativeApi
     /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_config_open_default(ConfigHandle* @out);
+    internal static partial GitError git_config_open_default(Git2.Config** @out);
 
     /// <summary>
     /// Open the global/XDG configuration file according to git's rules
@@ -470,7 +470,7 @@ internal unsafe static partial class NativeApi
     /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_config_open_global(ConfigHandle* @out, Git2.Config* config);
+    internal static partial GitError git_config_open_global(Git2.Config** @out, Git2.Config* config);
 
     /// <summary>
     /// Build a single-level focused config object from a multi-level one.
@@ -489,7 +489,7 @@ internal unsafe static partial class NativeApi
     /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_config_open_level(ConfigHandle* @out, Git2.Config* parent, GitConfigLevel level);
+    internal static partial GitError git_config_open_level(Git2.Config** @out, Git2.Config* parent, GitConfigLevel level);
 
     /// <summary>
     /// Create a new config instance containing a single on-disk file
@@ -499,12 +499,12 @@ internal unsafe static partial class NativeApi
     /// <returns>0 on success, or an error code</returns>
     /// <remarks>
     /// This method is a simple utility wrapper for the following sequence of calls:<br/>
-    /// - <see cref="git_config_new(ConfigHandle*)"/><br/>
+    /// - <see cref="git_config_new(Git2.Config**)"/><br/>
     /// - <see cref="git_config_add_file_ondisk(Git2.Config*, string, GitConfigLevel, Git2.Repository*, int)"/>
     /// </remarks>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_config_open_ondisk(ConfigHandle* @out, string path);
+    internal static partial GitError git_config_open_ondisk(Git2.Config** @out, string path);
 
     /// <summary>
     /// Set the value of a boolean config variable in the config file with the highest level (usually the local one).
@@ -583,5 +583,5 @@ internal unsafe static partial class NativeApi
     /// </remarks>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_config_snapshot(ConfigHandle* @out, Git2.Config* config);
+    internal static partial GitError git_config_snapshot(Git2.Config** @out, Git2.Config* config);
 }

@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace SharpGit2;
+﻿namespace SharpGit2;
 
 public enum GitObjectType
 {
@@ -42,11 +36,11 @@ public enum GitObjectType
     REF_Delta = 7
 }
 
-public unsafe readonly struct GitObjectHandle : IDisposable
+public unsafe readonly struct GitObject : IDisposable
 {
     internal readonly Git2.Object* NativeHandle;
 
-    internal GitObjectHandle(Git2.Object* nativeHandle)
+    internal GitObject(Git2.Object* nativeHandle)
     {
         NativeHandle = nativeHandle;
     }

@@ -15,7 +15,7 @@ public unsafe readonly struct GitTree : IDisposable
         NativeHandle = nativeHandle;
     }
 
-    public RepositoryHandle Owner => new(NativeApi.git_tree_owner(NativeHandle));
+    public GitRepository Owner => new(NativeApi.git_tree_owner(NativeHandle));
 
     public ref readonly GitObjectID Id => ref *NativeApi.git_tree_id(NativeHandle);
 

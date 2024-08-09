@@ -8,11 +8,11 @@ using System.Runtime.InteropServices.Marshalling;
 
 namespace SharpGit2;
 
-public unsafe readonly struct IndexHandle : IDisposable
+public unsafe readonly struct GitIndex : IDisposable
 {
     internal readonly Git2.Index* NativeHandle;
 
-    internal IndexHandle(Git2.Index* nativeHandle)
+    internal GitIndex(Git2.Index* nativeHandle)
     {
         NativeHandle = nativeHandle;
     }
@@ -32,7 +32,7 @@ public unsafe readonly struct IndexHandle : IDisposable
 
     public bool HasConflicts => NativeApi.git_index_has_conflicts(NativeHandle);
 
-    public RepositoryHandle Owner => new(NativeApi.git_index_owner(NativeHandle));
+    public GitRepository Owner => new(NativeApi.git_index_owner(NativeHandle));
 
     /// <summary>
     /// This Index's on-disk version
@@ -328,7 +328,7 @@ public unsafe readonly struct IndexHandle : IDisposable
     /// <remarks>
     /// This method will do the same as <see cref="WriteTree()"/>
     /// </remarks>
-    public GitObjectID WriteTreeTo(RepositoryHandle repository)
+    public GitObjectID WriteTreeTo(GitRepository repository)
     {
         ArgumentNullException.ThrowIfNull(repository.NativeHandle);
 
@@ -357,9 +357,9 @@ public unsafe readonly struct IndexHandle : IDisposable
         }
     }
 
-    public readonly struct Enumerable(IndexHandle index) : IEnumerable<GitIndexEntry>
+    public readonly struct Enumerable(GitIndex index) : IEnumerable<GitIndexEntry>
     {
-        private readonly IndexHandle _index = index;
+        private readonly GitIndex _index = index;
 
         public Enumerator GetEnumerator()
         {
@@ -423,9 +423,9 @@ public unsafe readonly struct IndexHandle : IDisposable
         }
     }
 
-    public readonly struct ConflictEnumerable(IndexHandle handle) : IEnumerable<(GitIndexEntry ancestor, GitIndexEntry ours, GitIndexEntry theirs)>
+    public readonly struct ConflictEnumerable(GitIndex handle) : IEnumerable<(GitIndexEntry ancestor, GitIndexEntry ours, GitIndexEntry theirs)>
     {
-        private readonly IndexHandle _handle = handle;
+        private readonly GitIndex _handle = handle;
 
         public ConflictEnumerator GetEnumerator()
         {

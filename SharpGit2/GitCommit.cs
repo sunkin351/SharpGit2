@@ -1,10 +1,10 @@
 ﻿namespace SharpGit2;
 
-public unsafe readonly struct CommitHandle
+public unsafe readonly struct GitCommit
 {
     internal readonly Git2.Commit* NativeHandle;
 
-    internal CommitHandle(Git2.Commit* handle)
+    internal GitCommit(Git2.Commit* handle)
     {
         NativeHandle = handle;
     }

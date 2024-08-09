@@ -1,16 +1,11 @@
-﻿using System;
-using System.Buffers;
-using System.Collections.Generic;
+﻿using System.Buffers;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.Marshalling;
 using System.Runtime.Intrinsics;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace SharpGit2;
 
@@ -23,11 +18,11 @@ public enum GitReferenceType
     All = Direct | Symbolic
 }
 
-public unsafe readonly partial struct ReferenceHandle : IDisposable, IComparable<ReferenceHandle>
+public unsafe readonly partial struct GitReference : IDisposable, IComparable<GitReference>
 {
     internal readonly Git2.Reference* NativeHandle;
 
-    internal ReferenceHandle(Git2.Reference* handle)
+    internal GitReference(Git2.Reference* handle)
     {
         NativeHandle = handle;
     }
@@ -78,7 +73,7 @@ public unsafe readonly partial struct ReferenceHandle : IDisposable, IComparable
 
     internal byte* NativeSymbolicTarget => NativeApi.git_reference_symbolic_target(NativeHandle);
 
-    public RepositoryHandle Owner => new(NativeApi.git_reference_owner(NativeHandle));
+    public GitRepository Owner => new(NativeApi.git_reference_owner(NativeHandle));
 
     public GitReferenceType TargetType => NativeApi.git_reference_target_type(NativeHandle);
 
@@ -92,7 +87,7 @@ public unsafe readonly partial struct ReferenceHandle : IDisposable, IComparable
         return NativeHandle == null ? "< NULL >" : GetName();
     }
 
-    public int CompareTo(ReferenceHandle other)
+    public int CompareTo(GitReference other)
     {
         return NativeApi.git_reference_cmp(NativeHandle, other.NativeHandle);
     }
@@ -108,10 +103,10 @@ public unsafe readonly partial struct ReferenceHandle : IDisposable, IComparable
         Git2.ThrowIfError(NativeApi.git_reference_delete(NativeHandle));
     }
 
-    public ReferenceHandle Duplicate()
+    public GitReference Duplicate()
     {
-        ReferenceHandle reference;
-        Git2.ThrowIfError(NativeApi.git_reference_dup(&reference, NativeHandle));
+        GitReference reference;
+        Git2.ThrowIfError(NativeApi.git_reference_dup((Git2.Reference**)&reference, NativeHandle));
 
         return reference;
     }
@@ -135,17 +130,17 @@ public unsafe readonly partial struct ReferenceHandle : IDisposable, IComparable
         return Utf8StringMarshaller.ConvertToManaged(this.NativeSymbolicTarget);
     }
 
-    public GitObjectHandle Peel(GitObjectType type)
+    public GitObject Peel(GitObjectType type)
     {
-        GitObjectHandle result;
+        GitObject result;
         Git2.ThrowIfError(NativeApi.git_reference_peel(&result, NativeHandle, type));
 
         return result;
     }
 
-    public GitError Peel(GitObjectType type, out GitObjectHandle obj)
+    public GitError Peel(GitObjectType type, out GitObject obj)
     {
-        GitObjectHandle result;
+        GitObject result;
         var error = NativeApi.git_reference_peel(&result, NativeHandle, type);
 
         obj = (error == GitError.OK) ? result : default;
@@ -153,38 +148,38 @@ public unsafe readonly partial struct ReferenceHandle : IDisposable, IComparable
         return error;
     }
 
-    public ReferenceHandle Rename(string newName, bool force, string? logMessage)
+    public GitReference Rename(string newName, bool force, string? logMessage)
     {
-        ReferenceHandle newReference;
-        Git2.ThrowIfError(NativeApi.git_reference_rename(&newReference, NativeHandle, newName, force ? 1 : 0, logMessage));
+        GitReference newReference;
+        Git2.ThrowIfError(NativeApi.git_reference_rename((Git2.Reference**)&newReference, NativeHandle, newName, force ? 1 : 0, logMessage));
 
         return newReference;
     }
 
-    public ReferenceHandle Resolve()
+    public GitReference Resolve()
     {
-        ReferenceHandle peeledReference;
-        Git2.ThrowIfError(NativeApi.git_reference_resolve(&peeledReference, NativeHandle));
+        GitReference peeledReference;
+        Git2.ThrowIfError(NativeApi.git_reference_resolve((Git2.Reference**)&peeledReference, NativeHandle));
 
         return peeledReference;
     }
 
-    public ReferenceHandle SetTarget(GitObjectID Id, string? logMessage)
+    public GitReference SetTarget(GitObjectID Id, string? logMessage)
     {
-        ReferenceHandle newReference;
-        Git2.ThrowIfError(NativeApi.git_reference_set_target(&newReference, NativeHandle, &Id, logMessage));
+        GitReference newReference;
+        Git2.ThrowIfError(NativeApi.git_reference_set_target((Git2.Reference**)&newReference, NativeHandle, &Id, logMessage));
 
         return newReference;
     }
 
-    public ReferenceHandle SetTarget(in GitObjectID Id, string? logMessage)
+    public GitReference SetTarget(in GitObjectID Id, string? logMessage)
     {
-        ReferenceHandle newReference;
+        GitReference newReference;
         GitError error;
 
         fixed (GitObjectID* ptr = &Id)
         {
-            error = NativeApi.git_reference_set_target(&newReference, NativeHandle, ptr, logMessage);
+            error = NativeApi.git_reference_set_target((Git2.Reference**)&newReference, NativeHandle, ptr, logMessage);
         }
 
         Git2.ThrowIfError(error);
@@ -192,18 +187,18 @@ public unsafe readonly partial struct ReferenceHandle : IDisposable, IComparable
         return newReference;
     }
 
-    public ReferenceHandle SetSymbolicTarget(string target, string? logMessage)
+    public GitReference SetSymbolicTarget(string target, string? logMessage)
     {
-        ReferenceHandle newReference;
-        Git2.ThrowIfError(NativeApi.git_reference_symbolic_set_target(&newReference, NativeHandle, target, logMessage));
+        GitReference newReference;
+        Git2.ThrowIfError(NativeApi.git_reference_symbolic_set_target((Git2.Reference**)&newReference, NativeHandle, target, logMessage));
 
         return newReference;
     }
 
-    public ReferenceHandle SetSymbolicTarget(ReferenceHandle target, string? logMessage)
+    public GitReference SetSymbolicTarget(GitReference target, string? logMessage)
     {
-        ReferenceHandle newReference;
-        Git2.ThrowIfError(NativeApi.git_reference_symbolic_set_target(&newReference, NativeHandle, target.NativeName, logMessage));
+        GitReference newReference;
+        Git2.ThrowIfError(NativeApi.git_reference_symbolic_set_target((Git2.Reference**)&newReference, NativeHandle, target.NativeName, logMessage));
 
         return newReference;
     }

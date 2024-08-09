@@ -8,11 +8,11 @@ using System.Text;
 
 namespace SharpGit2;
 
-public unsafe readonly partial struct RepositoryHandle : IDisposable
+public unsafe readonly partial struct GitRepository : IDisposable
 {
     internal readonly Git2.Repository* NativeHandle;
 
-    internal RepositoryHandle(Git2.Repository* handle)
+    internal GitRepository(Git2.Repository* handle)
     {
         NativeHandle = handle;
     }
@@ -77,6 +77,9 @@ public unsafe readonly partial struct RepositoryHandle : IDisposable
         }
     }
 
+    /// <summary>
+    /// Gets the currently active namespace for this repository, or <see langword="null"/> if there isn't one.
+    /// </summary>
     internal byte* NativeNamespace => NativeApi.git_repository_get_namespace(NativeHandle);
 
     internal byte* NativeWorkDirectory => NativeApi.git_repository_workdir(NativeHandle);
@@ -96,22 +99,22 @@ public unsafe readonly partial struct RepositoryHandle : IDisposable
         Git2.ThrowIfError(NativeApi.git_repository_state_cleanup(NativeHandle));
     }
 
-    public ReferenceHandle CreateReference(string name, GitObjectID id, bool force, string? logMessage)
+    public GitReference CreateReference(string name, GitObjectID id, bool force, string? logMessage)
     {
-        ReferenceHandle result;
-        Git2.ThrowIfError(NativeApi.git_reference_create(&result, NativeHandle, name, &id, force ? 1 : 0, logMessage));
+        GitReference result;
+        Git2.ThrowIfError(NativeApi.git_reference_create((Git2.Reference**)&result, NativeHandle, name, &id, force ? 1 : 0, logMessage));
 
         return result;
     }
 
-    public ReferenceHandle CreateReference(string name, in GitObjectID id, bool force, string? logMessage)
+    public GitReference CreateReference(string name, in GitObjectID id, bool force, string? logMessage)
     {
-        ReferenceHandle result;
+        GitReference result;
         GitError error;
 
         fixed (GitObjectID* ptr = &id)
         {
-            error = NativeApi.git_reference_create(&result, NativeHandle, name, ptr, force ? 1 : 0, logMessage);
+            error = NativeApi.git_reference_create((Git2.Reference**)&result, NativeHandle, name, ptr, force ? 1 : 0, logMessage);
         }
 
         Git2.ThrowIfError(error);
@@ -119,37 +122,37 @@ public unsafe readonly partial struct RepositoryHandle : IDisposable
         return result;
     }
 
-    public ReferenceHandle CreateMatchingReference(string name, GitObjectID id, bool force, GitObjectID currendId, string? logMessage)
+    public GitReference CreateMatchingReference(string name, GitObjectID id, bool force, GitObjectID currendId, string? logMessage)
     {
-        ReferenceHandle result;
-        Git2.ThrowIfError(NativeApi.git_reference_create_matching(&result, NativeHandle, name, &id, force ? 1 : 0, &currendId, logMessage));
+        GitReference result;
+        Git2.ThrowIfError(NativeApi.git_reference_create_matching((Git2.Reference**)&result, NativeHandle, name, &id, force ? 1 : 0, &currendId, logMessage));
 
         return result;
     }
 
-    public ReferenceHandle CreateMatchingReference(string name, in GitObjectID id, bool force, in GitObjectID currentId, string? logMessage)
+    public GitReference CreateMatchingReference(string name, in GitObjectID id, bool force, in GitObjectID currentId, string? logMessage)
     {
-        ReferenceHandle result;
+        GitReference result;
         fixed (GitObjectID* idPtr = &id, currentIdPtr = &currentId)
         {
-            Git2.ThrowIfError(NativeApi.git_reference_create_matching(&result, NativeHandle, name, idPtr, force ? 1 : 0, currentIdPtr, logMessage));
+            Git2.ThrowIfError(NativeApi.git_reference_create_matching((Git2.Reference**)&result, NativeHandle, name, idPtr, force ? 1 : 0, currentIdPtr, logMessage));
         }
 
         return result;
     }
 
-    public ReferenceHandle CreateSymbolicReference(string name, string target, bool force, string? logMessage)
+    public GitReference CreateSymbolicReference(string name, string target, bool force, string? logMessage)
     {
-        ReferenceHandle result;
-        Git2.ThrowIfError(NativeApi.git_reference_symbolic_create(&result, NativeHandle, name, target, force ? 1 : 0, logMessage));
+        GitReference result;
+        Git2.ThrowIfError(NativeApi.git_reference_symbolic_create((Git2.Reference**)&result, NativeHandle, name, target, force ? 1 : 0, logMessage));
 
         return result;
     }
 
-    public ReferenceHandle CreateSymbolicReferenceMatching(string name, string target, bool force, string? currentValue, string? logMessage)
+    public GitReference CreateSymbolicReferenceMatching(string name, string target, bool force, string? currentValue, string? logMessage)
     {
-        ReferenceHandle result;
-        Git2.ThrowIfError(NativeApi.git_reference_symbolic_create_matching(&result, NativeHandle, name, target, force ? 1 : 0, currentValue, logMessage));
+        GitReference result;
+        Git2.ThrowIfError(NativeApi.git_reference_symbolic_create_matching((Git2.Reference**)&result, NativeHandle, name, target, force ? 1 : 0, currentValue, logMessage));
 
         return result;
     }
@@ -308,7 +311,7 @@ public unsafe readonly partial struct RepositoryHandle : IDisposable
         return NativeApi.git_reference_foreach(NativeHandle, callback, payload);
     }
 
-    public void ForEachReference(Func<ReferenceHandle, bool> callback, bool autoDispose = true)
+    public void ForEachReference(Func<GitReference, bool> callback, bool autoDispose = true)
     {
         var context = new ForEachReferenceContext() { Callback = callback, AutoDispose = autoDispose };
 
@@ -336,7 +339,7 @@ public unsafe readonly partial struct RepositoryHandle : IDisposable
         [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
         static GitError _Callback(Git2.Reference* reference, nint payload)
         {
-            var referenceHandle = new ReferenceHandle(reference);
+            var referenceHandle = new GitReference(reference);
 
             var context = (ForEachReferenceContext)GCHandle.FromIntPtr(payload).Target!;
 
@@ -501,26 +504,26 @@ public unsafe readonly partial struct RepositoryHandle : IDisposable
     /// Needs disposal when no longer needed.
     /// </summary>
     /// <returns>The git config file object.</returns>
-    public ConfigHandle GetConfig()
+    public GitConfig GetConfig()
     {
-        ConfigHandle config;
+        Git2.Config* config;
         Git2.ThrowIfError(NativeApi.git_repository_config(&config, NativeHandle));
 
-        return config;
+        return new(config);
     }
 
-    public ConfigHandle GetConfigSnapshot()
+    public GitConfig GetConfigSnapshot()
     {
-        ConfigHandle config;
+        Git2.Config* config;
         Git2.ThrowIfError(NativeApi.git_repository_config_snapshot(&config, NativeHandle));
 
-        return config;
+        return new(config);
     }
 
-    public GitError GetHead(out ReferenceHandle head)
+    public GitError GetHead(out GitReference head)
     {
-        ReferenceHandle head_loc;
-        var error = NativeApi.git_repository_head(&head_loc, NativeHandle);
+        GitReference head_loc;
+        var error = NativeApi.git_repository_head((Git2.Reference**)&head_loc, NativeHandle);
 
         switch (error)
         {
@@ -551,12 +554,12 @@ public unsafe readonly partial struct RepositoryHandle : IDisposable
         email = Utf8StringMarshaller.ConvertToManaged(__email)!;
     }
 
-    public IndexHandle GetIndex()
+    public GitIndex GetIndex()
     {
-        IndexHandle index;
+        Git2.Index* index;
         Git2.ThrowIfError(NativeApi.git_repository_index(&index, NativeHandle));
 
-        return index;
+        return new(index);
     }
 
     public string GetItemPath(GitRepositoryItemType itemType)
@@ -616,12 +619,12 @@ public unsafe readonly partial struct RepositoryHandle : IDisposable
         return Utf8StringMarshaller.ConvertToManaged(this.NativeNamespace);
     }
 
-    public ObjectDatabaseHandle GetObjectDatabase()
+    public GitObjectDatabase GetObjectDatabase()
     {
-        ObjectDatabaseHandle result;
+        Git2.ObjectDatabase* result;
         Git2.ThrowIfError(NativeApi.git_repository_odb(&result, NativeHandle));
 
-        return result;
+        return new(result);
     }
 
     public string GetPath()
@@ -630,12 +633,12 @@ public unsafe readonly partial struct RepositoryHandle : IDisposable
         return Utf8StringMarshaller.ConvertToManaged(NativeApi.git_repository_path(NativeHandle))!;
     }
 
-    public ReferenceDatabaseHandle GetRefDB()
+    public GitReferenceDatabase GetRefDB()
     {
-        ReferenceDatabaseHandle refDB;
+        Git2.ReferenceDatabase* refDB;
         Git2.ThrowIfError(NativeApi.git_repository_refdb(&refDB, NativeHandle));
 
-        return refDB;
+        return new(refDB);
     }
 
     public string[] GetReferenceNameList()
@@ -709,9 +712,9 @@ public unsafe readonly partial struct RepositoryHandle : IDisposable
         Git2.ThrowIfError(NativeApi.git_repository_set_head(NativeHandle, refName));
     }
 
-    public void SetHead(ReferenceHandle reference)
+    public void SetHead(GitReference reference)
     {
-        ArgumentNullException.ThrowIfNull((Git2.Reference*)reference.NativeHandle);
+        ArgumentNullException.ThrowIfNull(reference.NativeHandle);
 
         Git2.ThrowIfError(NativeApi.git_repository_set_head(NativeHandle, reference.NativeName));
     }
@@ -744,7 +747,7 @@ public unsafe readonly partial struct RepositoryHandle : IDisposable
     /// <returns>true if successful, false if not or if the reference name is malformed</returns>
     /// <exception cref="Git2Exception"/>
     /// <exception cref="ArgumentNullException"/>
-    public bool TryLookupReference(string name, out ReferenceHandle reference)
+    public bool TryLookupReference(string name, out GitReference reference)
     {
         if (string.IsNullOrEmpty(name))
         {
@@ -752,8 +755,8 @@ public unsafe readonly partial struct RepositoryHandle : IDisposable
             return false;
         }
 
-        ReferenceHandle refLoc;
-        var result = NativeApi.git_reference_lookup(&refLoc, NativeHandle, name);
+        GitReference refLoc;
+        var result = NativeApi.git_reference_lookup((Git2.Reference**)&refLoc, NativeHandle, name);
 
         switch (result)
         {
@@ -769,10 +772,10 @@ public unsafe readonly partial struct RepositoryHandle : IDisposable
         }
     }
 
-    public bool TryGetReferenceByShorthand(string shorthand, out ReferenceHandle reference)
+    public bool TryGetReferenceByShorthand(string shorthand, out GitReference reference)
     {
-        ReferenceHandle result;
-        var error = NativeApi.git_reference_dwim(&result, NativeHandle, shorthand);
+        GitReference result;
+        var error = NativeApi.git_reference_dwim((Git2.Reference**)&result, NativeHandle, shorthand);
 
         switch (error)
         {
@@ -811,14 +814,14 @@ public unsafe readonly partial struct RepositoryHandle : IDisposable
         }
     }
 
-    private sealed class ForEachReferenceContext : Git2.ForEachContext<Func<ReferenceHandle, bool>>
+    private sealed class ForEachReferenceContext : Git2.ForEachContext<Func<GitReference, bool>>
     {
         public bool AutoDispose { get; init; }
     }
 
-    public readonly struct ReferenceEnumerable(RepositoryHandle repo, string? glob) : IEnumerable<ReferenceHandle>
+    public readonly struct ReferenceEnumerable(GitRepository repo, string? glob) : IEnumerable<GitReference>
     {
-        private readonly RepositoryHandle _repository = repo;
+        private readonly GitRepository _repository = repo;
         private readonly string? _glob = glob;
 
         public ReferenceEnumerator GetEnumerator()
@@ -837,23 +840,23 @@ public unsafe readonly partial struct RepositoryHandle : IDisposable
             return new(handle);
         }
 
-        IEnumerator<ReferenceHandle> IEnumerable<ReferenceHandle>.GetEnumerator() => GetEnumerator();
+        IEnumerator<GitReference> IEnumerable<GitReference>.GetEnumerator() => GetEnumerator();
 
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     }
 
-    public struct ReferenceEnumerator : IEnumerator<ReferenceHandle>
+    public struct ReferenceEnumerator : IEnumerator<GitReference>
     {
         private Git2.ReferenceIterator* _iteratorHandle;
 
         internal ReferenceEnumerator(Git2.ReferenceIterator* handle) => _iteratorHandle = handle;
 
-        public ReferenceHandle Current { get; private set; }
+        public GitReference Current { get; private set; }
 
         public bool MoveNext()
         {
-            ReferenceHandle handle;
-            var code = NativeApi.git_reference_next(&handle, _iteratorHandle);
+            GitReference handle;
+            var code = NativeApi.git_reference_next((Git2.Reference**)&handle, _iteratorHandle);
 
             switch (code)
             {
@@ -885,9 +888,9 @@ public unsafe readonly partial struct RepositoryHandle : IDisposable
         }
     }
 
-    public readonly struct ReferenceNameEnumerable(RepositoryHandle repo, string? glob) : IEnumerable<string>
+    public readonly struct ReferenceNameEnumerable(GitRepository repo, string? glob) : IEnumerable<string>
     {
-        private readonly RepositoryHandle _repository = repo;
+        private readonly GitRepository _repository = repo;
         private readonly string? _glob = glob;
 
         public ReferenceNameEnumerator GetEnumerator()

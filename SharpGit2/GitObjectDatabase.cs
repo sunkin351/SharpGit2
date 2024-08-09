@@ -1,10 +1,10 @@
 ﻿namespace SharpGit2;
 
-public unsafe readonly partial struct ObjectDatabaseHandle : IDisposable
+public unsafe readonly partial struct GitObjectDatabase : IDisposable
 {
     internal readonly Git2.ObjectDatabase* NativeHandle;
 
-    internal ObjectDatabaseHandle(Git2.ObjectDatabase* nativeHandle)
+    internal GitObjectDatabase(Git2.ObjectDatabase* nativeHandle)
     {
         NativeHandle = nativeHandle;
     }

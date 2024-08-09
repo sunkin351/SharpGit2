@@ -101,27 +101,27 @@ public static unsafe partial class Git2
         }
     }
 
-    public static RepositoryHandle InitRepository(string path)
+    public static GitRepository InitRepository(string path)
     {
         return InitRepository(path, false);
     }
 
-    public static RepositoryHandle InitRepository(string path, bool isBare)
+    public static GitRepository InitRepository(string path, bool isBare)
     {
-        RepositoryHandle handle;
-        Git2.ThrowIfError(NativeApi.git_repository_init(&handle, path, isBare ? 1u : 0u));
+        GitRepository handle;
+        Git2.ThrowIfError(NativeApi.git_repository_init((Git2.Repository**)&handle, path, isBare ? 1u : 0u));
 
         return handle;
     }
 
-    public static RepositoryHandle InitRepository(string path, RepositoryInitOptions options)
+    public static GitRepository InitRepository(string path, RepositoryInitOptions options)
     {
-        RepositoryHandle handle;
+        GitRepository handle;
         GitError error;
 
         fixed (RepositoryInitOptions.Unmanaged* pOptions = &options._structure)
         {
-            error = NativeApi.git_repository_init_ext(&handle, path, pOptions);
+            error = NativeApi.git_repository_init_ext((Git2.Repository**)&handle, path, pOptions);
         }
 
         Git2.ThrowIfError(error);
@@ -129,43 +129,43 @@ public static unsafe partial class Git2
         return handle;
     }
 
-    public static RepositoryHandle OpenRepository(string path)
+    public static GitRepository OpenRepository(string path)
     {
         ArgumentException.ThrowIfNullOrEmpty(path);
 
-        RepositoryHandle repository;
-        Git2.ThrowIfError(NativeApi.git_repository_open(&repository, path));
+        GitRepository repository;
+        Git2.ThrowIfError(NativeApi.git_repository_open((Git2.Repository**)&repository, path));
 
         return repository;
     }
 
-    public static RepositoryHandle OpenRepository(string? path, RepositoryOpenFlags flags, string? ceiling_dirs)
+    public static GitRepository OpenRepository(string? path, RepositoryOpenFlags flags, string? ceiling_dirs)
     {
         if ((flags & RepositoryOpenFlags.FromEnvironment) == 0)
             ArgumentException.ThrowIfNullOrEmpty(path);
 
-        RepositoryHandle repository;
-        Git2.ThrowIfError(NativeApi.git_repository_open_ext(&repository, path, flags, ceiling_dirs));
+        GitRepository repository;
+        Git2.ThrowIfError(NativeApi.git_repository_open_ext((Git2.Repository**)&repository, path, flags, ceiling_dirs));
 
         return repository;
     }
 
-    public static RepositoryHandle OpenBareRepository(string path)
+    public static GitRepository OpenBareRepository(string path)
     {
         ArgumentException.ThrowIfNullOrEmpty(path);
 
-        RepositoryHandle repository;
-        Git2.ThrowIfError(NativeApi.git_repository_open_bare(&repository, path));
+        GitRepository repository;
+        Git2.ThrowIfError(NativeApi.git_repository_open_bare((Git2.Repository**)&repository, path));
 
         return repository;
     }
 
-    public static RepositoryHandle OpenRepositoryFromWorktree(WorkTreeHandle worktree)
+    public static GitRepository OpenRepositoryFromWorktree(GitWorkTree worktree)
     {
         ArgumentNullException.ThrowIfNull(worktree.NativeHandle);
 
-        RepositoryHandle repository;
-        Git2.ThrowIfError(NativeApi.git_repository_open_from_worktree(&repository, worktree.NativeHandle));
+        GitRepository repository;
+        Git2.ThrowIfError(NativeApi.git_repository_open_from_worktree((Git2.Repository**)&repository, worktree.NativeHandle));
 
         return repository;
     }
