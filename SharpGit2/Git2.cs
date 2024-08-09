@@ -321,6 +321,7 @@ public static unsafe partial class Git2
         public int @class;
     }
 
+    #region Opaque Handles
     internal struct Commit
     {
     }
@@ -339,21 +340,6 @@ public static unsafe partial class Git2
 
     internal struct ConfigIterator
     {
-    }
-
-    internal enum ConfigMapType
-    {
-        False,
-        True,
-        Int32,
-        String
-    }
-
-    internal struct ConfigMap
-    {
-        public ConfigMapType Type;
-        public byte* StringMatch;
-        public int MapValue;
     }
 
     internal struct Index
@@ -400,8 +386,29 @@ public static unsafe partial class Git2
     {
     }
 
+    internal struct TreeEntry
+    {
+    }
+
     internal struct Worktree
     {
+    }
+
+    #endregion
+
+    internal enum ConfigMapType
+    {
+        False,
+        True,
+        Int32,
+        String
+    }
+
+    internal struct ConfigMap
+    {
+        public ConfigMapType Type;
+        public byte* StringMatch;
+        public int MapValue;
     }
 
     internal class ForEachContext<TDelegate> where TDelegate : Delegate
