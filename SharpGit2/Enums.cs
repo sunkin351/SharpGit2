@@ -267,3 +267,25 @@ public enum GitIndexCapabilities
     NoSymlinks = 4,
     FromOwner = -1
 }
+
+public enum GitTreeUpdateType
+{
+    UpdateOrInsert,
+    Remove
+}
+
+public enum GitFileMode
+{
+    Unreadable = 0,
+    Tree = 0040000,
+    Blob = 0100644,
+    BlobExecutable = 0100755,
+    Link = 0120000,
+    Commit = 0160000
+}
+
+public enum GitTreeWalkMode
+{
+    PreOrder,
+    PostOrder
+}

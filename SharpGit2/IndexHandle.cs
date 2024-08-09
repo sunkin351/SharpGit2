@@ -173,7 +173,7 @@ public unsafe readonly struct IndexHandle : IDisposable
         Git2.ThrowIfError(NativeApi.git_index_read(NativeHandle, force ? 1 : 0));
     }
 
-    public void ReadTree(TreeHandle tree)
+    public void ReadTree(GitTree tree)
     {
         Git2.ThrowIfError(NativeApi.git_index_read_tree(NativeHandle, tree.NativeHandle));
     }

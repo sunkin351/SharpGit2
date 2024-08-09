@@ -263,3 +263,21 @@ public struct GitIndexTime(uint seconds, uint nanoseconds)
     public uint Seconds = seconds;
     public uint Nanoseconds = nanoseconds;
 }
+
+[NativeMarshalling(typeof(GitTreeUpdateMarshaller))]
+public struct GitTreeUpdate
+{
+    public GitTreeUpdateType Action;
+    public GitObjectID Id;
+    public GitFileMode FileMode;
+    public string Path;
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal unsafe struct Unmanaged
+    {
+        public GitTreeUpdateType Action;
+        public GitObjectID Id;
+        public GitFileMode FileMode;
+        public byte* Path;
+    }
+}

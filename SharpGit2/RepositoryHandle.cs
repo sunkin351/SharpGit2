@@ -154,6 +154,14 @@ public unsafe readonly partial struct RepositoryHandle : IDisposable
         return result;
     }
 
+    public GitObjectID CreateUpdatedTree(GitTree baseline, ReadOnlySpan<GitTreeUpdate> updates)
+    {
+        GitObjectID id;
+        Git2.ThrowIfError(NativeApi.git_tree_create_updated(&id, NativeHandle, baseline.NativeHandle, (nuint)updates.Length, updates));
+
+        return id;
+    }
+
     public GitError DetachHead()
     {
         var error = NativeApi.git_repository_detach_head(NativeHandle);
