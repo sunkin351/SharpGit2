@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
@@ -114,19 +115,39 @@ public static unsafe partial class Git2
         return handle;
     }
 
-    public static GitRepository InitRepository(string path, RepositoryInitOptions options)
+    public static GitRepository InitRepository(string path, in GitRepositoryInitOptions options)
     {
-        GitRepository handle;
+        Git2.Repository* result;
         GitError error;
 
-        fixed (RepositoryInitOptions.Unmanaged* pOptions = &options._structure)
+        Native.GitRepositoryInitOptions nOptions = default;
+        try
         {
-            error = NativeApi.git_repository_init_ext((Git2.Repository**)&handle, path, pOptions);
+            nOptions.FromManaged(in options);
+
+            error = NativeApi.git_repository_init_ext(&result, path, &nOptions);
+        }
+        finally
+        {
+            nOptions.Free();
         }
 
         Git2.ThrowIfError(error);
 
-        return handle;
+        return new(result);
+    }
+
+    public static GitRepository InitRepository(string path, in Native.GitRepositoryInitOptions options)
+    {
+        Git2.Repository* result;
+        GitError error;
+
+        fixed (Native.GitRepositoryInitOptions* pOptions = &options)
+            error = NativeApi.git_repository_init_ext(&result, path, pOptions);
+
+        Git2.ThrowIfError(error);
+
+        return new(result);
     }
 
     public static GitRepository OpenRepository(string path)
@@ -139,9 +160,9 @@ public static unsafe partial class Git2
         return repository;
     }
 
-    public static GitRepository OpenRepository(string? path, RepositoryOpenFlags flags, string? ceiling_dirs)
+    public static GitRepository OpenRepository(string? path, GitRepositoryOpenFlags flags, string? ceiling_dirs)
     {
-        if ((flags & RepositoryOpenFlags.FromEnvironment) == 0)
+        if ((flags & GitRepositoryOpenFlags.FromEnvironment) == 0)
             ArgumentException.ThrowIfNullOrEmpty(path);
 
         GitRepository repository;
@@ -201,19 +222,24 @@ public static unsafe partial class Git2
     [MethodImpl(MethodImplOptions.NoInlining)]
     internal static Exception ExceptionForError(GitError error, string? message = null)
     {
-        if (message is null)
+        GitErrorClass @class = GitErrorClass.None;
+
+        if (NativeApi.git_error_exists())
         {
             var err = NativeApi.git_error_last();
 
             Debug.Assert(err != null);
 
+            @class = err->Class;
             message = Utf8StringMarshaller.ConvertToManaged(err->Message)!;
+
+            NativeApi.git_error_clear();
         }
 
         return error switch
         {
-            GitError.NotSupported => new NotSupportedException(message),
-            _ => new Git2Exception(error, message),
+            GitError.NotSupported => new NotSupportedException(message ?? "LibGit2 has returned that it does not support this operation!"),
+            _ => new Git2Exception(error, @class, message ?? "LibGit2 has returned an error!"),
         };
     }
 
@@ -249,7 +275,7 @@ public static unsafe partial class Git2
         internal Git2.Commit** commits;
         internal nuint count;
 
-        public readonly ReadOnlySpan<CommitHandle> Span => new(commits, checked((int)count));
+        public readonly ReadOnlySpan<GitCommit> Span => new(commits, checked((int)count));
 
         public void Dispose()
         {
@@ -261,26 +287,6 @@ public static unsafe partial class Git2
             NativeApi.git_commitarray_dispose(&copy);
 
             this = default;
-        }
-    }
-
-    internal struct StringArray(byte** strings, nuint count)
-    {
-        public byte** Strings = strings;
-        public nuint Count = count;
-
-        public readonly string[] ToManaged()
-        {
-            var span = new ReadOnlySpan<nint>(Strings, checked((int)Count));
-
-            var managedArray = new string[span.Length];
-
-            for (int i = 0; i < span.Length; ++i)
-            {
-                managedArray[i] = Utf8StringMarshaller.ConvertToManaged((byte*)span[i])!;
-            }
-
-            return managedArray;
         }
     }
 
@@ -322,78 +328,30 @@ public static unsafe partial class Git2
     }
 
     #region Opaque Handles
-    internal struct Commit
-    {
-    }
-
-    internal struct Config
-    {
-    }
-
-    internal struct ConfigBackend
-    {
-    }
-
-    internal struct ConfigEntry
-    {
-    }
-
-    internal struct ConfigIterator
-    {
-    }
-
-    internal struct Index
-    {
-    }
-
-    internal struct IndexConflictIterator
-    {
-    }
-
-    internal struct IndexIterator
-    {
-    }
-
-    internal struct Object
-    {
-    }
-
-    internal struct ObjectDatabase
-    {
-    }
-
-    internal struct Reference
-    {
-    }
-
-    internal struct ReferenceIterator
-    {
-    }
-
-    internal struct ReferenceDatabase
-    {
-    }
-
-    internal struct Repository
-    {
-    }
-
-    internal struct Transaction
-    {
-    }
-
-    internal struct Tree
-    {
-    }
-
-    internal struct TreeEntry
-    {
-    }
-
-    internal struct Worktree
-    {
-    }
-
+    public struct Certificate { }
+    public struct Commit { }
+    public struct Config { }
+    public struct ConfigBackend { }
+    public struct ConfigEntry { }
+    public struct ConfigIterator { }
+    public struct Credential { }
+    public struct Diff { }
+    public struct Index { }
+    public struct IndexConflictIterator { }
+    public struct IndexIterator { }
+    public struct Object { }
+    public struct ObjectDatabase { }
+    public struct ObjectDatabaseBackend { }
+    public struct Reference { }
+    public struct ReferenceIterator { }
+    public struct ReferenceDatabase { }
+    public struct Remote { }
+    public struct Repository { }
+    public struct Transaction { }
+    public struct Transport { }
+    public struct Tree { }
+    public struct TreeEntry { }
+    public struct Worktree { }
     #endregion
 
     internal enum ConfigMapType
@@ -411,7 +369,7 @@ public static unsafe partial class Git2
         public int MapValue;
     }
 
-    internal class ForEachContext<TDelegate> where TDelegate : Delegate
+    internal class CallbackContext<TDelegate> where TDelegate : Delegate
     {
         public required TDelegate Callback { get; init; }
 

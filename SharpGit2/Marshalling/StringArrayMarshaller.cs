@@ -6,9 +6,9 @@ using System.Text;
 namespace SharpGit2.Marshalling;
 
 [CustomMarshaller(typeof(string[]), MarshalMode.ManagedToUnmanagedIn, typeof(ManagedToUnmanagedIn))]
-internal unsafe static class StringArrayMarshaller
+public unsafe static class StringArrayMarshaller
 {
-    public static Git2.StringArray ConvertToUnmanaged(string[] array)
+    public static Native.GitStringArray ConvertToUnmanaged(string[]? array)
     {
         if (array is null or { Length: 0 })
             return default;
@@ -41,7 +41,7 @@ internal unsafe static class StringArrayMarshaller
                 strMemTmp = null;
             }
 
-            return new Git2.StringArray(arrayMemory, (nuint)array.Length);
+            return new Native.GitStringArray(arrayMemory, (nuint)array.Length);
         }
         catch
         {
@@ -60,7 +60,7 @@ internal unsafe static class StringArrayMarshaller
         }
     }
 
-    public static void Free(Git2.StringArray array)
+    public static void Free(Native.GitStringArray array)
     {
         if (array.Strings is null)
             return;
@@ -75,16 +75,16 @@ internal unsafe static class StringArrayMarshaller
 
     public ref struct ManagedToUnmanagedIn
     {
-        private Git2.StringArray _array;
+        private Native.GitStringArray _array;
 
         public void FromManaged(string[] array)
         {
             _array = ConvertToUnmanaged(array);
         }
 
-        public Git2.StringArray* ToUnmanaged()
+        public Native.GitStringArray* ToUnmanaged()
         {
-            return (Git2.StringArray*)Unsafe.AsPointer(ref _array);
+            return (Native.GitStringArray*)Unsafe.AsPointer(ref _array);
         }
 
         public void Free()

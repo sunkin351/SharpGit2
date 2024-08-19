@@ -301,7 +301,7 @@ internal static unsafe partial class NativeApi
     /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_reference_list(Git2.StringArray* list, Git2.Repository* repository);
+    internal static partial GitError git_reference_list(Native.GitStringArray* list, Git2.Repository* repository);
 
     /// <summary>
     /// Lookup a reference by name in a repository.

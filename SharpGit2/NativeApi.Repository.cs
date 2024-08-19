@@ -303,7 +303,7 @@ internal static unsafe partial class NativeApi
     /// </remarks>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_repository_init_ext(Git2.Repository** repository, string path, RepositoryInitOptions.Unmanaged* options);
+    internal static partial GitError git_repository_init_ext(Git2.Repository** repository, string path, Native.GitRepositoryInitOptions* options);
 
     /// <summary>
     /// Check if a repository is bare
@@ -416,7 +416,7 @@ internal static unsafe partial class NativeApi
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial GitError git_repository_odb(Git2.ObjectDatabase** db_out, Git2.Repository* repository);
 
-#if SHA256_OBJECT_ID
+#if GIT_EXPERIMENTAL_SHA256
     /// <summary>
     /// Gets the object type used by this repository.
     /// </summary>
@@ -467,7 +467,7 @@ internal static unsafe partial class NativeApi
     /// <param name="path">
     /// Path to open as git repository. If the flags permit "searching",
     /// then this can be a path to a subdirectory inside the working directory
-    /// of the repository. May be <see langword="null"/> if flags contains <see cref="RepositoryOpenFlags.FromEnvironment"/>.
+    /// of the repository. May be <see langword="null"/> if flags contains <see cref="GitRepositoryOpenFlags.FromEnvironment"/>.
     /// </param>
     /// <param name="flags"></param>
     /// <param name="ceiling_dirs">
@@ -480,7 +480,7 @@ internal static unsafe partial class NativeApi
     /// </returns>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_repository_open_ext(Git2.Repository** repository, string? path, RepositoryOpenFlags flags, string? ceiling_dirs);
+    internal static partial GitError git_repository_open_ext(Git2.Repository** repository, string? path, GitRepositoryOpenFlags flags, string? ceiling_dirs);
 
     /// <summary>
     /// Open working tree as a repository

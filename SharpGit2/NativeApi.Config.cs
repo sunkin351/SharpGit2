@@ -39,7 +39,7 @@ internal unsafe static partial class NativeApi
     // TODO: Docs
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_config_backend_foreach_match(Git2.ConfigBackend* config, string? regex, delegate* unmanaged[Cdecl]<GitConfigEntry.Unmanaged*, nint, GitError> callback, nint payload);
+    internal static partial GitError git_config_backend_foreach_match(Git2.ConfigBackend* config, string? regex, delegate* unmanaged[Cdecl]<Native.GitConfigEntry*, nint, GitError> callback, nint payload);
 
     /// <summary>
     /// Delete a config variable from the config file with the highest level (usually the local one).
@@ -71,7 +71,7 @@ internal unsafe static partial class NativeApi
     /// <param name="entry">The entry to free.</param>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial void git_config_entry_free(GitConfigEntry.Unmanaged* entry);
+    internal static partial void git_config_entry_free(Native.GitConfigEntry* entry);
 
     /// <summary>
     /// Locate the path to the global configuration file
@@ -147,7 +147,7 @@ internal unsafe static partial class NativeApi
     /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_config_foreach(Git2.Config* config, delegate* unmanaged[Cdecl]<GitConfigEntry.Unmanaged*, nint, GitError> callback, nint payload);
+    internal static partial GitError git_config_foreach(Git2.Config* config, delegate* unmanaged[Cdecl]<Native.GitConfigEntry*, nint, GitError> callback, nint payload);
 
     /// <summary>
     /// Perform an operation on each config variable matching a regular expression.
@@ -170,7 +170,7 @@ internal unsafe static partial class NativeApi
     /// </remarks>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_config_foreach_match(Git2.Config* config, string regex, delegate* unmanaged[Cdecl]<GitConfigEntry.Unmanaged*, nint, GitError> callback, nint payload);
+    internal static partial GitError git_config_foreach_match(Git2.Config* config, string regex, delegate* unmanaged[Cdecl]<Native.GitConfigEntry*, nint, GitError> callback, nint payload);
 
     /// <summary>
     /// Free the configuration and its associated memory and files
@@ -209,7 +209,7 @@ internal unsafe static partial class NativeApi
     /// </remarks>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_config_get_entry(GitConfigEntry.Unmanaged** value, Git2.Config* config, string name);
+    internal static partial GitError git_config_get_entry(Native.GitConfigEntry** value, Git2.Config* config, string name);
 
     /// <summary>
     /// Get the value of an integer config variable.
@@ -275,7 +275,7 @@ internal unsafe static partial class NativeApi
     /// </remarks>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_config_get_multivar_foreach(Git2.Config* config, string name, string? regex, delegate* unmanaged[Cdecl]<GitConfigEntry.Unmanaged*, nint, GitError> callback, nint payload);
+    internal static partial GitError git_config_get_multivar_foreach(Git2.Config* config, string name, string? regex, delegate* unmanaged[Cdecl]<Native.GitConfigEntry*, nint, GitError> callback, nint payload);
 
     /// <summary>
     /// Get the value of a path config variable.
@@ -441,7 +441,7 @@ internal unsafe static partial class NativeApi
     /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_config_next(GitConfigEntry.Unmanaged** @out, Git2.ConfigIterator* iterator);
+    internal static partial GitError git_config_next(Native.GitConfigEntry** @out, Git2.ConfigIterator* iterator);
 
     /// <summary>
     /// Open the global, XDG and system configuration files

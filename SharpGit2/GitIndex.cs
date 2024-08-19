@@ -96,7 +96,7 @@ public unsafe readonly struct GitIndex : IDisposable
         }
         else
         {
-            Git2.ForEachContext<MatchedPathCallback> context = new() { Callback = callback };
+            Git2.CallbackContext<MatchedPathCallback> context = new() { Callback = callback };
 
             GitError error;
             var gcHandle = GCHandle.Alloc(context, GCHandleType.Normal);
@@ -201,7 +201,7 @@ public unsafe readonly struct GitIndex : IDisposable
         }
         else
         {
-            var context = new Git2.ForEachContext<MatchedPathCallback>() { Callback = callback };
+            var context = new Git2.CallbackContext<MatchedPathCallback>() { Callback = callback };
 
             var gcHandle = GCHandle.Alloc(context, GCHandleType.Normal);
 
@@ -236,7 +236,7 @@ public unsafe readonly struct GitIndex : IDisposable
         [NotNullWhen(true)] out GitIndexEntry? ours,
         [NotNullWhen(true)] out GitIndexEntry? theirs)
     {
-        GitIndexEntry.Unmanaged* pAncestor, pOurs, pTheirs;
+        Native.GitIndexEntry* pAncestor, pOurs, pTheirs;
 
         var error = NativeApi.git_index_conflict_get(&pAncestor, &pOurs, &pTheirs, NativeHandle, path);
 
@@ -270,7 +270,7 @@ public unsafe readonly struct GitIndex : IDisposable
         }
         else
         {
-            var context = new Git2.ForEachContext<MatchedPathCallback>() { Callback = callback };
+            var context = new Git2.CallbackContext<MatchedPathCallback>() { Callback = callback };
 
             var gcHandle = GCHandle.Alloc(context, GCHandleType.Normal);
 
@@ -341,7 +341,7 @@ public unsafe readonly struct GitIndex : IDisposable
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
     private static int MatchedPathNativeCallback(byte* path, byte* matched_pathspec, nint payload)
     {
-        var context = (Git2.ForEachContext<MatchedPathCallback>)((GCHandle)payload).Target!;
+        var context = (Git2.CallbackContext<MatchedPathCallback>)((GCHandle)payload).Target!;
 
         try
         {
@@ -387,7 +387,7 @@ public unsafe readonly struct GitIndex : IDisposable
 
         public bool MoveNext()
         {
-            GitIndexEntry.Unmanaged* entry;
+            Native.GitIndexEntry* entry;
 
             var error = NativeApi.git_index_iterator_next(&entry, _iterator);
 
@@ -453,7 +453,7 @@ public unsafe readonly struct GitIndex : IDisposable
 
         public bool MoveNext()
         {
-            GitIndexEntry.Unmanaged* ancestor, ours, theirs;
+            Native.GitIndexEntry* ancestor, ours, theirs;
 
             var error = NativeApi.git_index_conflict_next(&ancestor, &ours, &theirs, _iterator);
 

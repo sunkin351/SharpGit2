@@ -10,9 +10,53 @@ namespace SharpGit2;
 
 public unsafe readonly partial struct GitRepository : IDisposable
 {
-    internal readonly Git2.Repository* NativeHandle;
+    public static GitRepository Clone(string url, string localDirectory, in GitCloneOptions options)
+    {
+        Git2.Repository* result = null;
+        GitError error;
 
-    internal GitRepository(Git2.Repository* handle)
+        List<GCHandle> gchandles = [];
+        Native.GitCloneOptions nativeOptions = default;
+        try
+        {
+            nativeOptions.FromManaged(in options, gchandles);
+
+            error = NativeApi.git_clone(&result, url, localDirectory, &nativeOptions);
+        }
+        finally
+        {
+            foreach (var handle in gchandles)
+            {
+                handle.Free();
+            }
+
+            nativeOptions.Free();
+        }
+
+        Git2.ThrowIfError(error);
+
+        return new(result);
+    }
+
+    public static GitRepository Clone(string url, string localDirectory, in Native.GitCloneOptions options)
+    {
+        Git2.Repository* result = null;
+        GitError error;
+
+        fixed (Native.GitCloneOptions* pOptions = &options)
+        {
+            error = NativeApi.git_clone(&result, url, localDirectory, pOptions);
+        }
+
+        Git2.ThrowIfError(error);
+
+        return new(result);
+    }
+
+
+    public readonly Git2.Repository* NativeHandle;
+
+    public GitRepository(Git2.Repository* handle)
     {
         NativeHandle = handle;
     }
@@ -203,7 +247,7 @@ public unsafe readonly partial struct GitRepository : IDisposable
 
     public void ForEachFetchHead(ForEachFetchHeadCallback callback)
     {
-        var context = new Git2.ForEachContext<ForEachFetchHeadCallback>() { Callback = callback };
+        var context = new Git2.CallbackContext<ForEachFetchHeadCallback>() { Callback = callback };
 
         var gcHandle = GCHandle.Alloc(context, GCHandleType.Normal);
         GitError error;
@@ -229,7 +273,7 @@ public unsafe readonly partial struct GitRepository : IDisposable
         [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
         static GitError _Callback(byte* ref_name, byte* remote_url, GitObjectID* oid, uint is_merge, nint payload)
         {
-            var context = (Git2.ForEachContext<ForEachFetchHeadCallback>)((GCHandle)payload).Target!;
+            var context = (Git2.CallbackContext<ForEachFetchHeadCallback>)((GCHandle)payload).Target!;
 
             try
             {
@@ -265,7 +309,7 @@ public unsafe readonly partial struct GitRepository : IDisposable
     /// <param name="callback"></param>
     public void ForEachMergeHead(ForEachMergeHeadCallback callback)
     {
-        var context = new Git2.ForEachContext<ForEachMergeHeadCallback>() { Callback = callback };
+        var context = new Git2.CallbackContext<ForEachMergeHeadCallback>() { Callback = callback };
 
         var gcHandle = GCHandle.Alloc(callback, GCHandleType.Normal);
         GitError error;
@@ -291,7 +335,7 @@ public unsafe readonly partial struct GitRepository : IDisposable
         [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
         static GitError _Callback(GitObjectID* objectId, nint payload)
         {
-            var context = (Git2.ForEachContext<ForEachMergeHeadCallback>)((GCHandle)payload).Target!;
+            var context = (Git2.CallbackContext<ForEachMergeHeadCallback>)((GCHandle)payload).Target!;
 
             try
             {
@@ -377,7 +421,7 @@ public unsafe readonly partial struct GitRepository : IDisposable
 
     public void ForEachReferenceName(ForEachReferenceUTF8NameCallback callback, string? glob = null)
     {
-        var context = new Git2.ForEachContext<ForEachReferenceUTF8NameCallback>() { Callback = callback };
+        var context = new Git2.CallbackContext<ForEachReferenceUTF8NameCallback>() { Callback = callback };
 
         var gcHandle = GCHandle.Alloc(context, GCHandleType.Normal);
         GitError error;
@@ -406,7 +450,7 @@ public unsafe readonly partial struct GitRepository : IDisposable
         [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
         static GitError _Callback(byte* name, nint payload)
         {
-            var context = (Git2.ForEachContext<ForEachReferenceUTF8NameCallback>)GCHandle.FromIntPtr(payload).Target!;
+            var context = (Git2.CallbackContext<ForEachReferenceUTF8NameCallback>)GCHandle.FromIntPtr(payload).Target!;
 
             try
             {
@@ -426,7 +470,7 @@ public unsafe readonly partial struct GitRepository : IDisposable
 
     public void ForEachReferenceName(Func<string, bool> callback, string? glob = null)
     {
-        var context = new Git2.ForEachContext<Func<string, bool>>() { Callback = callback };
+        var context = new Git2.CallbackContext<Func<string, bool>>() { Callback = callback };
 
         var gcHandle = GCHandle.Alloc(context, GCHandleType.Normal);
         GitError error;
@@ -455,7 +499,7 @@ public unsafe readonly partial struct GitRepository : IDisposable
         [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
         static GitError _Callback(byte* name, nint payload)
         {
-            var context = (Git2.ForEachContext<Func<string, bool>>)GCHandle.FromIntPtr(payload).Target!;
+            var context = (Git2.CallbackContext<Func<string, bool>>)GCHandle.FromIntPtr(payload).Target!;
 
             try
             {
@@ -643,7 +687,7 @@ public unsafe readonly partial struct GitRepository : IDisposable
 
     public string[] GetReferenceNameList()
     {
-        Git2.StringArray nativeArray = default;
+        Native.GitStringArray nativeArray = default;
 
         Git2.ThrowIfError(NativeApi.git_reference_list(&nativeArray, NativeHandle));
 
@@ -814,7 +858,7 @@ public unsafe readonly partial struct GitRepository : IDisposable
         }
     }
 
-    private sealed class ForEachReferenceContext : Git2.ForEachContext<Func<GitReference, bool>>
+    private sealed class ForEachReferenceContext : Git2.CallbackContext<Func<GitReference, bool>>
     {
         public bool AutoDispose { get; init; }
     }

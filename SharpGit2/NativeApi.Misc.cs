@@ -61,6 +61,15 @@ internal unsafe static partial class NativeApi
     //[LibraryImport(Git2.LibraryName)]
     //internal static partial int git_libgit2_opts(int option, ...);
 
+    [LibraryImport(Git2.LibraryName)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    internal static partial void git_error_clear();
+
+    [LibraryImport(Git2.LibraryName)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static partial bool git_error_exists();
+
     /// <summary>
     /// Return the last git_error object that was generated for the current thread.
     /// </summary>
@@ -78,17 +87,28 @@ internal unsafe static partial class NativeApi
     /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial Git2.Error* git_error_last();
-    
+    internal static partial Native.GitErrorDetails* git_error_last();
+
+
+    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    internal static partial GitError git_error_set_str(GitErrorClass errorClass, string message);
+
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial void git_commitarray_dispose(Git2.CommitArray* commitarray);
 
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial void git_strarray_dispose(Git2.StringArray* strarray);
+    internal static partial void git_strarray_dispose(Native.GitStringArray* strarray);
 
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial void git_buf_dispose(Git2.Buffer* buffer);
+
+
+    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    internal static partial GitError git_clone(Git2.Repository** repo_out, string url, string local_path, Native.GitCloneOptions* options);
+
 }

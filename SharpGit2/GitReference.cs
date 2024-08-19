@@ -132,18 +132,18 @@ public unsafe readonly partial struct GitReference : IDisposable, IComparable<Gi
 
     public GitObject Peel(GitObjectType type)
     {
-        GitObject result;
+        Git2.Object* result;
         Git2.ThrowIfError(NativeApi.git_reference_peel(&result, NativeHandle, type));
 
-        return result;
+        return new(result);
     }
 
     public GitError Peel(GitObjectType type, out GitObject obj)
     {
-        GitObject result;
+        Git2.Object* result;
         var error = NativeApi.git_reference_peel(&result, NativeHandle, type);
 
-        obj = (error == GitError.OK) ? result : default;
+        obj = (error == GitError.OK) ? new(result) : default;
 
         return error;
     }

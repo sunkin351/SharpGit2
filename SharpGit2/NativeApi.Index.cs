@@ -21,7 +21,7 @@ internal unsafe partial class NativeApi
     /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_index_add(Git2.Index* index, GitIndexEntry.Unmanaged* sourceEntry);
+    internal static partial GitError git_index_add(Git2.Index* index, Native.GitConfigEntry* sourceEntry);
 
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
@@ -230,9 +230,9 @@ internal unsafe partial class NativeApi
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial GitError git_index_conflict_get(
-        GitIndexEntry.Unmanaged** ancestor_out,
-        GitIndexEntry.Unmanaged** our_out,
-        GitIndexEntry.Unmanaged** their_out,
+        Native.GitIndexEntry** ancestor_out,
+        Native.GitIndexEntry** our_out,
+        Native.GitIndexEntry** their_out,
         Git2.Index* index,
         string path);
 
@@ -269,9 +269,9 @@ internal unsafe partial class NativeApi
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial GitError git_index_conflict_next(
-        GitIndexEntry.Unmanaged** ancestor_out,
-        GitIndexEntry.Unmanaged** our_out,
-        GitIndexEntry.Unmanaged** their_out, 
+        Native.GitIndexEntry** ancestor_out,
+        Native.GitIndexEntry** our_out,
+        Native.GitIndexEntry** their_out, 
         Git2.IndexConflictIterator* iterator);
 
     /// <summary>
@@ -337,7 +337,7 @@ internal unsafe partial class NativeApi
     /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitIndexEntry.Unmanaged* git_index_get_byindex(Git2.Index* index, nuint n);
+    internal static partial Native.GitIndexEntry* git_index_get_byindex(Git2.Index* index, nuint n);
 
     /// <summary>
     /// Get a pointer to one of the entries in the index
@@ -354,7 +354,7 @@ internal unsafe partial class NativeApi
     /// </remarks>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitIndexEntry.Unmanaged* git_index_get_bypath(Git2.Index* index, string path, GitIndexStageFlags stage);
+    internal static partial Native.GitIndexEntry* git_index_get_bypath(Git2.Index* index, string path, GitIndexStageFlags stage);
 
     /// <summary>
     /// Determine if the index contains entries representing file conflicts.
@@ -396,7 +396,7 @@ internal unsafe partial class NativeApi
     /// <returns>0 on success, <see cref="GitError.IterationOver"/> on iterator completion, or an error code</returns>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    internal static partial GitError git_index_iterator_next(GitIndexEntry.Unmanaged** entry_out, Git2.IndexIterator* iterator);
+    internal static partial GitError git_index_iterator_next(Native.GitIndexEntry** entry_out, Git2.IndexIterator* iterator);
 
     /// <summary>
     /// Get the repository this index relates to

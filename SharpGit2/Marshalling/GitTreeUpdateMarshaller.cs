@@ -5,9 +5,9 @@ namespace SharpGit2.Marshalling;
 [CustomMarshaller(typeof(GitTreeUpdate), MarshalMode.Default, typeof(GitTreeUpdateMarshaller))]
 internal unsafe static class GitTreeUpdateMarshaller
 {
-    public static GitTreeUpdate.Unmanaged ConvertToUnmanaged(GitTreeUpdate managed)
+    public static Native.GitTreeUpdate ConvertToUnmanaged(GitTreeUpdate managed)
     {
-        GitTreeUpdate.Unmanaged value;
+        Native.GitTreeUpdate value;
         value.Action = managed.Action;
         value.Id = managed.Id;
         value.FileMode = managed.FileMode;
@@ -16,7 +16,7 @@ internal unsafe static class GitTreeUpdateMarshaller
         return value;
     }
 
-    public static GitTreeUpdate ConvertToManaged(GitTreeUpdate.Unmanaged unmanaged)
+    public static GitTreeUpdate ConvertToManaged(Native.GitTreeUpdate unmanaged)
     {
         GitTreeUpdate value;
         value.Action = unmanaged.Action;
@@ -27,7 +27,7 @@ internal unsafe static class GitTreeUpdateMarshaller
         return value;
     }
 
-    public static void Free(GitTreeUpdate.Unmanaged unmanaged)
+    public static void Free(Native.GitTreeUpdate unmanaged)
     {
         Utf8StringMarshaller.Free(unmanaged.Path);
     }

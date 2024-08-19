@@ -11,7 +11,7 @@ internal unsafe static class GitIndexEntryMarshaller
         public static int BufferSize => 128;
 
         private Utf8StringMarshaller.ManagedToUnmanagedIn _pathMarshaller;
-        private GitIndexEntry.Unmanaged _structure;
+        private Native.GitIndexEntry _structure;
 
         public void FromManaged(GitIndexEntry entry, Span<byte> buffer)
         {
@@ -31,9 +31,9 @@ internal unsafe static class GitIndexEntryMarshaller
             _structure.Path = _pathMarshaller.ToUnmanaged();
         }
 
-        public GitIndexEntry.Unmanaged* ToUnmanaged()
+        public Native.GitIndexEntry* ToUnmanaged()
         {
-            return (GitIndexEntry.Unmanaged*)Unsafe.AsPointer(ref _structure);
+            return (Native.GitIndexEntry*)Unsafe.AsPointer(ref _structure);
         }
 
         public void Free()

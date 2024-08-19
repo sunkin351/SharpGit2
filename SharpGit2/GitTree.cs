@@ -104,7 +104,7 @@ public unsafe readonly struct GitTree : IDisposable
     {
         ArgumentNullException.ThrowIfNull(callback);
 
-        var context = new Git2.ForEachContext<Func<string, GitTreeEntry, int>>() { Callback = callback };
+        var context = new Git2.CallbackContext<Func<string, GitTreeEntry, int>>() { Callback = callback };
         var gcHandle = GCHandle.Alloc(context, GCHandleType.Normal);
         GitError error;
 
@@ -126,7 +126,7 @@ public unsafe readonly struct GitTree : IDisposable
         [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
         static int _Callback(byte* pRoot, Git2.TreeEntry* pEntry, nint payload)
         {
-            var context = (Git2.ForEachContext<Func<string, GitTreeEntry, int>>)((GCHandle)payload).Target!;
+            var context = (Git2.CallbackContext<Func<string, GitTreeEntry, int>>)((GCHandle)payload).Target!;
 
             try
             {

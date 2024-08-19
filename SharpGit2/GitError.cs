@@ -10,7 +10,7 @@ public enum GitError : int
     /// <summary>
     /// Generic Error
     /// </summary>
-    Error = -1,
+    GenericError = -1,
 
     /// <summary>
     /// Requested object could not be found

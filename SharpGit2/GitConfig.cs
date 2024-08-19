@@ -52,7 +52,7 @@ public unsafe readonly struct GitConfig : IDisposable
 
     public void ForEach(ForEachCallback callback)
     {
-        var context = new Git2.ForEachContext<ForEachCallback>() { Callback = callback };
+        var context = new Git2.CallbackContext<ForEachCallback>() { Callback = callback };
 
         var gcHandle = GCHandle.Alloc(context, GCHandleType.Normal);
         GitError error;
@@ -78,7 +78,7 @@ public unsafe readonly struct GitConfig : IDisposable
 
     public void ForEach([StringSyntax("regex")] string regex, ForEachCallback callback)
     {
-        var context = new Git2.ForEachContext<ForEachCallback>() { Callback = callback };
+        var context = new Git2.CallbackContext<ForEachCallback>() { Callback = callback };
 
         var gcHandle = GCHandle.Alloc(context, GCHandleType.Normal);
         GitError error;
@@ -104,7 +104,7 @@ public unsafe readonly struct GitConfig : IDisposable
 
     public void ForEachMultiVariable(string name, [StringSyntax("regex")] string? regex, ForEachCallback callback)
     {
-        var context = new Git2.ForEachContext<ForEachCallback>() { Callback = callback };
+        var context = new Git2.CallbackContext<ForEachCallback>() { Callback = callback };
 
         var gcHandle = GCHandle.Alloc(context, GCHandleType.Normal);
         GitError error;
@@ -129,9 +129,9 @@ public unsafe readonly struct GitConfig : IDisposable
     }
 
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
-    private static GitError _ForEachCallback(GitConfigEntry.Unmanaged* entry, nint payload)
+    private static GitError _ForEachCallback(Native.GitConfigEntry* entry, nint payload)
     {
-        var context = (Git2.ForEachContext<ForEachCallback>)((GCHandle)payload).Target!;
+        var context = (Git2.CallbackContext<ForEachCallback>)((GCHandle)payload).Target!;
 
         try
         {
@@ -155,7 +155,7 @@ public unsafe readonly struct GitConfig : IDisposable
 
     public GitConfigEntry GetEntry(string name)
     {
-        GitConfigEntry.Unmanaged* entry = null;
+        Native.GitConfigEntry* entry = null;
         Git2.ThrowIfError(NativeApi.git_config_get_entry(&entry, NativeHandle, name));
 
         try
@@ -317,7 +317,7 @@ public unsafe readonly struct GitConfig : IDisposable
         {
             ObjectDisposedException.ThrowIf(_nativeHandle is null, typeof(Enumerator));
 
-            GitConfigEntry.Unmanaged* entry;
+            Native.GitConfigEntry* entry;
             var error = NativeApi.git_config_next(&entry, _nativeHandle);
 
             switch (error)

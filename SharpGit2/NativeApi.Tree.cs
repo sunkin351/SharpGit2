@@ -1,5 +1,6 @@
 ﻿using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using SharpGit2.Native;
 
 namespace SharpGit2;
 
