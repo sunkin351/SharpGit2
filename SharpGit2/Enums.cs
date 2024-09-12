@@ -14,6 +14,40 @@ public enum GitApplyLocationType
 }
 
 [Flags]
+public enum GitAttributeCheckFlags : uint
+{
+    FileThenIndex = 0,
+    IndexThenFile = 1,
+    IndexOnly = 1 << 1,
+    NoSystem = 1 << 2,
+    IncludeHead = 1 << 3,
+    IncludeCommit = 1 << 4,
+}
+
+public enum GitAttributeValueType
+{
+    /// <summary>
+    /// The attribute is not present.
+    /// </summary>
+    Unspecified = 0,
+
+    /// <summary>
+    /// Boolean true value
+    /// </summary>
+    True,
+
+    /// <summary>
+    /// Boolean false value
+    /// </summary>
+    False,
+
+    /// <summary>
+    /// String value
+    /// </summary>
+    String
+}
+
+[Flags]
 public enum GitBlameFlags : uint
 {
     Normal = 0,
@@ -33,6 +67,14 @@ public enum GitBlobFilterFlags : uint
     NoSystemAttributes = 1 << 1,
     AttributesFromHead = 1 << 2,
     AttributesFromCommit = 1 << 3,
+}
+
+[Flags]
+public enum GitBranchType
+{
+    Local = 1,
+    Remote = 2,
+    All = Local | Remote
 }
 
 public enum GitCertificateType
@@ -245,6 +287,13 @@ public enum GitConfigLevel
     App = 7
 }
 
+public enum GitConfigMapType
+{
+    False,
+    True,
+    Int32,
+    String
+}
 public enum GitCredentialType
 {
     UserPassPlainText = 1,
@@ -412,6 +461,13 @@ public enum GitDiffFlags : uint
     /// file size value is known correct
     /// </summary>
     ValidSize = 1 << 4,
+}
+
+[Flags]
+public enum GitDiffFormatEmailFlags
+{
+    None = 0,
+    ExcludeSubjectPatchMarker = 1,
 }
 
 public enum GitDiffFormatType : uint
@@ -825,6 +881,40 @@ public enum GitIndexCapabilities
 }
 
 /// <summary>
+/// The results of `git_merge_analysis` indicate the merge opportunities.
+/// </summary>
+[Flags]
+public enum GitMergeAnalysisResult
+{
+    /// <summary>
+    /// No merge is possible.  (Unused.)
+    /// </summary>
+    None,
+    /// <summary>
+    /// A "normal" merge; both HEAD and the given merge input have diverged
+    /// from their common ancestor.  The divergent commits must be merged.
+    /// </summary>
+    Normal = 1,
+    /// <summary>
+    /// All given merge inputs are reachable from HEAD, meaning the
+    /// repository is up-to-date and no merge needs to be performed.
+    /// </summary>
+    UpToDate = 1 << 1,
+    /// <summary>
+    /// The given merge input is a fast-forward from HEAD and no merge
+    /// needs to be performed.  Instead, the client can check out the
+    /// given merge input.
+    /// </summary>
+    FastForward = 1 << 2,
+    /// <summary>
+    /// The HEAD of the current repository is "unborn" and does not point to
+    /// a valid commit.  No merge can be performed, but the caller may wish
+    /// to simply set HEAD to the target commit(s).
+    /// </summary>
+    Unborn = 1 << 3,
+}
+
+/// <summary>
 /// Merge file favor options for `git_merge_options` instruct the file-level
 /// merging functionality how to deal with conflicting regions of the files.
 /// </summary>
@@ -891,6 +981,29 @@ public enum GitMergeFlags : uint
     SkipREUC = 1 << 2,
     NoRecursive = 1 << 3,
     VirtualBase = 1 << 4,
+}
+
+/// <summary>
+/// The user's stated preference for merges.
+/// </summary>
+[Flags]
+public enum GitMergePreference
+{
+    /// <summary>
+    /// No configuration was found that suggests a preferred behavior for
+    /// merge.
+    /// </summary>
+    None = 0,
+    /// <summary>
+    /// There is a `merge.ff=false` configuration setting, suggesting that
+    /// the user does not want to allow a fast-forward merge.
+    /// </summary>
+    NoFastForward = 1,
+    /// <summary>
+    /// There is a `merge.ff=only` configuration setting, suggesting that
+    /// the user only wants fast-forward merges.
+    /// </summary>
+    FastForwardOnly = 2,
 }
 
 [Flags]

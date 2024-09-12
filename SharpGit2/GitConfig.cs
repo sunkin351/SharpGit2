@@ -188,7 +188,7 @@ public unsafe readonly struct GitConfig : IDisposable
 
     public string GetPath(string name)
     {
-        Git2.Buffer buffer = default;
+        Native.GitBuffer buffer = default;
         Git2.ThrowIfError(NativeApi.git_config_get_path(&buffer, NativeHandle, name));
 
         try
@@ -211,7 +211,7 @@ public unsafe readonly struct GitConfig : IDisposable
 
     public string GetString(string name)
     {
-        Git2.Buffer buffer = default;
+        Native.GitBuffer buffer = default;
         Git2.ThrowIfError(NativeApi.git_config_get_string_buf(&buffer, NativeHandle, name));
 
         try

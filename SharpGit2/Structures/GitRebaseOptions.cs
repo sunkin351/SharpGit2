@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.Marshalling;
@@ -25,6 +26,8 @@ namespace SharpGit2
     }
 }
 
+#pragma warning disable CS0169
+
 namespace SharpGit2.Native
 {
     public unsafe struct GitRebaseOptions
@@ -36,7 +39,9 @@ namespace SharpGit2.Native
         public GitMergeOptions MergeOptions;
         public GitCheckoutOptions CheckoutOptions;
         public delegate* unmanaged[Cdecl]<GitObjectID*, GitSignature*, GitSignature*, byte*, byte*, Git2.Tree*, nuint, Git2.Commit**, nint, int> CreateCommit;
-        private nint Reserved; // deprecated/obsolete field
+        [SuppressMessage("CodeQuality", "IDE0051:Remove unused private members", Justification = "This is a native padding field, reserved for future use")]
+        [SuppressMessage("Style", "IDE0044:Add readonly modifier")]
+        private void* Reserved;
         public nint Payload;
 
         public GitRebaseOptions()

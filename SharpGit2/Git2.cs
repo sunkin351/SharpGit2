@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.Marshalling;
 using System.Text;
 
+[assembly: InternalsVisibleTo("SharpGit2.Tests")]
 [assembly: DisableRuntimeMarshalling]
 
 namespace SharpGit2;
@@ -80,7 +81,7 @@ public static unsafe partial class Git2
     {
         ArgumentException.ThrowIfNullOrEmpty(startPath);
 
-        Git2.Buffer buffer = default;
+        Native.GitBuffer buffer = default;
 
         var error = NativeApi.git_repository_discover(&buffer, startPath, acrossFileSystems ? 1 : 0, ceilingDirs);
 
@@ -89,7 +90,7 @@ public static unsafe partial class Git2
             case GitError.OK:
                 try
                 {
-                    return Encoding.UTF8.GetString(buffer.Ptr, checked((int)buffer.Size));
+                    return Encoding.UTF8.GetString(buffer.Pointer, checked((int)buffer.Size));
                 }
                 finally
                 {
@@ -196,9 +197,9 @@ public static unsafe partial class Git2
     public static string? SystemConfigFile { get; } = GetPathFromFunction(&NativeApi.git_config_find_system);
     public static string? XDGConfigFile { get; } = GetPathFromFunction(&NativeApi.git_config_find_xdg);
 
-    private static string? GetPathFromFunction(delegate* managed<Git2.Buffer*, GitError> func)
+    private static string? GetPathFromFunction(delegate* managed<Native.GitBuffer*, GitError> func)
     {
-        Git2.Buffer buffer = default;
+        Native.GitBuffer buffer = default;
         var error = func(&buffer);
 
         switch (error)
@@ -206,7 +207,7 @@ public static unsafe partial class Git2
             case GitError.OK:
                 try
                 {
-                    return Encoding.UTF8.GetString(buffer.Ptr, checked((int)buffer.Size));
+                    return Encoding.UTF8.GetString(buffer.Pointer, checked((int)buffer.Size));
                 }
                 finally
                 {
@@ -222,19 +223,12 @@ public static unsafe partial class Git2
     [MethodImpl(MethodImplOptions.NoInlining)]
     internal static Exception ExceptionForError(GitError error, string? message = null)
     {
-        GitErrorClass @class = GitErrorClass.None;
+        var err = NativeApi.git_error_last();
 
-        if (NativeApi.git_error_exists())
-        {
-            var err = NativeApi.git_error_last();
+        Debug.Assert(err != null);
 
-            Debug.Assert(err != null);
-
-            @class = err->Class;
-            message = Utf8StringMarshaller.ConvertToManaged(err->Message)!;
-
-            NativeApi.git_error_clear();
-        }
+        GitErrorClass @class = err->Class;
+        message = Utf8StringMarshaller.ConvertToManaged(err->Message)!;
 
         return error switch
         {
@@ -248,10 +242,21 @@ public static unsafe partial class Git2
         throw ExceptionForError(code);
     }
 
+    internal static void ThrowError(GitError code, string message)
+    {
+        throw ExceptionForError(code, message);
+    }
+
     internal static void ThrowIfError(GitError code)
     {
-        if (code != GitError.OK)
+        if (code < 0)
             ThrowError(code);
+    }
+
+    internal static void ThrowIfError(GitError code, string message)
+    {
+        if (code < 0)
+            ThrowError(code, message);
     }
 
     internal static bool ErrorOrBoolean(int code)
@@ -290,84 +295,59 @@ public static unsafe partial class Git2
         }
     }
 
-    internal struct Buffer
-    {
-        /// <summary>
-        /// The buffer contents.  `ptr` points to the start of the buffer
-	    /// being returned.The buffer's length (in bytes) is specified
-	    /// by the `size` member of the structure, and contains a NUL
-	    /// terminator at position `(size + 1)`.
-        /// </summary>
-        public byte* Ptr;
-        /// <summary>
-        /// This field is reserved and unused.
-        /// </summary>
-        private nuint Reserved;
-        /// <summary>
-        /// The length (in bytes) of the buffer pointed to by `ptr`,
-	    /// not including a NUL terminator.
-        /// </summary>
-        public nuint Size;
-
-        public readonly ReadOnlySpan<byte> Span => new(Ptr, checked((int)Size));
-
-        /// <summary>
-        /// Interprets the buffer as a UTF8 string and converts it to a managed string
-        /// </summary>
-        /// <returns>The managed string</returns>
-        public readonly string AsString()
-        {
-            return Encoding.UTF8.GetString(Ptr, checked((int)Size));
-        }
-    }
-
-    internal struct Error
-    {
-        public byte* Message;
-        public int @class;
-    }
-
     #region Opaque Handles
+    public struct AnnotatedCommit { }
+    public struct Blame { }
+    public struct Blob { }
+    public struct BranchIterator { }
     public struct Certificate { }
     public struct Commit { }
+    public struct CommitGraph { }
     public struct Config { }
     public struct ConfigBackend { }
-    public struct ConfigEntry { }
     public struct ConfigIterator { }
     public struct Credential { }
+    public struct DescribeResult { }
     public struct Diff { }
+    public struct DiffStats { }
+    public struct FilterList { }
     public struct Index { }
+    public struct Indexer { }
     public struct IndexConflictIterator { }
     public struct IndexIterator { }
+    public struct MailMap { }
+    public struct Note { }
+    public struct NoteIterator { }
     public struct Object { }
     public struct ObjectDatabase { }
     public struct ObjectDatabaseBackend { }
+    public struct ObjectDatabaseObject { }
+    public struct PackBuilder { }
+    public struct Patch { }
+    public struct PathSpec { }
+    public struct PathSpecMatchList { }
+    public struct Rebase { }
+    public struct RefDB { }
     public struct Reference { }
     public struct ReferenceIterator { }
     public struct ReferenceDatabase { }
+    public struct RefLog { }
+    public struct RefLogEntry { }
+    public struct RefSpec { }
     public struct Remote { }
     public struct Repository { }
+    public struct RevWalk { }
+    public struct StatusList { }
+    public struct Submodule { }
+    public struct Tag { }
     public struct Transaction { }
     public struct Transport { }
     public struct Tree { }
+    public struct TreeBuilder { }
     public struct TreeEntry { }
     public struct Worktree { }
+
     #endregion
-
-    internal enum ConfigMapType
-    {
-        False,
-        True,
-        Int32,
-        String
-    }
-
-    internal struct ConfigMap
-    {
-        public ConfigMapType Type;
-        public byte* StringMatch;
-        public int MapValue;
-    }
 
     internal class CallbackContext<TDelegate> where TDelegate : Delegate
     {

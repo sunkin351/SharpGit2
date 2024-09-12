@@ -95,7 +95,7 @@ namespace SharpGit2
                 ContextLines = 3;
             }
 
-            public void MarshalFrom(in SharpGit2.GitDiffOptions options, List<GCHandle> handles)
+            public void FromManaged(in SharpGit2.GitDiffOptions options, List<GCHandle> handles)
             {
                 Version = 1;
                 Flags = options.Flags;

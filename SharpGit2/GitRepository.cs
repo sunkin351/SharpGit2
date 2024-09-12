@@ -10,6 +10,14 @@ namespace SharpGit2;
 
 public unsafe readonly partial struct GitRepository : IDisposable
 {
+    public static GitRepository Clone(string url, string localDirectory)
+    {
+        Git2.Repository* result = null;
+        Git2.ThrowIfError(NativeApi.git_clone(&result, url, localDirectory, null));
+
+        return new(result);
+    }
+
     public static GitRepository Clone(string url, string localDirectory, in GitCloneOptions options)
     {
         Git2.Repository* result = null;
@@ -608,12 +616,12 @@ public unsafe readonly partial struct GitRepository : IDisposable
 
     public string GetItemPath(GitRepositoryItemType itemType)
     {
-        Git2.Buffer buffer = default;
+        Native.GitBuffer buffer = default;
         Git2.ThrowIfError(NativeApi.git_repository_item_path(&buffer, NativeHandle, itemType));
 
         try
         {
-            return Encoding.UTF8.GetString(buffer.Ptr, checked((int)buffer.Size));
+            return Encoding.UTF8.GetString(buffer.Pointer, checked((int)buffer.Size));
         }
         finally
         {
@@ -623,7 +631,7 @@ public unsafe readonly partial struct GitRepository : IDisposable
 
     public string? GetMessage()
     {
-        Git2.Buffer buffer = default;
+        Native.GitBuffer buffer = default;
 
         var error = NativeApi.git_repository_message(&buffer, NativeHandle);
 
@@ -631,7 +639,7 @@ public unsafe readonly partial struct GitRepository : IDisposable
         {
             try
             {
-                return Encoding.UTF8.GetString(buffer.Ptr, checked((int)buffer.Size));
+                return Encoding.UTF8.GetString(buffer.Pointer, checked((int)buffer.Size));
             }
             finally
             {

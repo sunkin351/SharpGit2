@@ -1,5 +1,8 @@
-﻿namespace SharpGit2;
+﻿using System.Runtime.InteropServices;
 
+namespace SharpGit2;
+
+[StructLayout(LayoutKind.Sequential)]
 public struct GitIndexerProgress
 {
     public uint TotalObjects;

@@ -1,7 +1,5 @@
-﻿using System.Diagnostics;
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Runtime.InteropServices.Marshalling;
 
 namespace SharpGit2
 {
@@ -82,7 +80,9 @@ namespace SharpGit2.Native
 
             try
             {
-                return callbacks.OnHunk(in *hunk);
+                var mHunk = new SharpGit2.GitDiffHunk(in *hunk);
+
+                return callbacks.OnHunk(in mHunk);
             }
             catch (Exception e)
             {

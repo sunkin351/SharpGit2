@@ -4,7 +4,7 @@ using System.Text.RegularExpressions;
 
 namespace SharpGit2;
 
-internal unsafe partial class NativeApi
+public static unsafe partial class NativeApi
 {
     private static readonly nint _libraryHandle;
     private static readonly NativeLibraryLifetimeObject _lifetime;
@@ -73,8 +73,14 @@ internal unsafe partial class NativeApi
                         if (FileNameRegex().IsMatch(filename)
                             && NativeLibrary.TryLoad(file, out _libraryHandle))
                         {
-                            found = true;
-                            break;
+                            if (NativeLibrary.TryGetExport(_libraryHandle, "git_libgit2_init", out _))
+                            {
+                                found = true;
+                                break;
+                            }
+
+                            NativeLibrary.Free(_libraryHandle);
+                            _libraryHandle = 0;
                         }
                     }
 
@@ -106,6 +112,8 @@ internal unsafe partial class NativeApi
             Git2.ThrowError((GitError)code);
 
         _lifetime = new();
+
+        git_credential_userpass = (delegate* unmanaged[Cdecl]<Git2.Credential**, byte*, byte*, GitCredentialType, nint, int>)NativeLibrary.GetExport(_libraryHandle, nameof(git_credential_userpass));
     }
 
     [GeneratedRegex("^(lib)?git2-[0-9a-f]+\\.(dll|so|dylib)$")]

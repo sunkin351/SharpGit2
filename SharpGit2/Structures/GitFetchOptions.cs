@@ -6,7 +6,6 @@ namespace SharpGit2
 {
     public unsafe struct GitFetchOptions
     {
-        public int Version;
         public IGitRemoteCallbacks? Callbacks;
         public GitFetchPrune Prune;
         public GitRemoteUpdateFlags UpdateFetchhead;
@@ -18,7 +17,6 @@ namespace SharpGit2
 
         public GitFetchOptions()
         {
-            Version = 1;
             ProxyOptions = new();
         }
     }
