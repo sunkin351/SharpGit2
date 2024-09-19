@@ -16,11 +16,45 @@ public enum GitApplyLocationType
 [Flags]
 public enum GitAttributeCheckFlags : uint
 {
+    /// <summary>
+    /// Check attribute flags: Reading values from index and working directory.
+    /// <br/><br/>
+    /// When checking attributes, it is possible to check attribute files
+    /// in both the working directory (if there is one) and the index (if
+    /// there is one).  You can explicitly choose where to check and in
+    /// which order using the following flags.
+    /// <br/><br/>
+    /// Core git usually checks the working directory then the index,
+    /// except during a checkout when it checks the index first.  It will
+    /// use index only for creating archives or for a bare repo (if an
+    /// index has been specified for the bare repo).
+    /// </summary>
     FileThenIndex = 0,
+    ///<inheritdoc cref="FileThenIndex"/>
     IndexThenFile = 1,
+    ///<inheritdoc cref="FileThenIndex"/>
     IndexOnly = 1 << 1,
+
+    /// <summary>
+    /// Check attribute flags: controlling extended attribute behavior.
+    /// 
+    /// Normally, attribute checks include looking in the /etc (or system
+    /// equivalent) directory for a `gitattributes` file.  Passing this
+    /// flag will cause attribute checks to ignore that file.
+    /// equivalent) directory for a `gitattributes` file.  Passing the
+    /// `GIT_ATTR_CHECK_NO_SYSTEM` flag will cause attribute checks to
+    /// ignore that file.
+    /// 
+    /// Passing the `GIT_ATTR_CHECK_INCLUDE_HEAD` flag will use attributes
+    /// from a `.gitattributes` file in the repository at the HEAD revision.
+    /// 
+    /// Passing the `GIT_ATTR_CHECK_INCLUDE_COMMIT` flag will use attributes
+    /// from a `.gitattributes` file in a specific commit.
+    /// </summary>
     NoSystem = 1 << 2,
+    ///<inheritdoc cref="NoSystem"/>
     IncludeHead = 1 << 3,
+    ///<inheritdoc cref="NoSystem"/>
     IncludeCommit = 1 << 4,
 }
 
@@ -267,11 +301,32 @@ public enum GitCheckoutStrategyFlags : uint
     ConflictStyleZDiff3 = 1 << 25,
 }
 
+/// <summary>
+/// Options for bypassing the git-aware transport on clone. Bypassing
+/// it means that instead of a fetch, libgit2 will copy the object
+/// database directory instead of figuring out what it needs, which is
+/// faster. If possible, it will hardlink the files to save space.
+/// </summary>
 public enum GitCloneLocalType
 {
+    /// <summary>
+    /// Auto-detect (default), libgit2 will bypass the git-aware
+    /// transport for local paths, but use a normal fetch for
+    /// `file://` urls.
+    /// </summary>
     LocalAuto,
+    /// <summary>
+    /// Bypass the git-aware transport even for a `file://` url.
+    /// </summary>
     Local,
+    /// <summary>
+    /// Do no bypass the git-aware transport
+    /// </summary>
     NoLocal,
+    /// <summary>
+    /// Bypass the git-aware transport, but do not try to use
+    /// hardlinks.
+    /// </summary>
     LocalNoLinks
 }
 
@@ -952,14 +1007,41 @@ public enum GitMergeFileFavor
 public enum GitMergeFileFlags : uint
 {
     Default = 0,
+    /// <summary>
+    /// Create standard conflicted merge files
+    /// </summary>
     StyleMerge = 1,
+    /// <summary>
+    /// Create diff3-style files
+    /// </summary>
     StyleDiff3 = 1 << 1,
+    /// <summary>
+    /// Condense non-alphanumeric regions for simplified diff file
+    /// </summary>
     SimplifyAlphaNumeric = 1 << 2,
+    /// <summary>
+    /// Ignore all whitespace
+    /// </summary>
     IgnoreWhitespace = 1 << 3,
+    /// <summary>
+    /// Ignore changes in amount of whitespace
+    /// </summary>
     IgnoreWhitespaceChange = 1 << 4,
+    /// <summary>
+    /// Ignore whitespace at end of line
+    /// </summary>
     IgnoreWhitespaceEOL = 1 << 5,
+    /// <summary>
+    /// Use the "patience diff" algorithm
+    /// </summary>
     DiffPatience = 1 << 6,
+    /// <summary>
+    /// Take extra time to find minimal diff
+    /// </summary>
     DiffMinimal = 1 << 7,
+    /// <summary>
+    /// Create zdiff3 ("zealous diff3")-style files
+    /// </summary>
     StyleZDiff3 = 1 << 8,
     /// <summary>
     /// Do not produce file conflicts when common regions have
@@ -1040,15 +1122,53 @@ public enum GitPackBuilderStageType
     Deltafication = 1,
 }
 
+/// <summary>
+/// Options controlling how pathspec match should be executed
+/// </summary>
 [Flags]
 public enum GitPathSpecFlags : uint
 {
     Default = 0,
+
+    /// <summary>
+    /// Forces match to ignore case. Otherwise match will
+    /// use native case sensitivity of platform filesystem
+    /// </summary>
     IgnoreCase = 1,
+
+    /// <summary>
+    /// Forces case sensitive match. Otherwise match will
+    /// use native case sensitivity of platform filesystem
+    /// </summary>
     UseCase = 1 << 1,
+
+    /// <summary>
+    /// Disables glob patterns and just uses simple
+    /// string comparison for matching
+    /// </summary>
     NoGlob = 1 << 2,
+
+    /// <summary>
+    /// This means the match functions return error code <see cref="GitError.NotFound"/>
+    /// if no matches are found; otherwise no matches is still success (return 0) but
+    /// <see cref="NativeApi.git_pathspec_match_list_entrycount(Git2.PathSpecMatchList*)"/>
+    /// will indicate 0 matches.
+    /// </summary>
     NoMatchError = 1 << 3,
+
+    /// <summary>
+    /// This means that the <see cref="GitPathSpecMatchList"/>
+    /// should track which patterns matched which files so that at the end of
+    /// the match we can identify patterns that did not match any files.
+    /// </summary>
     FindFailures = 1 << 4,
+
+    /// <summary>
+    /// This means that the <see cref="GitPathSpecMatchList"/>
+    /// does not need to keep the actual matching filenames.  Use this to
+    /// just test if there were any matches at all or in combination with
+    /// <see cref="FindFailures"/> to validate a pathspec.
+    /// </summary>
     FailuresOnly = 1 << 5,
 }
 
@@ -1339,12 +1459,33 @@ public enum GitStashApplyProgressType
     Done
 }
 
+/// <summary>
+/// Stash Flags
+/// </summary>
 public enum GitStashFlags
 {
+    /// <summary>
+    /// No options, default
+    /// </summary>
     Default = 0,
+    /// <summary>
+    /// All changes already added to the index are left intact in
+    /// the working directory
+    /// </summary>
     KeepIndex = 1,
+    /// <summary>
+    /// All untracked files are also stashed and then cleaned up
+    /// from the working directory
+    /// </summary>
     IncludeUntracked = 1 << 1,
+    /// <summary>
+    /// All ignored files are also stashed and then cleaned up from
+    /// the working directory
+    /// </summary>
     IncludeIgnore = 1 << 2,
+    /// <summary>
+    /// All changes in the index and working directory are left intact
+    /// </summary>
     KeepAll = 1 << 3,
 }
 

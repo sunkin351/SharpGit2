@@ -5,6 +5,8 @@ using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 
+using static SharpGit2.NativeApi;
+
 #pragma warning disable IDE1006
 
 namespace SharpGit2;
@@ -20,22 +22,22 @@ public unsafe readonly struct GitConfig : IDisposable
 
     public void Dispose()
     {
-        NativeApi.git_config_free(NativeHandle);
+        git_config_free(NativeHandle);
     }
 
     public void AddFile(string path, GitConfigLevel level, GitRepository repository, bool force)
     {
-        Git2.ThrowIfError(NativeApi.git_config_add_file_ondisk(NativeHandle, path, level, repository.NativeHandle, force ? 1 : 0));
+        Git2.ThrowIfError(git_config_add_file_ondisk(NativeHandle, path, level, repository.NativeHandle, force ? 1 : 0));
     }
 
     public void DeleteEntry(string name)
     {
-        Git2.ThrowIfError(NativeApi.git_config_delete_entry(NativeHandle, name));
+        Git2.ThrowIfError(git_config_delete_entry(NativeHandle, name));
     }
 
     public void DeleteMultiVariable(string name, [StringSyntax("regex")] string regex)
     {
-        Git2.ThrowIfError(NativeApi.git_config_delete_multivar(NativeHandle, name, regex));
+        Git2.ThrowIfError(git_config_delete_multivar(NativeHandle, name, regex));
     }
 
     public Enumerable EnumerateEntries([StringSyntax("regex")] string? regex = null)
@@ -48,94 +50,52 @@ public unsafe readonly struct GitConfig : IDisposable
         return new MultiVariableEnumerable(this, name, regex);
     }
 
-    public delegate bool ForEachCallback(GitConfigEntry entry);
+    public delegate void ForEachCallback(GitConfigEntry entry, ref bool breakLoop);
 
+    [MethodImpl(MethodImplOptions.NoInlining)]
     public void ForEach(ForEachCallback callback)
     {
-        var context = new Git2.CallbackContext<ForEachCallback>() { Callback = callback };
+        var context = new Git2.CallbackContext<ForEachCallback>(callback);
 
-        var gcHandle = GCHandle.Alloc(context, GCHandleType.Normal);
-        GitError error;
+        var error = git_config_foreach(NativeHandle, &_ForEachCallback, (nint)(void*)&context);
 
-        try
-        {
-            error = NativeApi.git_config_foreach(NativeHandle, &_ForEachCallback, GCHandle.ToIntPtr(gcHandle));
-        }
-        finally
-        {
-            gcHandle.Free();
-        }
-
-        if (error == Git2.ForEachException)
-        {
-            context.ExceptionInfo!.Throw();
-        }
-        else if (error < 0)
-        {
-            Git2.ThrowError(error);
-        }
+        context.ExceptionInfo?.Throw();
+        Git2.ThrowIfError(error);
     }
 
+    [MethodImpl(MethodImplOptions.NoInlining)]
     public void ForEach([StringSyntax("regex")] string regex, ForEachCallback callback)
     {
-        var context = new Git2.CallbackContext<ForEachCallback>() { Callback = callback };
+        var context = new Git2.CallbackContext<ForEachCallback>(callback);
 
-        var gcHandle = GCHandle.Alloc(context, GCHandleType.Normal);
-        GitError error;
+        var error = git_config_foreach_match(NativeHandle, regex, &_ForEachCallback, (nint)(void*)&context);
 
-        try
-        {
-            error = NativeApi.git_config_foreach_match(NativeHandle, regex, &_ForEachCallback, GCHandle.ToIntPtr(gcHandle));
-        }
-        finally
-        {
-            gcHandle.Free();
-        }
-
-        if (error == Git2.ForEachException)
-        {
-            context.ExceptionInfo!.Throw();
-        }
-        else if (error < 0)
-        {
-            Git2.ThrowError(error);
-        }
+        context.ExceptionInfo?.Throw();
+        Git2.ThrowIfError(error);
     }
 
+    [MethodImpl(MethodImplOptions.NoInlining)]
     public void ForEachMultiVariable(string name, [StringSyntax("regex")] string? regex, ForEachCallback callback)
     {
-        var context = new Git2.CallbackContext<ForEachCallback>() { Callback = callback };
+        var context = new Git2.CallbackContext<ForEachCallback>(callback);
 
-        var gcHandle = GCHandle.Alloc(context, GCHandleType.Normal);
-        GitError error;
+        var error = git_config_get_multivar_foreach(NativeHandle, name, regex, &_ForEachCallback, (nint)(void*)&context);
 
-        try
-        {
-            error = NativeApi.git_config_get_multivar_foreach(NativeHandle, name, regex, &_ForEachCallback, GCHandle.ToIntPtr(gcHandle));
-        }
-        finally
-        {
-            gcHandle.Free();
-        }
-
-        if (error == Git2.ForEachException)
-        {
-            context.ExceptionInfo!.Throw();
-        }
-        else if (error < 0)
-        {
-            Git2.ThrowError(error);
-        }
+        context.ExceptionInfo?.Throw();
+        Git2.ThrowIfError(error);
     }
 
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
     private static GitError _ForEachCallback(Native.GitConfigEntry* entry, nint payload)
     {
-        var context = (Git2.CallbackContext<ForEachCallback>)((GCHandle)payload).Target!;
+        ref var context = ref *(Git2.CallbackContext<ForEachCallback>*)payload;
 
         try
         {
-            return context.Callback(new(entry)) ? GitError.OK : Git2.ForEachBreak;
+            bool breakLoop = false;
+            context.Callback(new(entry), ref breakLoop);
+
+            return breakLoop ? Git2.ForEachBreak : GitError.OK;
         }
         catch (Exception e)
         {
@@ -148,7 +108,7 @@ public unsafe readonly struct GitConfig : IDisposable
     public bool GetBoolean(string name)
     {
         int value;
-        Git2.ThrowIfError(NativeApi.git_config_get_bool(&value, NativeHandle, name));
+        Git2.ThrowIfError(git_config_get_bool(&value, NativeHandle, name));
 
         return value != 0;
     }
@@ -156,7 +116,7 @@ public unsafe readonly struct GitConfig : IDisposable
     public GitConfigEntry GetEntry(string name)
     {
         Native.GitConfigEntry* entry = null;
-        Git2.ThrowIfError(NativeApi.git_config_get_entry(&entry, NativeHandle, name));
+        Git2.ThrowIfError(git_config_get_entry(&entry, NativeHandle, name));
 
         try
         {
@@ -166,14 +126,14 @@ public unsafe readonly struct GitConfig : IDisposable
         }
         finally
         {
-            NativeApi.git_config_entry_free(entry);
+            git_config_entry_free(entry);
         }
     }
 
     public int GetInt32(string name)
     {
         int value;
-        Git2.ThrowIfError(NativeApi.git_config_get_int32(&value, NativeHandle, name));
+        Git2.ThrowIfError(git_config_get_int32(&value, NativeHandle, name));
 
         return value;
     }
@@ -181,7 +141,7 @@ public unsafe readonly struct GitConfig : IDisposable
     public long GetInt64(string name)
     {
         long value;
-        Git2.ThrowIfError(NativeApi.git_config_get_int64(&value, NativeHandle, name));
+        Git2.ThrowIfError(git_config_get_int64(&value, NativeHandle, name));
 
         return value;
     }
@@ -189,7 +149,7 @@ public unsafe readonly struct GitConfig : IDisposable
     public string GetPath(string name)
     {
         Native.GitBuffer buffer = default;
-        Git2.ThrowIfError(NativeApi.git_config_get_path(&buffer, NativeHandle, name));
+        Git2.ThrowIfError(git_config_get_path(&buffer, NativeHandle, name));
 
         try
         {
@@ -197,14 +157,14 @@ public unsafe readonly struct GitConfig : IDisposable
         }
         finally
         {
-            NativeApi.git_buf_dispose(&buffer);
+            git_buf_dispose(&buffer);
         }
     }
 
     public GitConfig GetSnapshot()
     {
         Git2.Config* config;
-        Git2.ThrowIfError(NativeApi.git_config_snapshot(&config, NativeHandle));
+        Git2.ThrowIfError(git_config_snapshot(&config, NativeHandle));
 
         return new(config);
     }
@@ -212,7 +172,7 @@ public unsafe readonly struct GitConfig : IDisposable
     public string GetString(string name)
     {
         Native.GitBuffer buffer = default;
-        Git2.ThrowIfError(NativeApi.git_config_get_string_buf(&buffer, NativeHandle, name));
+        Git2.ThrowIfError(git_config_get_string_buf(&buffer, NativeHandle, name));
 
         try
         {
@@ -220,33 +180,66 @@ public unsafe readonly struct GitConfig : IDisposable
         }
         finally
         {
-            NativeApi.git_buf_dispose(&buffer);
+            git_buf_dispose(&buffer);
         }
     }
 
     public void Set(string name, bool value)
     {
-        Git2.ThrowIfError(NativeApi.git_config_set_bool(NativeHandle, name, value ? 1 : 0));
+        Git2.ThrowIfError(git_config_set_bool(NativeHandle, name, value ? 1 : 0));
     }
 
     public void Set(string name, int value)
     {
-        Git2.ThrowIfError(NativeApi.git_config_set_int32(NativeHandle, name, value));
+        Git2.ThrowIfError(git_config_set_int32(NativeHandle, name, value));
     }
 
     public void Set(string name, long value)
     {
-        Git2.ThrowIfError(NativeApi.git_config_set_int64(NativeHandle, name, value));
+        Git2.ThrowIfError(git_config_set_int64(NativeHandle, name, value));
     }
 
     public void Set(string name, [StringSyntax("regex")] string regex, string value)
     {
-        Git2.ThrowIfError(NativeApi.git_config_set_multivar(NativeHandle, name, regex, value));
+        Git2.ThrowIfError(git_config_set_multivar(NativeHandle, name, regex, value));
     }
 
     public void Set(string name, string value)
     {
-        Git2.ThrowIfError(NativeApi.git_config_set_string(NativeHandle, name, value));
+        Git2.ThrowIfError(git_config_set_string(NativeHandle, name, value));
+    }
+
+    public GitConfig OpenLevel(GitConfigLevel level)
+    {
+        Git2.Config* result;
+
+        Git2.ThrowIfError(git_config_open_level(&result, NativeHandle, level));
+
+        return new(result);
+    }
+
+    public GitConfig OpenGlobal()
+    {
+        Git2.Config* result;
+
+        Git2.ThrowIfError(git_config_open_global(&result, NativeHandle));
+
+        return new(result);
+    }
+
+    public static GitConfig OpenDefault()
+    {
+        Git2.Config* result;
+        Git2.ThrowIfError(git_config_open_default(&result));
+
+        return new(result);
+    }
+
+    public static GitConfig OpenFile(string path)
+    {
+        Git2.Config* result;
+        Git2.ThrowIfError(git_config_open_ondisk(&result, path));
+        return new(result);
     }
 
     public readonly struct Enumerable : IEnumerable<GitConfigEntry>
@@ -264,9 +257,9 @@ public unsafe readonly struct GitConfig : IDisposable
         {
             Git2.ConfigIterator* iterator;
             if (_regex is null)
-                Git2.ThrowIfError(NativeApi.git_config_iterator_new(&iterator, _handle.NativeHandle));
+                Git2.ThrowIfError(git_config_iterator_new(&iterator, _handle.NativeHandle));
             else
-                Git2.ThrowIfError(NativeApi.git_config_iterator_glob_new(&iterator, _handle.NativeHandle, _regex));
+                Git2.ThrowIfError(git_config_iterator_glob_new(&iterator, _handle.NativeHandle, _regex));
 
             return new Enumerator(iterator);
         }
@@ -292,7 +285,7 @@ public unsafe readonly struct GitConfig : IDisposable
         public Enumerator GetEnumerator()
         {
             Git2.ConfigIterator* iterator;
-            Git2.ThrowIfError(NativeApi.git_config_multivar_iterator_new(&iterator, _handle.NativeHandle, _name, _regex));
+            Git2.ThrowIfError(git_config_multivar_iterator_new(&iterator, _handle.NativeHandle, _name, _regex));
 
             return new Enumerator(iterator);
         }
@@ -318,7 +311,7 @@ public unsafe readonly struct GitConfig : IDisposable
             ObjectDisposedException.ThrowIf(_nativeHandle is null, typeof(Enumerator));
 
             Native.GitConfigEntry* entry;
-            var error = NativeApi.git_config_next(&entry, _nativeHandle);
+            var error = git_config_next(&entry, _nativeHandle);
 
             switch (error)
             {
@@ -337,7 +330,7 @@ public unsafe readonly struct GitConfig : IDisposable
         {
             if (_nativeHandle is not null)
             {
-                NativeApi.git_config_iterator_free(_nativeHandle);
+                git_config_iterator_free(_nativeHandle);
                 _nativeHandle = null;
                 Current = default;
             }

@@ -71,6 +71,12 @@ public static unsafe partial class NativeApi
     /// Frees an annotated commit.
     /// </summary>
     /// <param name="commit">annotated commit to free</param>
+    /// <remarks>
+    /// Native Signature:
+    /// <code>
+    /// void git_annotated_commit_free(git_annotated_commit *commit);
+    /// </code>
+    /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial void git_annotated_commit_free(Git2.AnnotatedCommit* commit);
@@ -87,6 +93,12 @@ public static unsafe partial class NativeApi
     /// <returns>
     /// 0 on success or an error code
     /// </returns>
+    /// <remarks>
+    /// Native Signature:
+    /// <code>
+    /// int git_annotated_commit_from_fetchhead(git_annotated_commit **out, git_repository *repo, const char *branch_name, const char *remote_url, const git_oid *id);
+    /// </code>
+    /// </remarks>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_annotated_commit_from_fetchhead(
@@ -96,6 +108,16 @@ public static unsafe partial class NativeApi
         string remoteUrl,
         GitObjectID* id);
 
+    ///<inheritdoc cref="git_annotated_commit_from_fetchhead"/>
+    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    public static partial GitError git_annotated_commit_from_fetchhead(
+        Git2.AnnotatedCommit** commit_out,
+        Git2.Repository* repository,
+        string branchName,
+        string remoteUrl,
+        in GitObjectID id);
+
     /// <summary>
     /// Creates an annotated commit from the given reference.
     /// The resulting annotated commit must be freed with <see cref="git_annotated_commit_free"/>.
@@ -104,6 +126,12 @@ public static unsafe partial class NativeApi
     /// <param name="repo">repository that contains the given reference</param>
     /// <param name="reference">reference to use to lookup the annotated commit</param>
     /// <returns>0 on success or an error code</returns>
+    /// <remarks>
+    /// Native Signature:
+    /// <code>
+    /// int git_annotated_commit_from_ref(git_annotated_commit **out, git_repository *repo, const git_reference *ref);
+    /// </code>
+    /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_annotated_commit_from_ref(Git2.AnnotatedCommit** commit_out, Git2.Repository* repo, Git2.Reference* reference);
@@ -117,6 +145,11 @@ public static unsafe partial class NativeApi
     /// <returns>0 on success or an error code</returns>
     /// <remarks>
     /// See <c>man gitrevisions</c>, or http://git-scm.com/docs/git-rev-parse.html#_specifying_revisions for information on the syntax accepted.
+    /// <br/><br/>
+    /// Native Signature:
+    /// <code>
+    /// int git_annotated_commit_from_revspec(git_annotated_commit **out, git_repository *repo, const char *revspec);
+    /// </code>
     /// </remarks>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
@@ -127,6 +160,12 @@ public static unsafe partial class NativeApi
     /// </summary>
     /// <param name="commit">the given annotated commit</param>
     /// <returns>The commit ID</returns>
+    /// <remarks>
+    /// Native Signature:
+    /// <code>
+    /// const git_oid * git_annotated_commit_id(const git_annotated_commit *commit);
+    /// </code>
+    /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitObjectID* git_annotated_commit_id(Git2.AnnotatedCommit* commit);
@@ -146,16 +185,32 @@ public static unsafe partial class NativeApi
     /// source or target branches being merged. It is therefore preferable to use
     /// the most specific function (e.g. <see cref="git_annotated_commit_from_ref"/>)
     /// instead of this one when that data is known.
+    /// <br/><br/>
+    /// Native Signature:
+    /// <code>
+    /// int git_annotated_commit_lookup(git_annotated_commit **out, git_repository *repo, const git_oid *id);
+    /// </code>
     /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_annotated_commit_lookup(Git2.AnnotatedCommit** commit_out, Git2.Repository* repo, GitObjectID* id);
+
+    ///<inheritdoc cref="git_annotated_commit_lookup"/>
+    [LibraryImport(Git2.LibraryName)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    public static partial GitError git_annotated_commit_lookup(Git2.AnnotatedCommit** commit_out, Git2.Repository* repo, in GitObjectID id);
 
     /// <summary>
     /// Get the refname that the given annotated commit referes to.
     /// </summary>
     /// <param name="commit">the given annotated commit</param>
     /// <returns>The ref name</returns>
+    /// <remarks>
+    /// Native Signature:
+    /// <code>
+    /// const char * git_annotated_commit_ref(const git_annotated_commit *commit);
+    /// </code>
+    /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial byte* git_annotated_commit_ref(Git2.AnnotatedCommit* commit);
@@ -170,9 +225,46 @@ public static unsafe partial class NativeApi
     /// <param name="location">the location to apply (workdir, index or both)</param>
     /// <param name="options">the options for the apply (or null for defaults)</param>
     /// <returns>0 on success or an error code</returns>
+    /// <remarks>
+    /// Native Signature:
+    /// <code>
+    /// int git_apply(git_repository *repo, git_diff *diff, git_apply_location_t location, const git_apply_options *options);
+    /// </code>
+    /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_apply(Git2.Repository* repository, Git2.Diff* diff, GitApplyLocationType location, Native.GitApplyOptions* options);
+
+    ///<inheritdoc cref="git_apply(Git2.Repository*, Git2.Diff*, GitApplyLocationType, Native.GitApplyOptions*)"/>
+    public static GitError git_apply(Git2.Repository* repository, Git2.Diff* diff, GitApplyLocationType location, in Native.GitApplyOptions options)
+    {
+        fixed (Native.GitApplyOptions* pOptions = &options)
+        {
+            return git_apply(repository, diff, location, pOptions);
+        }
+    }
+
+    ///<inheritdoc cref="git_apply(Git2.Repository*, Git2.Diff*, GitApplyLocationType, Native.GitApplyOptions*)"/>
+    public static GitError git_apply(Git2.Repository* repository, Git2.Diff* diff, GitApplyLocationType location, in GitApplyOptions options)
+    {
+        Native.GitApplyOptions nOptions = default;
+        List<GCHandle> gchandles = [];
+        try
+        {
+            nOptions.FromManaged(in options, gchandles);
+
+            return git_apply(repository, diff, location, &nOptions);
+        }
+        finally
+        {
+            foreach (var handle in gchandles)
+            {
+                handle.Free();
+            }
+
+            nOptions.Free();
+        }
+    }
 
     /// <summary>
     /// Apply a diff to a tree, and return the resulting image as an index.
@@ -183,6 +275,12 @@ public static unsafe partial class NativeApi
     /// <param name="diff">the diff to apply</param>
     /// <param name="options">the options for the apply (or null for defaults)</param>
     /// <returns>0 on success or an error code</returns>
+    /// <remarks>
+    /// Native Signature:
+    /// <code>
+    /// int git_apply_to_tree(git_index **out, git_repository *repo, git_tree *preimage, git_diff *diff, const git_apply_options *options);
+    /// </code>
+    /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_apply_to_tree(
@@ -191,6 +289,48 @@ public static unsafe partial class NativeApi
         Git2.Tree* preimage,
         Git2.Diff* diff,
         Native.GitApplyOptions* options);
+
+    ///<inheritdoc cref="git_apply_to_tree(Git2.Index**, Git2.Repository*, Git2.Tree*, Git2.Diff*, Native.GitApplyOptions*)"/>
+    public static GitError git_apply_to_tree(
+        Git2.Index** postimage_out,
+        Git2.Repository* repository,
+        Git2.Tree* preimage,
+        Git2.Diff* diff,
+        in Native.GitApplyOptions options)
+    {
+        fixed (Native.GitApplyOptions* pOptions = &options)
+        {
+            return git_apply_to_tree(postimage_out, repository, preimage, diff, pOptions);
+        }
+    }
+
+    ///<inheritdoc cref="git_apply_to_tree(Git2.Index**, Git2.Repository*, Git2.Tree*, Git2.Diff*, Native.GitApplyOptions*)"/>
+    public static GitError git_apply_to_tree(
+        Git2.Index** postimage_out,
+        Git2.Repository* repository,
+        Git2.Tree* preimage,
+        Git2.Diff* diff,
+        in GitApplyOptions options)
+    {
+        Native.GitApplyOptions nOptions = default;
+        List<GCHandle> gchandles = [];
+
+        try
+        {
+            nOptions.FromManaged(in options, gchandles);
+
+            return git_apply_to_tree(postimage_out, repository, preimage, diff, &nOptions);
+        }
+        finally
+        {
+            foreach (var handle in gchandles)
+            {
+                handle.Free();
+            }
+
+            nOptions.Free();
+        }
+    }
     #endregion
 
     #region Attribute
@@ -208,6 +348,10 @@ public static unsafe partial class NativeApi
     /// <code>
     /// git_attr_add_macro(repo, "binary", "-diff -crlf");
     /// </code>
+    /// Native Signature:
+    /// <code>
+    /// int git_attr_add_macro(git_repository *repo, const char *name, const char *values);
+    /// </code>
     /// </remarks>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
@@ -222,6 +366,11 @@ public static unsafe partial class NativeApi
     /// Call this if you have reason to believe that the attributes files on disk no longer
     /// match the cached contents of memory. This will cause the attributes files to be
     /// reloaded the next time that an attribute access function is called.
+    /// <br/><br/>
+    /// Native Signature:
+    /// <code>
+    /// int git_attr_cache_flush(git_repository *repo);
+    /// </code>
     /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
@@ -250,6 +399,10 @@ public static unsafe partial class NativeApi
     /// </returns>
     /// <remarks>
     /// The callback will be invoked only once per attribute name, even if there are multiple rules for a given file. The highest priority rule will be used.
+    /// Native Signature:
+    /// <code>
+    /// int git_attr_foreach(git_repository *repo, uint32_t flags, const char *path, git_attr_foreach_cb callback, void *payload);
+    /// </code>
     /// </remarks>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
@@ -257,8 +410,6 @@ public static unsafe partial class NativeApi
         Git2.Repository* repository,
         GitAttributeCheckFlags flags,
         string path,
-        // 
-        // returns: 0 to continue looping, non-zero to stop. This value will be returned from git_attr_foreach.
         delegate* unmanaged[Cdecl]<byte*, byte*, nint, int> callback, 
         nint payload);
 
@@ -285,12 +436,26 @@ public static unsafe partial class NativeApi
     /// </returns>
     /// <remarks>
     /// The callback will be invoked only once per attribute name, even if there are multiple rules for a given file. The highest priority rule will be used.
+    /// <br/><br/>
+    /// Native Signature:
+    /// <code>
+    /// int git_attr_foreach_ext(git_repository *repo, git_attr_options *opts, const char *path, git_attr_foreach_cb callback, void *payload);
+    /// </code>
     /// </remarks>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial int git_attr_foreach_ext(
         Git2.Repository* repository,
         Native.GitAttributeOptions* options,
+        string path,
+        delegate* unmanaged[Cdecl]<byte*, byte*, nint, int> callback,
+        nint payload);
+
+    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    public static partial int git_attr_foreach_ext(
+        Git2.Repository* repository,
+        in Native.GitAttributeOptions options,
         string path,
         delegate* unmanaged[Cdecl]<byte*, byte*, nint, int> callback,
         nint payload);
@@ -307,11 +472,7 @@ public static unsafe partial class NativeApi
     /// <summary>
     /// Look up the value of one git attribute for path.
     /// </summary>
-    /// <param name="value_out">
-    /// Output of the value of the attribute. Use the <see cref="GitAttributeCheckFlags"/>
-    /// flags to test for TRUE, FALSE, UNSPECIFIED, etc. or just use the string value for
-    /// attributes set to a value. You should NOT modify or free this value.
-    /// </param>
+    /// <param name="value_out"></param>
     /// <param name="repository">The repository containing the path.</param>
     /// <param name="flags"></param>
     /// <param name="path">
@@ -324,8 +485,14 @@ public static unsafe partial class NativeApi
     /// <returns>
     /// 0 on success or an error code.
     /// </returns>
+    /// <remarks>
+    /// Native Signature:
+    /// <code>
+    /// int git_attr_get_ext(const char **value_out, git_repository *repo, git_attr_options *opts, const char *path, const char *name);
+    /// </code>
+    /// </remarks>
     public static GitError git_attr_get(
-        out string? value_out,
+        out GitAttributeValue value_out,
         Git2.Repository* repository,
         GitAttributeCheckFlags flags,
         string path,
@@ -334,7 +501,15 @@ public static unsafe partial class NativeApi
         byte* _value = null;
         var error = git_attr_get(&_value, repository, flags, path, name);
 
-        value_out = error == GitError.OK ? Utf8StringMarshaller.ConvertToManaged(_value) : null;
+        if (error != GitError.OK)
+        {
+            value_out = default;
+            return error;
+        }
+
+        var type = git_attr_value(_value);
+        
+        value_out = new(type, type is GitAttributeValueType.String ? Utf8StringMarshaller.ConvertToManaged(_value) : null);
         return error;
     }
 
@@ -353,10 +528,10 @@ public static unsafe partial class NativeApi
     /// <param name="value_out">
     /// Output of the value of the attribute. Use the <see cref="GitAttributeCheckFlags"/>
     /// flags to test for TRUE, FALSE, UNSPECIFIED, etc. or just use the string value for
-    /// attributes set to a value. You should NOT modify or free this value.
+    /// attributes set to a value.
     /// </param>
     /// <param name="repository">The repository containing the path.</param>
-    /// <param name="flags"></param>
+    /// <param name="options">The <see cref="Native.GitAttributeOptions"/> to use when querying these attributes.</param>
     /// <param name="path">
     /// The path to check for attributes. Relative paths are
     /// interpreted relative to the repo root. The file does
@@ -368,7 +543,7 @@ public static unsafe partial class NativeApi
     /// 0 on success or an error code.
     /// </returns>
     public static GitError git_attr_get_ext(
-        out string? value_out,
+        out GitAttributeValue value_out,
         Git2.Repository* repository,
         Native.GitAttributeOptions* options,
         string path,
@@ -377,7 +552,15 @@ public static unsafe partial class NativeApi
         byte* _value = null;
         var error = git_attr_get_ext(&_value, repository, options, path, name);
 
-        value_out = error == GitError.OK ? Utf8StringMarshaller.ConvertToManaged(_value) : null;
+        if (error != GitError.OK)
+        {
+            value_out = default;
+            return error;
+        }
+
+        var type = git_attr_value(_value);
+
+        value_out = new(type, type is GitAttributeValueType.String ? Utf8StringMarshaller.ConvertToManaged(_value) : null);
         return error;
     }
 
@@ -401,7 +584,7 @@ public static unsafe partial class NativeApi
     /// <param name="names"></param>
     /// <returns></returns>
     public static GitError git_attr_get_many(
-        out string[]? values_out,
+        out GitAttributeValue[] values_out,
         Git2.Repository* repository,
         GitAttributeCheckFlags flags,
         string path,
@@ -409,14 +592,13 @@ public static unsafe partial class NativeApi
     {
         ArgumentNullException.ThrowIfNull(names);
 
-        values_out = null;
-
         IList<string> _names = names as IList<string> ?? names.ToList();
 
         int nameCount = _names.Count;
 
         if (nameCount == 0)
         {
+            values_out = [];
             return GitError.OK;
         }
 
@@ -425,8 +607,8 @@ public static unsafe partial class NativeApi
 
         if (nameCount <= 16)
         {
-            byte** pNames = stackalloc byte*[nameCount * 2];
-            byte** pValues = pNames + nameCount;
+            byte** pNames = stackalloc byte*[32];
+            byte** pValues = pNames + 16;
 
             try
             {
@@ -439,14 +621,22 @@ public static unsafe partial class NativeApi
 
                 if (error == GitError.OK)
                 {
-                    var array = new string[nameCount];
+                    var array = new GitAttributeValue[nameCount];
 
                     for (int i = 0; i < nameCount; ++i)
                     {
-                        array[i] = Utf8StringMarshaller.ConvertToManaged(pValues[i])!;
+                        byte* value = pValues[i];
+
+                        var type = git_attr_value(value);
+
+                        array[i] = new(type, type is GitAttributeValueType.String ? Utf8StringMarshaller.ConvertToManaged(value) : null);
                     }
 
                     values_out = array;
+                }
+                else
+                {
+                    values_out = [];
                 }
 
                 return error;
@@ -474,14 +664,22 @@ public static unsafe partial class NativeApi
 
                 if (error == GitError.OK)
                 {
-                    var array = new string[nameCount];
+                    var array = new GitAttributeValue[nameCount];
 
                     for (int i = 0; i < nameCount; ++i)
                     {
-                        array[i] = Utf8StringMarshaller.ConvertToManaged(pValues[i])!;
+                        byte* value = pValues[i];
+
+                        var type = git_attr_value(value);
+
+                        array[i] = new(type, type is GitAttributeValueType.String ? Utf8StringMarshaller.ConvertToManaged(value) : null);
                     }
 
                     values_out = array;
+                }
+                else
+                {
+                    values_out = [];
                 }
 
                 return error;
@@ -524,15 +722,13 @@ public static unsafe partial class NativeApi
     /// </param>
     /// <returns>0 on success or an error code.</returns>
     public static GitError git_attr_get_many_ext(
-        out string[]? values_out,
+        out GitAttributeValue[] values_out,
         Git2.Repository* repository,
         Native.GitAttributeOptions* options,
         string path,
         IEnumerable<string> names)
     {
         ArgumentNullException.ThrowIfNull(names);
-
-        values_out = null;
 
         var _names = names as IReadOnlyList<string> ?? names.ToList();
 
@@ -549,8 +745,8 @@ public static unsafe partial class NativeApi
 
         if (nameCount <= 16)
         {
-            byte** pNames = stackalloc byte*[nameCount * 2];
-            byte** pValues = pNames + nameCount;
+            byte** pNames = stackalloc byte*[32];
+            byte** pValues = pNames + 16;
 
             try
             {
@@ -563,14 +759,22 @@ public static unsafe partial class NativeApi
 
                 if (error == GitError.OK)
                 {
-                    var array = new string[nameCount];
+                    var array = new GitAttributeValue[nameCount];
 
                     for (int i = 0; i < nameCount; ++i)
                     {
-                        array[i] = Utf8StringMarshaller.ConvertToManaged(pValues[i])!;
+                        byte* value = pValues[i];
+
+                        var type = git_attr_value(value);
+
+                        array[i] = new(type, type is GitAttributeValueType.String ? Utf8StringMarshaller.ConvertToManaged(value) : null);
                     }
 
                     values_out = array;
+                }
+                else
+                {
+                    values_out = [];
                 }
 
                 return error;
@@ -598,14 +802,22 @@ public static unsafe partial class NativeApi
 
                 if (error == GitError.OK)
                 {
-                    var array = new string[nameCount];
+                    var array = new GitAttributeValue[nameCount];
 
                     for (int i = 0; i < nameCount; ++i)
                     {
-                        array[i] = Utf8StringMarshaller.ConvertToManaged(pValues[i])!;
+                        byte* value = pValues[i];
+
+                        var type = git_attr_value(value);
+
+                        array[i] = new(type, type is GitAttributeValueType.String ? Utf8StringMarshaller.ConvertToManaged(value) : null);
                     }
 
                     values_out = array;
+                }
+                else
+                {
+                    values_out = [];
                 }
 
                 return error;
@@ -623,13 +835,13 @@ public static unsafe partial class NativeApi
     }
 
     /// <summary>
-    /// Return the value type for a given attribute.
+    /// Used to determine the type of value returned by attribute API's
     /// </summary>
     /// <param name="attribute">The attribute</param>
     /// <returns></returns>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
-    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    public static partial GitAttributeValueType git_attr_value(string attribute);
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl), typeof(CallConvSuppressGCTransition)])]
+    public static partial GitAttributeValueType git_attr_value(byte* attribute);
     #endregion
 
     #region Blame
@@ -715,7 +927,7 @@ public static unsafe partial class NativeApi
     /// <param name="blame">The blame structure to query.</param>
     /// <returns>The number of hunks.</returns>
     [LibraryImport(Git2.LibraryName)]
-    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl), typeof(CallConvSuppressGCTransition)])]
     public static partial uint git_blame_get_hunk_count(Git2.Blame* blame);
     #endregion
 
@@ -820,7 +1032,7 @@ public static unsafe partial class NativeApi
     /// <param name="data">The blob data which content should be analyzed</param>
     /// <param name="length">The length of the data</param>
     /// <returns>1 if the content of the blob is detected as binary; 0 otherwise.</returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     [return: MarshalAs(UnmanagedType.I4)]
     public static partial bool git_blob_data_is_binary(byte* data, nuint length);
@@ -1284,6 +1496,36 @@ public static unsafe partial class NativeApi
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_checkout_head(Git2.Repository* repository, Native.GitCheckoutOptions* options);
 
+    public static GitError git_checkout_head(Git2.Repository* repository, in Native.GitCheckoutOptions options)
+    {
+        fixed (Native.GitCheckoutOptions* pOptions = &options)
+        {
+            return git_checkout_head(repository, pOptions);
+        }
+    }
+
+    public static GitError git_checkout_head(Git2.Repository* repository, in GitCheckoutOptions options)
+    {
+        Native.GitCheckoutOptions nOptions = default;
+        List<GCHandle> gchandles = [];
+        try
+        {
+            nOptions.FromManaged(in options, gchandles);
+
+            return git_checkout_head(repository, &nOptions);
+        }
+        finally
+        {
+            foreach (var handle in gchandles)
+            {
+                handle.Free();
+            }
+
+            nOptions.Free();
+        }
+    }
+
+
     /// <summary>
     /// 
     /// </summary>
@@ -1295,6 +1537,35 @@ public static unsafe partial class NativeApi
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_checkout_index(Git2.Repository* repository, Git2.Index* index, Native.GitCheckoutOptions* options);
 
+    public static GitError git_checkout_index(Git2.Repository* repository, Git2.Index* index, in Native.GitCheckoutOptions options)
+    {
+        fixed (Native.GitCheckoutOptions* pOptions = &options)
+        {
+            return git_checkout_index(repository, index, pOptions);
+        }
+    }
+
+    public static GitError git_checkout_index(Git2.Repository* repository, Git2.Index* index, in GitCheckoutOptions options)
+    {
+        Native.GitCheckoutOptions nOptions = default;
+        List<GCHandle> gchandles = [];
+        try
+        {
+            nOptions.FromManaged(in options, gchandles);
+
+            return git_checkout_index(repository, index, &nOptions);
+        }
+        finally
+        {
+            foreach (var handle in gchandles)
+            {
+                handle.Free();
+            }
+
+            nOptions.Free();
+        }
+    }
+
     /// <summary>
     /// 
     /// </summary>
@@ -1305,6 +1576,35 @@ public static unsafe partial class NativeApi
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_checkout_tree(Git2.Repository* repository, Git2.Object* treeish, Native.GitCheckoutOptions* options);
+
+    public static GitError git_checkout_tree(Git2.Repository* repository, Git2.Object* treeish, in Native.GitCheckoutOptions options)
+    {
+        fixed (Native.GitCheckoutOptions* pOptions = &options)
+        {
+            return git_checkout_tree(repository, treeish, pOptions);
+        }
+    }
+
+    public static GitError git_checkout_tree(Git2.Repository* repository, Git2.Object* treeish, in GitCheckoutOptions options)
+    {
+        Native.GitCheckoutOptions nOptions = default;
+        List<GCHandle> gchandles = [];
+        try
+        {
+            nOptions.FromManaged(in options, gchandles);
+
+            return git_checkout_tree(repository, treeish, &nOptions);
+        }
+        finally
+        {
+            foreach (var handle in gchandles)
+            {
+                handle.Free();
+            }
+
+            nOptions.Free();
+        }
+    }
     #endregion
 
     #region Cherrypick
@@ -1359,6 +1659,11 @@ public static unsafe partial class NativeApi
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_clone(Git2.Repository** repo_out, string url, string local_path, Native.GitCloneOptions* options);
+
+    ///<inheritdoc cref="git_clone(Git2.Repository**, string, string, Native.GitCloneOptions*)"/>
+    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    public static partial GitError git_clone(Git2.Repository** repo_out, string url, string local_path, in Native.GitCloneOptions options);
     #endregion
 
     #region Commit
@@ -2340,7 +2645,7 @@ public static unsafe partial class NativeApi
     /// <br/><br/>
     /// The string returned when querying such a config object is valid until it is freed.
     /// </remarks>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_config_snapshot(Git2.Config** @out, Git2.Config* config);
     #endregion
@@ -4135,14 +4440,22 @@ public static unsafe partial class NativeApi
 
     #region Merge
     /// <summary>
-    /// 
+    /// Merges the given commit(s) into HEAD, writing the results into the working directory.
+    /// Any changes are staged for commit and any conflicts are written to the index.
+    /// Callers should inspect the repository's index after this completes,
+    /// resolve any conflicts and prepare a commit.
     /// </summary>
-    /// <param name="repository"></param>
-    /// <param name="their_heads"></param>
-    /// <param name="their_heads_count"></param>
-    /// <param name="merge_options"></param>
-    /// <param name="checkout_options"></param>
-    /// <returns></returns>
+    /// <param name="repository">the repository to merge</param>
+    /// <param name="their_heads">the heads to merge into</param>
+    /// <param name="their_heads_count">the number of heads to merge</param>
+    /// <param name="merge_options">merge options</param>
+    /// <param name="checkout_options">checkout options</param>
+    /// <returns>0 on success, or an error code</returns>
+    /// <remarks>
+    /// For compatibility with git, the repository is put into a merging state.
+    /// Once the commit is done (or if the user wishes to abort), you should clear
+    /// this state by calling <see cref="git_repository_state_cleanup(Git2.Repository*)"/>.
+    /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_merge(
@@ -4153,14 +4466,14 @@ public static unsafe partial class NativeApi
         Native.GitCheckoutOptions* checkout_options);
 
     /// <summary>
-    /// 
+    /// Analyzes the given branch(es) and determines the opportunities for merging them into the HEAD of the repository.
     /// </summary>
-    /// <param name="analysis_out"></param>
-    /// <param name="preference_out"></param>
-    /// <param name="repository"></param>
-    /// <param name="their_heads"></param>
-    /// <param name="their_heads_count"></param>
-    /// <returns></returns>
+    /// <param name="analysis_out">analysis enumeration that the result is written into</param>
+    /// <param name="preference_out">One of the `git_merge_preference_t` flag.</param>
+    /// <param name="repository">the repository to merge</param>
+    /// <param name="their_heads">the heads to merge into</param>
+    /// <param name="their_heads_count">the number of heads to merge</param>
+    /// <returns>0 on success, or an error code</returns>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_merge_analysis(
@@ -4171,15 +4484,15 @@ public static unsafe partial class NativeApi
         nuint their_heads_count);
 
     /// <summary>
-    /// 
+    /// Analyzes the given branch(es) and determines the opportunities for merging them into a reference.
     /// </summary>
-    /// <param name="analysis_out"></param>
-    /// <param name="preference_out"></param>
-    /// <param name="repository"></param>
-    /// <param name="our_ref"></param>
-    /// <param name="their_heads"></param>
-    /// <param name="their_heads_count"></param>
-    /// <returns></returns>
+    /// <param name="analysis_out">analysis enumeration that the result is written into</param>
+    /// <param name="preference_out">One of the `git_merge_preference_t` flags.</param>
+    /// <param name="repository">the repository to merge</param>
+    /// <param name="our_ref">the reference to perform the analysis from</param>
+    /// <param name="their_heads">the heads to merge into</param>
+    /// <param name="their_heads_count">the number of heads to merge</param>
+    /// <returns>0 on success, or an error code</returns>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_merge_analysis_for_ref(
@@ -4191,13 +4504,13 @@ public static unsafe partial class NativeApi
         nuint their_heads_count);
 
     /// <summary>
-    /// 
+    /// Find a merge base between two commits
     /// </summary>
-    /// <param name="id_out"></param>
-    /// <param name="repository"></param>
-    /// <param name="one"></param>
-    /// <param name="two"></param>
-    /// <returns></returns>
+    /// <param name="id_out">the OID of a merge base between <paramref name="one"/> and <paramref name="two"/></param>
+    /// <param name="repository">the repository where the commits exist</param>
+    /// <param name="one">The first commit</param>
+    /// <param name="two">The second commit</param>
+    /// <returns>0 on success, <see cref="GitError.NotFound"/> if not found, or an error code</returns>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_merge_base(
@@ -4207,13 +4520,13 @@ public static unsafe partial class NativeApi
         GitObjectID* two);
 
     /// <summary>
-    /// 
+    /// Find a merge base given a list of commits
     /// </summary>
-    /// <param name="id_out"></param>
-    /// <param name="repository"></param>
-    /// <param name="length"></param>
-    /// <param name="input_array"></param>
-    /// <returns></returns>
+    /// <param name="id_out">The OID of a merge base considering all the commits</param>
+    /// <param name="repository">The repository where the commits exist</param>
+    /// <param name="length">The number of commits provided in <paramref name="input_array"/></param>
+    /// <param name="input_array">Object ID's of the commits</param>
+    /// <returns>0 on success, <see cref="GitError.NotFound"/> if not found, or an error code</returns>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_merge_base_many(
@@ -4223,13 +4536,13 @@ public static unsafe partial class NativeApi
         GitObjectID* input_array);
 
     /// <summary>
-    /// 
+    /// Find a merge base in preparation for an octopus merge
     /// </summary>
-    /// <param name="id_out"></param>
-    /// <param name="repository"></param>
-    /// <param name="length"></param>
-    /// <param name="input_array"></param>
-    /// <returns></returns>
+    /// <param name="id_out">The OID of a merge base considering all the commits</param>
+    /// <param name="repository">The repository where the commits exist</param>
+    /// <param name="length">The number of commits provided in <paramref name="input_array"/></param>
+    /// <param name="input_array">Object ID's of the commits</param>
+    /// <returns>0 on success, <see cref="GitError.NotFound"/> if not found, or an error code</returns>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_merge_base_octopus(
@@ -4239,13 +4552,13 @@ public static unsafe partial class NativeApi
         GitObjectID* input_array);
 
     /// <summary>
-    /// 
+    /// Find merge bases between two commits
     /// </summary>
-    /// <param name="ids_out"></param>
-    /// <param name="repository"></param>
-    /// <param name="one"></param>
-    /// <param name="two"></param>
-    /// <returns></returns>
+    /// <param name="ids_out">Array in which to store the resulting ids</param>
+    /// <param name="repository">The repository where the commits exist</param>
+    /// <param name="one">The first commit</param>
+    /// <param name="two">The second commit</param>
+    /// <returns>0 on success, <see cref="GitError.NotFound"/> if not found, or an error code</returns>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_merge_bases(
@@ -4255,13 +4568,13 @@ public static unsafe partial class NativeApi
         GitObjectID* two);
 
     /// <summary>
-    /// 
+    /// Find all merge bases given a list of commits
     /// </summary>
-    /// <param name="id_out"></param>
-    /// <param name="repository"></param>
-    /// <param name="length"></param>
-    /// <param name="input_array"></param>
-    /// <returns></returns>
+    /// <param name="id_out">Array in which to store the resulting ids</param>
+    /// <param name="repository">The repository where the commits exist</param>
+    /// <param name="length">The number of commits provided in <paramref name="input_array"/></param>
+    /// <param name="input_array">Object ID's of the commits</param>
+    /// <returns>0 on success, <see cref="GitError.NotFound"/> if not found, or an error code</returns>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_merge_bases_many(
@@ -4271,14 +4584,17 @@ public static unsafe partial class NativeApi
         GitObjectID* input_array);
 
     /// <summary>
-    /// 
+    /// Merge two commits, producing a <see cref="Git2.Index"/> that reflects the result of the merge.
+    /// The index may be written as-is to the working directory or checked out.
+    /// If the index is to be converted to a tree, the caller should resolve any conflicts
+    /// that arose as part of the merge.
     /// </summary>
-    /// <param name="index_out"></param>
-    /// <param name="repository"></param>
-    /// <param name="our_commit"></param>
-    /// <param name="their_commit"></param>
-    /// <param name="options"></param>
-    /// <returns></returns>
+    /// <param name="index_out">Pointer to store the index result in</param>
+    /// <param name="repository">Repository that contains the given trees</param>
+    /// <param name="our_commit">The commit that reflects the destination tree</param>
+    /// <param name="their_commit">the commit to merge into <paramref name="our_commit"/></param>
+    /// <param name="options">The merge options (or null for defaults)</param>
+    /// <returns>0 on success, or an error code</returns>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_merge_commits(
@@ -4289,14 +4605,20 @@ public static unsafe partial class NativeApi
         Native.GitMergeOptions* options);
 
     /// <summary>
-    /// 
+    /// Merge two files as they exist in the in-memory data structures,
+    /// using the given common ancestor as the baseline, producing a
+    /// <see cref="GitMergeFileResult"/> that reflects the merge result.
+    /// <paramref name="result"/> must be freed with <see cref="git_merge_file_result_free"/>.
     /// </summary>
-    /// <param name="result"></param>
-    /// <param name="ancestor"></param>
-    /// <param name="ours"></param>
-    /// <param name="theirs"></param>
-    /// <param name="options"></param>
-    /// <returns></returns>
+    /// <param name="result">The <see cref="Native.GitMergeFileResult"/> to be filled in</param>
+    /// <param name="ancestor">The contents of the ancestor file</param>
+    /// <param name="ours">The contents of the file in "our" side</param>
+    /// <param name="theirs">The contents of the file in "their" side</param>
+    /// <param name="options">The merge file options or `NULL` for defaults</param>
+    /// <returns>0 on success, or an error code</returns>
+    /// <remarks>
+    /// Note that this function does not reference a repository and any configuration must be passed as 
+    /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_merge_file(
@@ -4307,41 +4629,47 @@ public static unsafe partial class NativeApi
         Native.GitMergeFileOptions* options);
 
     /// <summary>
-    /// 
+    /// Merge two files as they exist in the index, using the given common ancestor as the baseline, producing a
+    /// <see cref="Native.GitMergeFileResult"/> that reflects the merge result. The <see cref="Native.GitMergeFileResult"/>
+    /// must be freed with <see cref="git_merge_file_result_free"/>.
     /// </summary>
-    /// <param name="result"></param>
-    /// <param name="ancestor"></param>
-    /// <param name="ours"></param>
-    /// <param name="theirs"></param>
-    /// <param name="options"></param>
-    /// <returns></returns>
+    /// <param name="result">The <see cref="Native.GitMergeFileResult"/> to be filled in</param>
+    /// <param name="repository">The repository</param>
+    /// <param name="ancestor">The index entry for the ancestor file (stage level 1)</param>
+    /// <param name="ours">The index entry for our file (stage level 2)</param>
+    /// <param name="theirs">The index entry for their file (stage level 3)</param>
+    /// <param name="options">The merge file options or NULL</param>
+    /// <returns>0 on success, or an error code</returns>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_merge_file_from_index(
         Native.GitMergeFileResult* result,
+        Git2.Repository* repository,
         Native.GitIndexEntry* ancestor,
         Native.GitIndexEntry* ours,
         Native.GitIndexEntry* theirs,
         Native.GitMergeFileOptions* options);
 
     /// <summary>
-    /// 
+    /// Frees a <see cref="Native.GitMergeFileResult"/>. (Not not actually, just any memory it refers to.)
     /// </summary>
-    /// <param name="result"></param>
+    /// <param name="result">The result to free or `NULL`</param>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial void git_merge_file_result_free(Native.GitMergeFileResult* result);
 
     /// <summary>
-    /// 
+    /// Merge two trees, producing a <see cref="Git2.Index"/> that reflects the result of the merge.
+    /// The index may be written as-is to the working directory or checked out. If the index is to
+    /// be converted to a tree, the caller should resolve any conflicts that arose as part of the merge.
     /// </summary>
-    /// <param name="index_out"></param>
-    /// <param name="repository"></param>
-    /// <param name="ancestor_tree"></param>
-    /// <param name="our_tree"></param>
-    /// <param name="their_tree"></param>
-    /// <param name="options"></param>
-    /// <returns></returns>
+    /// <param name="index_out">Pointer to store the resulting index in.</param>
+    /// <param name="repository">The repository that contains the given trees</param>
+    /// <param name="ancestor_tree">The common ancestor between the trees (or null if none)</param>
+    /// <param name="our_tree">The tree that reflects the destination tree</param>
+    /// <param name="their_tree">the tree to merge in to <paramref name="our_tree"/></param>
+    /// <param name="options">The merge tree options (or null for defaults)</param>
+    /// <returns>0 on success, or an error code</returns>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_merge_trees(
@@ -4510,7 +4838,7 @@ public static unsafe partial class NativeApi
     /// <param name="result"></param>
     /// <param name="repository"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_note_default_ref(Native.GitBuffer* result, Git2.Repository* repository);
 
@@ -5847,7 +6175,7 @@ public static unsafe partial class NativeApi
     /// <returns></returns>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    public static partial GitError git_refdb_compress(Git2.RefDB* refdb);
+    public static partial GitError git_refdb_compress(Git2.ReferenceDatabase* refdb);
 
     /// <summary>
     /// 
@@ -5855,17 +6183,7 @@ public static unsafe partial class NativeApi
     /// <param name="refdb"></param>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    public static partial void git_refdb_free(Git2.RefDB* refdb);
-
-    /// <summary>
-    /// 
-    /// </summary>
-    /// <param name="refdb"></param>
-    /// <param name="repository"></param>
-    /// <returns></returns>
-    [LibraryImport(Git2.LibraryName)]
-    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    public static partial GitError git_refdb_new(Git2.RefDB** refdb, Git2.Repository* repository);
+    public static partial void git_refdb_free(Git2.ReferenceDatabase* refdb);
 
     /// <summary>
     /// 
@@ -5875,7 +6193,17 @@ public static unsafe partial class NativeApi
     /// <returns></returns>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    public static partial GitError git_refdb_open(Git2.RefDB** refdb, Git2.Repository* repository);
+    public static partial GitError git_refdb_new(Git2.ReferenceDatabase** refdb, Git2.Repository* repository);
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="refdb"></param>
+    /// <param name="repository"></param>
+    /// <returns></returns>
+    [LibraryImport(Git2.LibraryName)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    public static partial GitError git_refdb_open(Git2.ReferenceDatabase** refdb, Git2.Repository* repository);
     #endregion
 
     #region Reference
@@ -6812,7 +7140,7 @@ public static unsafe partial class NativeApi
     /// </summary>
     /// <param name="remote"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitRemoteAutoTagOption git_remote_autotag(Git2.Remote* remote);
 
@@ -6825,7 +7153,7 @@ public static unsafe partial class NativeApi
     /// <param name="proxy_options"></param>
     /// <param name="custom_headers"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_remote_connect(
         Git2.Remote* remote,
@@ -6841,7 +7169,7 @@ public static unsafe partial class NativeApi
     /// <param name="direction"></param>
     /// <param name="options"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_remote_connect_ext(
         Git2.Remote* remote,
@@ -6853,7 +7181,7 @@ public static unsafe partial class NativeApi
     /// </summary>
     /// <param name="remote"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     [return: MarshalAs(UnmanagedType.I4)]
     public static partial bool git_remote_connected(Git2.Remote* remote);
@@ -6938,7 +7266,7 @@ public static unsafe partial class NativeApi
     /// <param name="branch_out"></param>
     /// <param name="remote"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_remote_default_branch(Native.GitBuffer* branch_out, Git2.Remote* remote);
 
@@ -6957,7 +7285,7 @@ public static unsafe partial class NativeApi
     /// </summary>
     /// <param name="remote"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_remote_disconnect(Git2.Remote* remote);
 
@@ -6968,7 +7296,7 @@ public static unsafe partial class NativeApi
     /// <param name="refspecs"></param>
     /// <param name="options"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_remote_download(
         Git2.Remote* remote,
@@ -6981,7 +7309,7 @@ public static unsafe partial class NativeApi
     /// <param name="remote_out"></param>
     /// <param name="remote"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_remote_dup(
         Git2.Remote** remote_out,
@@ -7007,7 +7335,7 @@ public static unsafe partial class NativeApi
     /// 
     /// </summary>
     /// <param name="remote"></param>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial void git_remote_free(Git2.Remote* remote);
 
@@ -7017,7 +7345,7 @@ public static unsafe partial class NativeApi
     /// <param name="array"></param>
     /// <param name="remote"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_remote_get_fetch_refspecs(
         Native.GitStringArray* array,
@@ -7029,7 +7357,7 @@ public static unsafe partial class NativeApi
     /// <param name="array"></param>
     /// <param name="remote"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_remote_get_push_refspecs(
         Native.GitStringArray* array,
@@ -7041,7 +7369,7 @@ public static unsafe partial class NativeApi
     /// <param name="remote"></param>
     /// <param name="idx"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial Git2.RefSpec* git_remote_get_refspec(Git2.Remote* remote, nuint idx);
 
@@ -7061,7 +7389,7 @@ public static unsafe partial class NativeApi
     /// <param name="list_out"></param>
     /// <param name="remote"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_remote_list(Native.GitStringArray* list_out, Git2.Remote* remote);
 
@@ -7083,7 +7411,7 @@ public static unsafe partial class NativeApi
     /// <param name="remote_heads_count"></param>
     /// <param name="remote"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_remote_ls(
         Native.GitRemoteHead*** remote_heads_out,
@@ -7095,7 +7423,7 @@ public static unsafe partial class NativeApi
     /// </summary>
     /// <param name="remote"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial byte* git_remote_name(Git2.Remote* remote);
 
@@ -7114,7 +7442,7 @@ public static unsafe partial class NativeApi
     /// </summary>
     /// <param name="remote"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial Git2.Repository* git_remote_owner(Git2.Remote* remote);
 
@@ -7124,7 +7452,7 @@ public static unsafe partial class NativeApi
     /// <param name="remote"></param>
     /// <param name="callbacks"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_remote_prune(Git2.Remote* remote, Native.GitRemoteCallbacks* callbacks);
 
@@ -7133,7 +7461,7 @@ public static unsafe partial class NativeApi
     /// </summary>
     /// <param name="remote"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial int git_remote_prune_refs(Git2.Remote* remote);
 
@@ -7144,7 +7472,7 @@ public static unsafe partial class NativeApi
     /// <param name="refspecs"></param>
     /// <param name="options"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial int git_remote_push(
         Git2.Remote* remote,
@@ -7156,7 +7484,7 @@ public static unsafe partial class NativeApi
     /// </summary>
     /// <param name="remote"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial byte* git_remote_pushurl(Git2.Remote* remote);
 
@@ -7165,7 +7493,7 @@ public static unsafe partial class NativeApi
     /// </summary>
     /// <param name="remote"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial nuint git_remote_refspec_count(Git2.Remote* remote);
 
@@ -7243,7 +7571,7 @@ public static unsafe partial class NativeApi
     /// </summary>
     /// <param name="remote"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitIndexerProgress* git_remote_stats(Git2.Remote* remote);
 
@@ -7252,7 +7580,7 @@ public static unsafe partial class NativeApi
     /// </summary>
     /// <param name="remote"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_remote_stop(Git2.Remote* remote);
 
@@ -7281,7 +7609,7 @@ public static unsafe partial class NativeApi
     /// <param name="refspecs"></param>
     /// <param name="options"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_remote_upload(
         Git2.Remote* remote,
@@ -7293,7 +7621,7 @@ public static unsafe partial class NativeApi
     /// </summary>
     /// <param name="remote"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial byte* git_remote_url(Git2.Remote* remote);
     #endregion
@@ -7531,7 +7859,7 @@ public static unsafe partial class NativeApi
     /// An unborn branch is one named from HEAD but which doesn't exist
     /// in the refs namespace, because it doesn't have any commit to point to.
     /// </remarks>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial int git_repository_head_unborn(Git2.Repository* repository);
 
@@ -7597,6 +7925,10 @@ public static unsafe partial class NativeApi
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_repository_init_ext(Git2.Repository** repository, string path, Native.GitRepositoryInitOptions* options);
+
+    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    public static partial GitError git_repository_init_ext(Git2.Repository** repository, string path, in Native.GitRepositoryInitOptions options);
 
     /// <summary>
     /// Check if a repository is bare
@@ -7784,7 +8116,7 @@ public static unsafe partial class NativeApi
     /// <remarks>
     /// Open the working directory of the working tree as a normal repository that can then be worked on.
     /// </remarks>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_repository_open_from_worktree(Git2.Repository** repository, Git2.Worktree* worktree);
 
@@ -7966,7 +8298,7 @@ public static unsafe partial class NativeApi
     /// <param name="reset_type"></param>
     /// <param name="options"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial byte* git_reset(
         Git2.Repository* repository,
@@ -7981,7 +8313,7 @@ public static unsafe partial class NativeApi
     /// <param name="target"></param>
     /// <param name="pathspecs"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial byte* git_reset_default(
         Git2.Repository* repository,
@@ -7996,7 +8328,7 @@ public static unsafe partial class NativeApi
     /// <param name="reset_type"></param>
     /// <param name="options"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial byte* git_reset_from_annotated(
         Git2.Repository* repository,
@@ -8013,7 +8345,7 @@ public static unsafe partial class NativeApi
     /// <param name="target"></param>
     /// <param name="options"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial byte* git_revert(
         Git2.Repository* repository,
@@ -8030,7 +8362,7 @@ public static unsafe partial class NativeApi
     /// <param name="mainline"></param>
     /// <param name="merge_options"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial byte* git_revert_commit(
         Git2.Index** index_out,
@@ -8095,7 +8427,7 @@ public static unsafe partial class NativeApi
     /// <param name="hide_cb"></param>
     /// <param name="payload"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_revwalk_add_hide_cb(
         Git2.RevWalk* walk,
@@ -8107,7 +8439,7 @@ public static unsafe partial class NativeApi
     /// </summary>
     /// <param name="walk"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_revwalk_free(Git2.RevWalk* walk);
 
@@ -8117,7 +8449,7 @@ public static unsafe partial class NativeApi
     /// <param name="walk"></param>
     /// <param name="commit_id"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_revwalk_hide(Git2.RevWalk* walk, GitObjectID* commit_id);
 
@@ -8136,7 +8468,7 @@ public static unsafe partial class NativeApi
     /// </summary>
     /// <param name="walk"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_revwalk_hide_head(Git2.RevWalk* walk);
 
@@ -8156,7 +8488,7 @@ public static unsafe partial class NativeApi
     /// <param name="walk_out"></param>
     /// <param name="repository"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_revwalk_new(Git2.RevWalk** walk_out, Git2.Repository* repository);
 
@@ -8166,7 +8498,7 @@ public static unsafe partial class NativeApi
     /// <param name="id_out"></param>
     /// <param name="walk"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_revwalk_next(GitObjectID* id_out, Git2.RevWalk* walk);
 
@@ -8176,7 +8508,7 @@ public static unsafe partial class NativeApi
     /// <param name="walk"></param>
     /// <param name="id"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_revwalk_push(Git2.RevWalk* walk, GitObjectID* id);
 
@@ -8195,7 +8527,7 @@ public static unsafe partial class NativeApi
     /// </summary>
     /// <param name="walk"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_revwalk_push_head(Git2.RevWalk* walk);
 
@@ -8225,7 +8557,7 @@ public static unsafe partial class NativeApi
     /// <param name="walk"></param>
     /// <param name="id"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial Git2.Repository* git_revwalk_repository(Git2.RevWalk* walk, GitObjectID* id);
 
@@ -8234,7 +8566,7 @@ public static unsafe partial class NativeApi
     /// </summary>
     /// <param name="walk"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_revwalk_reset(Git2.RevWalk* walk);
 
@@ -8243,7 +8575,7 @@ public static unsafe partial class NativeApi
     /// </summary>
     /// <param name="walk"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_revwalk_simplify_first_parent(Git2.RevWalk* walk);
 
@@ -8253,7 +8585,7 @@ public static unsafe partial class NativeApi
     /// <param name="walk"></param>
     /// <param name="sort_mode"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_revwalk_sorting(
         Git2.RevWalk* walk,
@@ -8268,7 +8600,7 @@ public static unsafe partial class NativeApi
     /// <param name="idx"></param>
     /// <param name="options"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_stash_apply(
         Git2.Repository* repository,
@@ -8281,7 +8613,7 @@ public static unsafe partial class NativeApi
     /// <param name="repository"></param>
     /// <param name="idx"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_stash_drop(
         Git2.Repository* repository,
@@ -8294,7 +8626,7 @@ public static unsafe partial class NativeApi
     /// <param name="callback"></param>
     /// <param name="payload"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_stash_foreach(
         Git2.Repository* repository,
@@ -8308,7 +8640,7 @@ public static unsafe partial class NativeApi
     /// <param name="idx"></param>
     /// <param name="options"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_stash_pop(
         Git2.Repository* repository,
@@ -8340,7 +8672,7 @@ public static unsafe partial class NativeApi
     /// <param name="repository"></param>
     /// <param name="options"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_stash_save_with_opts(
         GitObjectID* id_out,
@@ -8365,7 +8697,7 @@ public static unsafe partial class NativeApi
     public static partial GitError git_status_file(GitStatusFlags* status_flags, Git2.Repository* repository, string path);
 
 
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_status_foreach(
         Git2.Repository* repository,
@@ -8373,7 +8705,7 @@ public static unsafe partial class NativeApi
         nint payload);
 
 
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_status_foreach_ext(
         Git2.Repository* repository,
@@ -8382,17 +8714,17 @@ public static unsafe partial class NativeApi
         nint payload);
 
 
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial nuint git_status_list_entrycount(Git2.StatusList* statuslist);
 
 
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial void git_status_list_free(Git2.StatusList* statuslist);
 
 
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_status_list_new(
         Git2.StatusList** statuslist_out,
@@ -8411,7 +8743,7 @@ public static unsafe partial class NativeApi
     /// </summary>
     /// <param name="submodule"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_submodule_add_finalize(Git2.Submodule* submodule);
 
@@ -8439,7 +8771,7 @@ public static unsafe partial class NativeApi
     /// <param name="submodule"></param>
     /// <param name="write_index"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_submodule_add_to_index(
         Git2.Submodule* submodule,
@@ -8450,7 +8782,7 @@ public static unsafe partial class NativeApi
     /// </summary>
     /// <param name="submodule"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial byte* git_submodule_branch(Git2.Submodule* submodule);
 
@@ -8461,7 +8793,7 @@ public static unsafe partial class NativeApi
     /// <param name="submodule"></param>
     /// <param name="options"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_submodule_clone(
         Git2.Repository** repository_out,
@@ -8474,7 +8806,7 @@ public static unsafe partial class NativeApi
     /// <param name="submodule_out"></param>
     /// <param name="submodule"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_submodule_dup(
         Git2.Submodule** submodule_out,
@@ -8485,7 +8817,7 @@ public static unsafe partial class NativeApi
     /// </summary>
     /// <param name="submodule"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitSubmoduleRecurseType git_submodule_fetch_recurse_submodules(Git2.Submodule* submodule);
 
@@ -8496,7 +8828,7 @@ public static unsafe partial class NativeApi
     /// <param name="callback"></param>
     /// <param name="payload"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_submodule_foreach(
         Git2.Repository* repository,
@@ -8516,7 +8848,7 @@ public static unsafe partial class NativeApi
     /// </summary>
     /// <param name="submodule"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitObjectID* git_submodule_head_id(Git2.Submodule* submodule);
 
@@ -8525,7 +8857,7 @@ public static unsafe partial class NativeApi
     /// </summary>
     /// <param name="submodule"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitSubmoduleIgnoreType git_submodule_ignore(Git2.Submodule* submodule);
 
@@ -8534,7 +8866,7 @@ public static unsafe partial class NativeApi
     /// </summary>
     /// <param name="submodule"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitObjectID* git_submodule_index_id(Git2.Submodule* submodule);
 
@@ -8544,7 +8876,7 @@ public static unsafe partial class NativeApi
     /// <param name="submodule"></param>
     /// <param name="overwrite"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_submodule_init(
         Git2.Submodule* submodule,
@@ -8556,7 +8888,7 @@ public static unsafe partial class NativeApi
     /// <param name="location_status"></param>
     /// <param name="submodule"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_submodule_location(
         uint* location_status,
@@ -8581,7 +8913,7 @@ public static unsafe partial class NativeApi
     /// </summary>
     /// <param name="submodule"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial byte* git_submodule_name(Git2.Submodule* submodule);
 
@@ -8591,7 +8923,7 @@ public static unsafe partial class NativeApi
     /// <param name="repository_out"></param>
     /// <param name="submodule"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_submodule_open(
         Git2.Repository** repository_out,
@@ -8602,7 +8934,7 @@ public static unsafe partial class NativeApi
     /// </summary>
     /// <param name="submodule"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial Git2.Repository* git_submodule_owner(Git2.Submodule* submodule);
 
@@ -8611,7 +8943,7 @@ public static unsafe partial class NativeApi
     /// </summary>
     /// <param name="submodule"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial byte* git_submodule_path(Git2.Submodule* submodule);
 
@@ -8621,7 +8953,7 @@ public static unsafe partial class NativeApi
     /// <param name="submodule"></param>
     /// <param name="force"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_submodule_reload(
         Git2.Submodule* submodule,
@@ -8634,7 +8966,7 @@ public static unsafe partial class NativeApi
     /// <param name="submodule"></param>
     /// <param name="use_gitlink"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_submodule_repo_init(
         Git2.Repository** repository_out,
@@ -8746,7 +9078,7 @@ public static unsafe partial class NativeApi
     /// </summary>
     /// <param name="submodule"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_submodule_sync(Git2.Submodule* submodule);
 
@@ -8756,7 +9088,7 @@ public static unsafe partial class NativeApi
     /// <param name="submodule"></param>
     /// <param name="options"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_submodule_update(
         Git2.Submodule* submodule,
@@ -8767,7 +9099,7 @@ public static unsafe partial class NativeApi
     /// </summary>
     /// <param name="submodule"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitSubmoduleUpdateType git_submodule_update_strategy(Git2.Submodule* submodule);
 
@@ -8776,7 +9108,7 @@ public static unsafe partial class NativeApi
     /// </summary>
     /// <param name="submodule"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial byte* git_submodule_url(Git2.Submodule* submodule);
 
@@ -8785,7 +9117,7 @@ public static unsafe partial class NativeApi
     /// </summary>
     /// <param name="submodule"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitObjectID* git_submodule_wd_id(Git2.Submodule* submodule);
     #endregion
@@ -8857,7 +9189,7 @@ public static unsafe partial class NativeApi
     /// <param name="buffer"></param>
     /// <param name="force"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_tag_create_from_buffer(
         GitObjectID* id_out,
@@ -8901,7 +9233,7 @@ public static unsafe partial class NativeApi
     /// <param name="tag_out"></param>
     /// <param name="tag"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_tag_dup(
         Git2.Tag** tag_out,
@@ -8914,7 +9246,7 @@ public static unsafe partial class NativeApi
     /// <param name="callback"></param>
     /// <param name="payload"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_tag_foreach(
         Git2.Repository* repository,
@@ -8969,7 +9301,7 @@ public static unsafe partial class NativeApi
     /// <param name="repository"></param>
     /// <param name="id"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_tag_lookup(
         Git2.Tag** tag_out,
@@ -8984,7 +9316,7 @@ public static unsafe partial class NativeApi
     /// <param name="id"></param>
     /// <param name="id_length"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_tag_lookup_prefix(
         Git2.Tag** tag_out,
@@ -9035,7 +9367,7 @@ public static unsafe partial class NativeApi
     /// <param name="target_out"></param>
     /// <param name="tag"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_tag_peel(Git2.Object** target_out, Git2.Tag* tag);
 
@@ -9054,7 +9386,7 @@ public static unsafe partial class NativeApi
     /// <param name="target_out"></param>
     /// <param name="tag"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_tag_target(Git2.Object** target_out, Git2.Tag* tag);
 
@@ -9485,7 +9817,7 @@ public static unsafe partial class NativeApi
     /// </summary>
     /// <param name="builder"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_treebuilder_clear(Git2.TreeBuilder* builder);
 
@@ -9494,7 +9826,7 @@ public static unsafe partial class NativeApi
     /// </summary>
     /// <param name="builder"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial nuint git_treebuilder_entrycount(Git2.TreeBuilder* builder);
 
@@ -9505,7 +9837,7 @@ public static unsafe partial class NativeApi
     /// <param name="filter"></param>
     /// <param name="payload"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_treebuilder_filter(
         Git2.TreeBuilder* builder,
@@ -9516,7 +9848,7 @@ public static unsafe partial class NativeApi
     /// 
     /// </summary>
     /// <param name="builder"></param>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial void git_treebuilder_free(Git2.TreeBuilder* builder);
 
@@ -9555,7 +9887,7 @@ public static unsafe partial class NativeApi
     /// <param name="repository"></param>
     /// <param name="source"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_treebuilder_new(
         Git2.TreeBuilder** builder_out,
@@ -9580,7 +9912,7 @@ public static unsafe partial class NativeApi
     /// <param name="id_out"></param>
     /// <param name="builder"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_treebuilder_write(
         GitObjectID* id_out,
@@ -9593,7 +9925,7 @@ public static unsafe partial class NativeApi
     /// <param name="builder"></param>
     /// <param name="tree"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_treebuilder_write_with_buffer(
         GitObjectID* id_out,
@@ -9624,7 +9956,7 @@ public static unsafe partial class NativeApi
     /// 
     /// </summary>
     /// <param name="worktree"></param>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial void git_worktree_free(Git2.Worktree* worktree);
 
@@ -9634,7 +9966,7 @@ public static unsafe partial class NativeApi
     /// <param name="reason"></param>
     /// <param name="worktree"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_worktree_is_locked(Native.GitBuffer* reason, Git2.Worktree* worktree);
 
@@ -9644,7 +9976,7 @@ public static unsafe partial class NativeApi
     /// <param name="worktree"></param>
     /// <param name="options"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_worktree_is_prunable(
         Git2.Worktree* worktree,
@@ -9656,7 +9988,7 @@ public static unsafe partial class NativeApi
     /// <param name="names_out"></param>
     /// <param name="repository"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_worktree_list(
         Native.GitStringArray* names_out,
@@ -9693,7 +10025,7 @@ public static unsafe partial class NativeApi
     /// </summary>
     /// <param name="worktree"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial byte* git_worktree_name(Git2.Worktree* worktree);
 
@@ -9703,7 +10035,7 @@ public static unsafe partial class NativeApi
     /// <param name="worktree_out"></param>
     /// <param name="repository"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_worktree_open_from_repository(
         Git2.Worktree** worktree_out,
@@ -9714,7 +10046,7 @@ public static unsafe partial class NativeApi
     /// </summary>
     /// <param name="worktree"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial byte* git_worktree_path(Git2.Worktree* worktree);
 
@@ -9724,7 +10056,7 @@ public static unsafe partial class NativeApi
     /// <param name="worktree"></param>
     /// <param name="options"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_worktree_prune(
         Git2.Worktree* worktree,
@@ -9735,7 +10067,7 @@ public static unsafe partial class NativeApi
     /// </summary>
     /// <param name="worktree"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_worktree_unlock(Git2.Worktree* worktree);
 
@@ -9744,7 +10076,7 @@ public static unsafe partial class NativeApi
     /// </summary>
     /// <param name="worktree"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_worktree_validate(Git2.Worktree* worktree);
     #endregion
@@ -9756,7 +10088,12 @@ public static unsafe partial class NativeApi
     /// <param name="commitarray"></param>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    public static partial void git_commitarray_dispose(Git2.CommitArray* commitarray);
+    public static partial void git_commitarray_dispose(Git2.CommitArray* array);
+
+
+    [LibraryImport(Git2.LibraryName)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    public static partial void git_oidarray_dispose(Native.GitObjectIDArray* array);
 
     /// <summary>
     /// 
@@ -9764,7 +10101,7 @@ public static unsafe partial class NativeApi
     /// <param name="strarray"></param>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    public static partial void git_strarray_dispose(Native.GitStringArray* strarray);
+    public static partial void git_strarray_dispose(Native.GitStringArray* array);
 
     #endregion
 }

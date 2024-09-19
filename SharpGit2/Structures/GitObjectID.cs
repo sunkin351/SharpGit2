@@ -61,16 +61,14 @@ public unsafe struct GitObjectID : IEquatable<GitObjectID>, IComparable<GitObjec
         return ((ReadOnlySpan<byte>)this.Id).SequenceCompareTo(other.Id);
     }
 
-    public static GitObjectID FromHexString(string hexString)
+    public static GitObjectID Parse(ReadOnlySpan<char> hexString)
     {
-        ArgumentNullException.ThrowIfNull(hexString);
-
         if (hexString.Length != 40)
         {
             throw new ArgumentException("Invalid Hex String Length!");
         }
 
-        ReadOnlySpan<byte> idBytes = Convert.FromHexString(hexString);
+        byte[] idBytes = Convert.FromHexString(hexString);
 
         GitObjectID result = default;
         idBytes.CopyTo(result.Id);
@@ -161,7 +159,7 @@ public unsafe struct GitObjectID : IEquatable<GitObjectID>, IComparable<GitObjec
         return ((ReadOnlySpan<byte>)this.Id).SequenceCompareTo(other.Id);
     }
 
-    public static GitObjectID FromHexString(string hexString)
+    public static GitObjectID Parse(string hexString)
     {
         ArgumentNullException.ThrowIfNull(hexString);
 

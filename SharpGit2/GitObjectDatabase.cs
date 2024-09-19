@@ -1,4 +1,6 @@
-﻿namespace SharpGit2;
+﻿using static SharpGit2.NativeApi;
+
+namespace SharpGit2;
 
 public unsafe readonly partial struct GitObjectDatabase : IDisposable
 {
@@ -11,6 +13,6 @@ public unsafe readonly partial struct GitObjectDatabase : IDisposable
 
     public void Dispose()
     {
-        throw new NotImplementedException();
+        git_odb_free(NativeHandle);
     }
 }

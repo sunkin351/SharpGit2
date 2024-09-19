@@ -2,7 +2,7 @@
 {
     public struct GitMergeFileInput
     {
-        public string FileContent;
+        public ReadOnlyMemory<byte> FileContent;
         public string Path;
         public uint Mode;
     }

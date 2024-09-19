@@ -1,5 +1,7 @@
 ﻿using System.Runtime.InteropServices.Marshalling;
 
+using static SharpGit2.NativeApi;
+
 namespace SharpGit2;
 
 public unsafe readonly struct GitTreeEntry : IDisposable, IComparable<GitTreeEntry>
@@ -11,17 +13,17 @@ public unsafe readonly struct GitTreeEntry : IDisposable, IComparable<GitTreeEnt
         NativeHandle = nativeHandle;
     }
 
-    public GitFileMode FileMode => NativeApi.git_tree_entry_filemode(NativeHandle);
+    public GitFileMode FileMode => git_tree_entry_filemode(NativeHandle);
 
-    public GitFileMode FileModeRaw => NativeApi.git_tree_entry_filemode_raw(NativeHandle);
+    public GitFileMode FileModeRaw => git_tree_entry_filemode_raw(NativeHandle);
 
-    public ref readonly GitObjectID Id => ref *NativeApi.git_tree_entry_id(NativeHandle);
+    public ref readonly GitObjectID Id => ref *git_tree_entry_id(NativeHandle);
 
-    public GitObjectType ObjectType => NativeApi.git_tree_entry_type(NativeHandle);
+    public GitObjectType ObjectType => git_tree_entry_type(NativeHandle);
 
     public void Dispose()
     {
-        NativeApi.git_tree_entry_free(NativeHandle);
+        git_tree_entry_free(NativeHandle);
     }
 
     /// <summary>
@@ -33,7 +35,7 @@ public unsafe readonly struct GitTreeEntry : IDisposable, IComparable<GitTreeEnt
         ArgumentNullException.ThrowIfNull(e1.NativeHandle);
         ArgumentNullException.ThrowIfNull(e2.NativeHandle);
 
-        return NativeApi.git_tree_entry_cmp(e1.NativeHandle, e2.NativeHandle);
+        return git_tree_entry_cmp(e1.NativeHandle, e2.NativeHandle);
     }
 
     public int CompareTo(GitTreeEntry other)
@@ -41,19 +43,19 @@ public unsafe readonly struct GitTreeEntry : IDisposable, IComparable<GitTreeEnt
         if (NativeHandle is null | other.NativeHandle is null)
             return ((nint)NativeHandle).CompareTo((nint)other.NativeHandle);
 
-        return NativeApi.git_tree_entry_cmp(NativeHandle, other.NativeHandle);
+        return git_tree_entry_cmp(NativeHandle, other.NativeHandle);
     }
 
     public GitTreeEntry Duplicate()
     {
         Git2.TreeEntry* newEntry;
-        Git2.ThrowIfError(NativeApi.git_tree_entry_dup(&newEntry, NativeHandle));
+        Git2.ThrowIfError(git_tree_entry_dup(&newEntry, NativeHandle));
 
         return new(newEntry);
     }
 
     public string GetName()
     {
-        return Utf8StringMarshaller.ConvertToManaged(NativeApi.git_tree_entry_name(NativeHandle))!;
+        return Utf8StringMarshaller.ConvertToManaged(git_tree_entry_name(NativeHandle))!;
     }
 }

@@ -1,11 +1,60 @@
-﻿namespace SharpGit2;
+﻿using static SharpGit2.NativeApi;
 
-public unsafe readonly struct GitCommit
+namespace SharpGit2;
+
+public unsafe readonly struct GitCommit : IDisposable
 {
     internal readonly Git2.Commit* NativeHandle;
 
     internal GitCommit(Git2.Commit* handle)
     {
         NativeHandle = handle;
+    }
+
+    public ref readonly GitObjectID Id => ref *git_commit_id(NativeHandle);
+
+    public GitRepository Owner => new(git_commit_owner(NativeHandle));
+
+    public int ParentCount => checked((int)git_commit_parentcount(NativeHandle));
+
+    public void Dispose()
+    {
+        git_commit_free(NativeHandle);
+    }
+
+    public GitCommit Duplicate()
+    {
+        Git2.Commit* result;
+        Git2.ThrowIfError(git_commit_dup(&result, NativeHandle));
+
+        return new(result);
+    }
+
+    public GitTree GetTree()
+    {
+        Git2.Tree* result;
+
+        Git2.ThrowIfError(git_commit_tree(&result, NativeHandle));
+
+        return new(result);
+    }
+
+    public ref readonly GitObjectID GetParentID(int index)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(index);
+        ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(index, this.ParentCount);
+
+        return ref *git_commit_parent_id(NativeHandle, (uint)index);
+    }
+
+    public GitCommit GetParent(int index)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(index);
+        ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(index, this.ParentCount);
+
+        Git2.Commit* result;
+        Git2.ThrowIfError(git_commit_parent(&result, NativeHandle, (uint)index));
+
+        return new(result);
     }
 }

@@ -7,6 +7,8 @@ using System.Runtime.InteropServices.Marshalling;
 using System.Runtime.Intrinsics;
 using System.Text;
 
+using static SharpGit2.NativeApi;
+
 namespace SharpGit2;
 
 [Flags]
@@ -31,7 +33,7 @@ public unsafe readonly partial struct GitReference : IDisposable, IComparable<Gi
     {
         get
         {
-            var code = NativeApi.git_reference_is_branch(NativeHandle);
+            var code = git_reference_is_branch(NativeHandle);
 
             return code != 0;
         }
@@ -41,7 +43,7 @@ public unsafe readonly partial struct GitReference : IDisposable, IComparable<Gi
     {
         get
         {
-            var code = NativeApi.git_reference_is_note(NativeHandle);
+            var code = git_reference_is_note(NativeHandle);
 
             return code != 0;
         }
@@ -51,7 +53,7 @@ public unsafe readonly partial struct GitReference : IDisposable, IComparable<Gi
     {
         get
         {
-            var code = NativeApi.git_reference_is_remote(NativeHandle);
+            var code = git_reference_is_remote(NativeHandle);
 
             return code != 0;
         }
@@ -61,25 +63,25 @@ public unsafe readonly partial struct GitReference : IDisposable, IComparable<Gi
     {
         get
         {
-            var code = NativeApi.git_reference_is_tag(NativeHandle);
+            var code = git_reference_is_tag(NativeHandle);
 
             return code != 0;
         }
     }
 
-    internal byte* NativeName => NativeApi.git_reference_name(NativeHandle);
+    internal byte* NativeName => git_reference_name(NativeHandle);
 
-    internal byte* NativeShorthand => NativeApi.git_reference_shorthand(NativeHandle);
+    internal byte* NativeShorthand => git_reference_shorthand(NativeHandle);
 
-    internal byte* NativeSymbolicTarget => NativeApi.git_reference_symbolic_target(NativeHandle);
+    internal byte* NativeSymbolicTarget => git_reference_symbolic_target(NativeHandle);
 
-    public GitRepository Owner => new(NativeApi.git_reference_owner(NativeHandle));
+    public GitRepository Owner => new(git_reference_owner(NativeHandle));
 
-    public GitReferenceType TargetType => NativeApi.git_reference_target_type(NativeHandle);
+    public GitReferenceType Type => git_reference_type(NativeHandle);
 
     public void Dispose()
     {
-        NativeApi.git_reference_free(NativeHandle);
+        git_reference_free(NativeHandle);
     }
 
     public override string ToString()
@@ -89,7 +91,7 @@ public unsafe readonly partial struct GitReference : IDisposable, IComparable<Gi
 
     public int CompareTo(GitReference other)
     {
-        return NativeApi.git_reference_cmp(NativeHandle, other.NativeHandle);
+        return git_reference_cmp(NativeHandle, other.NativeHandle);
     }
 
     /// <summary>
@@ -100,13 +102,13 @@ public unsafe readonly partial struct GitReference : IDisposable, IComparable<Gi
     /// </remarks>
     public void Delete()
     {
-        Git2.ThrowIfError(NativeApi.git_reference_delete(NativeHandle));
+        Git2.ThrowIfError(git_reference_delete(NativeHandle));
     }
 
     public GitReference Duplicate()
     {
         GitReference reference;
-        Git2.ThrowIfError(NativeApi.git_reference_dup((Git2.Reference**)&reference, NativeHandle));
+        Git2.ThrowIfError(git_reference_dup((Git2.Reference**)&reference, NativeHandle));
 
         return reference;
     }
@@ -133,7 +135,7 @@ public unsafe readonly partial struct GitReference : IDisposable, IComparable<Gi
     public GitObject Peel(GitObjectType type)
     {
         Git2.Object* result;
-        Git2.ThrowIfError(NativeApi.git_reference_peel(&result, NativeHandle, type));
+        Git2.ThrowIfError(git_reference_peel(&result, NativeHandle, type));
 
         return new(result);
     }
@@ -141,7 +143,7 @@ public unsafe readonly partial struct GitReference : IDisposable, IComparable<Gi
     public GitError Peel(GitObjectType type, out GitObject obj)
     {
         Git2.Object* result;
-        var error = NativeApi.git_reference_peel(&result, NativeHandle, type);
+        var error = git_reference_peel(&result, NativeHandle, type);
 
         obj = (error == GitError.OK) ? new(result) : default;
 
@@ -151,7 +153,7 @@ public unsafe readonly partial struct GitReference : IDisposable, IComparable<Gi
     public GitReference Rename(string newName, bool force, string? logMessage)
     {
         GitReference newReference;
-        Git2.ThrowIfError(NativeApi.git_reference_rename((Git2.Reference**)&newReference, NativeHandle, newName, force ? 1 : 0, logMessage));
+        Git2.ThrowIfError(git_reference_rename((Git2.Reference**)&newReference, NativeHandle, newName, force ? 1 : 0, logMessage));
 
         return newReference;
     }
@@ -159,7 +161,7 @@ public unsafe readonly partial struct GitReference : IDisposable, IComparable<Gi
     public GitReference Resolve()
     {
         GitReference peeledReference;
-        Git2.ThrowIfError(NativeApi.git_reference_resolve((Git2.Reference**)&peeledReference, NativeHandle));
+        Git2.ThrowIfError(git_reference_resolve((Git2.Reference**)&peeledReference, NativeHandle));
 
         return peeledReference;
     }
@@ -167,7 +169,7 @@ public unsafe readonly partial struct GitReference : IDisposable, IComparable<Gi
     public GitReference SetTarget(GitObjectID Id, string? logMessage)
     {
         GitReference newReference;
-        Git2.ThrowIfError(NativeApi.git_reference_set_target((Git2.Reference**)&newReference, NativeHandle, &Id, logMessage));
+        Git2.ThrowIfError(git_reference_set_target((Git2.Reference**)&newReference, NativeHandle, &Id, logMessage));
 
         return newReference;
     }
@@ -179,7 +181,7 @@ public unsafe readonly partial struct GitReference : IDisposable, IComparable<Gi
 
         fixed (GitObjectID* ptr = &Id)
         {
-            error = NativeApi.git_reference_set_target((Git2.Reference**)&newReference, NativeHandle, ptr, logMessage);
+            error = git_reference_set_target((Git2.Reference**)&newReference, NativeHandle, ptr, logMessage);
         }
 
         Git2.ThrowIfError(error);
@@ -190,7 +192,7 @@ public unsafe readonly partial struct GitReference : IDisposable, IComparable<Gi
     public GitReference SetSymbolicTarget(string target, string? logMessage)
     {
         GitReference newReference;
-        Git2.ThrowIfError(NativeApi.git_reference_symbolic_set_target((Git2.Reference**)&newReference, NativeHandle, target, logMessage));
+        Git2.ThrowIfError(git_reference_symbolic_set_target((Git2.Reference**)&newReference, NativeHandle, target, logMessage));
 
         return newReference;
     }
@@ -198,14 +200,14 @@ public unsafe readonly partial struct GitReference : IDisposable, IComparable<Gi
     public GitReference SetSymbolicTarget(GitReference target, string? logMessage)
     {
         GitReference newReference;
-        Git2.ThrowIfError(NativeApi.git_reference_symbolic_set_target((Git2.Reference**)&newReference, NativeHandle, target.NativeName, logMessage));
+        Git2.ThrowIfError(git_reference_symbolic_set_target((Git2.Reference**)&newReference, NativeHandle, target.NativeName, logMessage));
 
         return newReference;
     }
 
     public bool TryGetTarget(out GitObjectID id)
     {
-        var ptr = NativeApi.git_reference_target(NativeHandle);
+        var ptr = git_reference_target(NativeHandle);
 
         if (ptr is not null)
         {
@@ -219,9 +221,9 @@ public unsafe readonly partial struct GitReference : IDisposable, IComparable<Gi
 
     public bool TryGetTargetPeel(out GitObjectID id)
     {
-        var ptr = NativeApi.git_reference_target_peel(NativeHandle);
+        var ptr = git_reference_target_peel(NativeHandle);
 
-        if (ptr is not null)
+        if (ptr != null)
         {
             id = *ptr;
             return true;
@@ -233,7 +235,7 @@ public unsafe readonly partial struct GitReference : IDisposable, IComparable<Gi
 
     public static bool IsValidReferenceName(string referenceName)
     {
-        int code = NativeApi.git_reference_is_valid_name(referenceName);
+        int code = git_reference_is_valid_name(referenceName);
 
         return code != 0;
     }
@@ -241,7 +243,7 @@ public unsafe readonly partial struct GitReference : IDisposable, IComparable<Gi
     private static readonly SearchValues<char> _invalidChars = SearchValues.Create("~^:\\?[");
 
     /// <summary>
-    /// Managed implementation of <see cref="NativeApi.git_reference_normalize_name(byte*, nuint, byte*, GitReferenceFormat)"/>.
+    /// Managed implementation of <see cref="git_reference_normalize_name(byte*, nuint, byte*, GitReferenceFormat)"/>.
     /// Only allows Ascii.
     /// </summary>
     /// <param name="referenceName"></param>

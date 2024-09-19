@@ -1,4 +1,6 @@
-﻿namespace SharpGit2;
+﻿using static SharpGit2.NativeApi;
+
+namespace SharpGit2;
 
 public enum GitObjectType
 {
@@ -45,8 +47,18 @@ public unsafe readonly struct GitObject : IDisposable
         NativeHandle = nativeHandle;
     }
 
+    public GitObjectType Type => git_object_type(NativeHandle);
+
     public void Dispose()
     {
-        throw new NotImplementedException();
+        git_object_free(NativeHandle);
+    }
+
+    public static explicit operator GitCommit(GitObject obj)
+    {
+        if (obj.Type == GitObjectType.Commit)
+            return new GitCommit((Git2.Commit*)obj.NativeHandle);
+
+        throw new InvalidCastException("Git Object is not of type Commit!");
     }
 }

@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
@@ -207,7 +208,7 @@ public static unsafe partial class Git2
             case GitError.OK:
                 try
                 {
-                    return Encoding.UTF8.GetString(buffer.Pointer, checked((int)buffer.Size));
+                    return buffer.AsString();
                 }
                 finally
                 {
@@ -327,7 +328,6 @@ public static unsafe partial class Git2
     public struct PathSpec { }
     public struct PathSpecMatchList { }
     public struct Rebase { }
-    public struct RefDB { }
     public struct Reference { }
     public struct ReferenceIterator { }
     public struct ReferenceDatabase { }
@@ -349,11 +349,17 @@ public static unsafe partial class Git2
 
     #endregion
 
-    internal class CallbackContext<TDelegate> where TDelegate : Delegate
+    internal ref struct CallbackContext<TCallback> where TCallback : class
     {
-        public required TDelegate Callback { get; init; }
+        public required TCallback Callback { get; init; }
 
         internal ExceptionDispatchInfo? ExceptionInfo { get; set; }
+
+        [SetsRequiredMembers]
+        public CallbackContext(TCallback callback)
+        {
+            Callback = callback;
+        }
     }
 
     public readonly record struct Version : IComparable<Version>, ISpanFormattable

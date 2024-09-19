@@ -174,6 +174,27 @@ namespace SharpGit2
             public ushort FlagsExtended;
 
             internal byte* Path;
+
+            public void FromManaged(SharpGit2.GitIndexEntry entry)
+            {
+                CTime = entry.CTime;
+                MTime = entry.MTime;
+                Dev = entry.Dev;
+                Ino = entry.Ino;
+                Mode = entry.Mode;
+                UID = entry.UID;
+                GID = entry.GID;
+                FileSize = entry.FileSize;
+                ID = entry.ID;
+                Flags = entry._flags;
+                FlagsExtended = entry._flagsExtended;
+                Path = Utf8StringMarshaller.ConvertToUnmanaged(entry.Path);
+            }
+
+            public void Free()
+            {
+                Utf8StringMarshaller.Free(Path);
+            }
         }
     }
 }

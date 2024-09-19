@@ -1,8 +1,6 @@
-﻿using System;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
-using System.Runtime.Intrinsics;
 using System.Text;
 
 namespace SharpGit2.Native;
@@ -41,7 +39,7 @@ public unsafe struct GitBuffer
     
     public readonly bool ContainsNul()
     {
-        if (Size <= int.MaxValue)
+        if (Size <= 1024 * 512)
         {
             return new ReadOnlySpan<byte>(Pointer, (int)Size).Contains((byte)0);
         }
