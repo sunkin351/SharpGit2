@@ -522,6 +522,20 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
 
     #endregion
 
+    #region Graph
+    public (nuint ahead, nuint behind) GetGraphAheadBehind(in GitObjectID local, in GitObjectID upstream)
+    {
+        nuint _ahead = 0, _behind = 0;
+        GitError error;
+
+        fixed (GitObjectID* pLocal = &local, pUpstream = &upstream)
+            error = git_graph_ahead_behind(&_ahead, &_behind, this.NativeHandle, pLocal, pUpstream);
+
+        Git2.ThrowIfError(error);
+        return (_ahead, _behind);
+    }
+    #endregion
+
     #region Merge
     public void Merge(
         ReadOnlySpan<GitAnnotatedCommit> commits,
