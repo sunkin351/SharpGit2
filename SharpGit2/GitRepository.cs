@@ -247,6 +247,182 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
     }
     #endregion
 
+    #region Branch
+    public GitBranch CreateBranch(string branchName, GitCommit target, bool force)
+    {
+        Git2.Reference* result = null;
+        Git2.ThrowIfError(git_branch_create(&result, this.NativeHandle, branchName, target.NativeHandle, force ? 1 : 0));
+
+        return new(result);
+    }
+
+    public GitBranch CreateBranch(string branchName, GitAnnotatedCommit target, bool force)
+    {
+        Git2.Reference* result = null;
+        Git2.ThrowIfError(git_branch_create_from_annotated(&result, this.NativeHandle, branchName, target.NativeHandle, force ? 1 : 0));
+
+        return new(result);
+    }
+
+    /// <summary>
+    /// Remember to free all returned objects yourself!
+    /// </summary>
+    /// <param name="filter"></param>
+    /// <returns></returns>
+    public BranchEnumerable EnumerateBranches(GitBranchType filter)
+    {
+        return new BranchEnumerable(this, filter);
+    }
+
+    public GitBranch GetBranch(string branchName, GitBranchType type)
+    {
+        Git2.Reference* result;
+        Git2.ThrowIfError(git_branch_lookup(&result, this.NativeHandle, branchName, type));
+
+        return new(result);
+    }
+
+    public bool TryGetBranch(string branchName, GitBranchType type, out GitBranch branch)
+    {
+        Git2.Reference* result;
+        var error = git_branch_lookup(&result, this.NativeHandle, branchName, type);
+
+        switch (error)
+        {
+            case GitError.OK:
+                branch = new(result);
+                return true;
+            case GitError.NotFound:
+                branch = default;
+                return false;
+            default:
+                throw Git2.ExceptionForError(error);
+        }
+    }
+
+    public string? GetBranchRemoteName(string refName)
+    {
+        Native.GitBuffer buffer = default;
+
+        Git2.ThrowIfError(git_branch_remote_name(&buffer, this.NativeHandle, refName));
+
+        try
+        {
+            return buffer.AsString();
+        }
+        finally
+        {
+            git_buf_dispose(&buffer);
+        }
+    }
+
+    public string? GetBranchUpstreamMerge(string refName)
+    {
+        Native.GitBuffer buffer = default;
+
+        Git2.ThrowIfError(git_branch_upstream_merge(&buffer, this.NativeHandle, refName));
+
+        try
+        {
+            return buffer.AsString();
+        }
+        finally
+        {
+            git_buf_dispose(&buffer);
+        }
+    }
+
+    public string? GetBranchUpstreamName(string refName)
+    {
+        Native.GitBuffer buffer = default;
+
+        Git2.ThrowIfError(git_branch_upstream_name(&buffer, this.NativeHandle, refName));
+
+        try
+        {
+            return buffer.AsString();
+        }
+        finally
+        {
+            git_buf_dispose(&buffer);
+        }
+    }
+
+    public string? GetBranchUpstreamRemote(string refName)
+    {
+        Native.GitBuffer buffer = default;
+
+        Git2.ThrowIfError(git_branch_upstream_remote(&buffer, this.NativeHandle, refName));
+
+        try
+        {
+            return buffer.AsString();
+        }
+        finally
+        {
+            git_buf_dispose(&buffer);
+        }
+    }
+
+    public readonly struct BranchEnumerable(GitRepository repo, GitBranchType type) : IEnumerable<(GitBranch, GitBranchType)>
+    {
+        private readonly GitRepository _repository = repo;
+        private readonly GitBranchType _filter = type;
+
+        public BranchEnumerator GetEnumerator()
+        {
+            Git2.BranchIterator* iterator;
+            Git2.ThrowIfError(git_branch_iterator_new(&iterator, _repository.NativeHandle, _filter));
+
+            return new(iterator);
+        }
+
+        IEnumerator<(GitBranch, GitBranchType)> IEnumerable<(GitBranch, GitBranchType)>.GetEnumerator() => GetEnumerator();
+
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+    }
+
+    public struct BranchEnumerator(Git2.BranchIterator* iterator) : IEnumerator<(GitBranch, GitBranchType)>
+    {
+        private Git2.BranchIterator* _iterator = iterator;
+
+        public (GitBranch, GitBranchType) Current { get; private set; }
+
+        public bool MoveNext()
+        {
+            Git2.Reference* branch = default;
+            GitBranchType type = default;
+
+            var error = git_branch_next(&branch, &type, _iterator);
+
+            switch (error)
+            {
+                case GitError.OK:
+                    Current = (new GitBranch(branch), type);
+                    return true;
+                case GitError.IterationOver:
+                    Current = default;
+                    return false;
+                default:
+                    throw Git2.ExceptionForError(error);
+            }
+        }
+
+        public void Dispose()
+        {
+            git_branch_iterator_free(_iterator);
+            _iterator = null;
+        }
+
+        readonly object IEnumerator.Current => this.Current;
+
+        void IEnumerator.Reset()
+        {
+            throw new NotSupportedException();
+        }
+    }
+    #endregion
+
     #region Checkout
     public void Checkout(GitCommit commit)
     {
@@ -955,14 +1131,6 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
     }
 
     #endregion
-
-    public GitReference GetBranchReference(string branchName, GitBranchType type)
-    {
-        Git2.Reference* result;
-        Git2.ThrowIfError(git_branch_lookup(&result, this.NativeHandle, branchName, type));
-
-        return new(result);
-    }
 
     /// <summary>
     /// Gets the parents of the next commit, given the current repository state.
