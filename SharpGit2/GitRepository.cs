@@ -475,6 +475,53 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
     }
     #endregion
 
+    #region Clone
+    public static GitRepository Clone(string url, string localDirectory)
+    {
+        Git2.Repository* result = null;
+        Git2.ThrowIfError(git_clone(&result, url, localDirectory, null));
+
+        return new(result);
+    }
+
+    public static GitRepository Clone(string url, string localDirectory, in GitCloneOptions options)
+    {
+        Git2.Repository* result = null;
+        GitError error;
+
+        List<GCHandle> gchandles = [];
+        Native.GitCloneOptions nativeOptions = default;
+        try
+        {
+            nativeOptions.FromManaged(in options, gchandles);
+
+            error = git_clone(&result, url, localDirectory, &nativeOptions);
+        }
+        finally
+        {
+            foreach (var handle in gchandles)
+            {
+                handle.Free();
+            }
+
+            nativeOptions.Free();
+        }
+
+        Git2.ThrowIfError(error);
+
+        return new(result);
+    }
+
+    public static GitRepository Clone(string url, string localDirectory, in Native.GitCloneOptions options)
+    {
+        Git2.Repository* result = null;
+        Git2.ThrowIfError(git_clone(&result, url, localDirectory, in options));
+
+        return new(result);
+    }
+
+    #endregion
+
     #region Merge
     public void Merge(
         ReadOnlySpan<GitAnnotatedCommit> commits,
@@ -1700,50 +1747,6 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
             default:
                 throw Git2.ExceptionForError(error);
         }
-    }
-
-    public static GitRepository Clone(string url, string localDirectory)
-    {
-        Git2.Repository* result = null;
-        Git2.ThrowIfError(git_clone(&result, url, localDirectory, null));
-
-        return new(result);
-    }
-
-    public static GitRepository Clone(string url, string localDirectory, in GitCloneOptions options)
-    {
-        Git2.Repository* result = null;
-        GitError error;
-
-        List<GCHandle> gchandles = [];
-        Native.GitCloneOptions nativeOptions = default;
-        try
-        {
-            nativeOptions.FromManaged(in options, gchandles);
-
-            error = git_clone(&result, url, localDirectory, &nativeOptions);
-        }
-        finally
-        {
-            foreach (var handle in gchandles)
-            {
-                handle.Free();
-            }
-
-            nativeOptions.Free();
-        }
-
-        Git2.ThrowIfError(error);
-
-        return new(result);
-    }
-
-    public static GitRepository Clone(string url, string localDirectory, in Native.GitCloneOptions options)
-    {
-        Git2.Repository* result = null;
-        Git2.ThrowIfError(git_clone(&result, url, localDirectory, in options));
-
-        return new(result);
     }
 
     public static GitRepository Init(string path)
