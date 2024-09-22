@@ -3551,7 +3551,7 @@ public static unsafe partial class NativeApi
     /// <returns></returns>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    public static partial GitError git_graph_descendant_of(
+    public static partial int git_graph_descendant_of(
         Git2.Repository* repository,
         GitObjectID* commit,
         GitObjectID* ancestor);
