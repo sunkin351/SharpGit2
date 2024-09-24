@@ -55,6 +55,14 @@ public unsafe readonly struct GitDiff(Git2.Diff* nativeHandle) : IDisposable
         Git2.ThrowIfError(error);
     }
 
+    public GitPatch GetPatch(nuint idx)
+    {
+        Git2.Patch* result;
+        Git2.ThrowIfError(git_patch_from_diff(&result, this.NativeHandle, idx));
+
+        return new(result);
+    }
+
     public static void DiffBuffers(
         ReadOnlySpan<char> old_content,
         string? old_as_path,
