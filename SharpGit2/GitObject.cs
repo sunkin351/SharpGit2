@@ -54,3 +54,11 @@ public unsafe readonly struct GitObject : IDisposable
         git_object_free(NativeHandle);
     }
 }
+
+public static class GitObjectTypeExtensions
+{
+    public static bool IsLooseType(this GitObjectType type)
+    {
+        return git_object_typeisloose(type);
+    }
+}
