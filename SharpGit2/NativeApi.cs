@@ -4998,9 +4998,9 @@ public static unsafe partial class NativeApi
     /// <param name="id"></param>
     /// <param name="type"></param>
     /// <returns></returns>
-    [LibraryImport(Git2.LibraryName)]
+    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    public static partial GitError git_object_lookup_bypath(Git2.Object** obj_out, Git2.Object* treeish, GitObjectID* id, GitObjectType type);
+    public static partial GitError git_object_lookup_bypath(Git2.Object** obj_out, Git2.Object* treeish, string path, GitObjectType type);
     
     /// <summary>
     /// 
