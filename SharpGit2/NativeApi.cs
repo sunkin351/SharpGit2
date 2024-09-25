@@ -4952,125 +4952,205 @@ public static unsafe partial class NativeApi
 
     #region Object
     /// <summary>
-    /// 
+    /// Create an in-memory copy of a Git object. The copy must be explicitly free'd or it will leak.
     /// </summary>
-    /// <param name="obj_out"></param>
-    /// <param name="obj"></param>
-    /// <returns></returns>
+    /// <param name="obj_out">Pointer to store the copy of the object</param>
+    /// <param name="obj">Original object to copy</param>
+    /// <returns>0 on success, or an error code</returns>
+    /// <remarks>
+    /// Native Signature: <code>int git_object_dup(git_object **dest, git_object *source);</code>
+    /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_object_dup(Git2.Object** obj_out, Git2.Object* obj);
 
     /// <summary>
-    /// 
+    /// Free an existing object
     /// </summary>
-    /// <param name="instance"></param>
+    /// <param name="instance">The object to free</param>
+    /// <remarks>
+    /// This method instructs the library to close an existing object;
+    /// note that git_objects are owned and cached by the repository so
+    /// the object may or may not be freed after this library call,
+    /// depending on how aggressive the caching mechanism used by the
+    /// repository is.
+    /// <br/><br/>
+    /// IMPORTANT: It is necessary to call this method when you stop
+    /// using an object. Failure to do so will cause a memory leak.
+    /// <br/><br/>
+    /// Native Signature: <code>void git_object_free(git_object *object);</code>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial void git_object_free(Git2.Object* instance);
 
     /// <summary>
-    /// 
+    /// Get the id (SHA1) of a repository object
     /// </summary>
-    /// <param name="instance"></param>
-    /// <returns></returns>
+    /// <param name="instance">The repository object</param>
+    /// <returns>The SHA1 id</returns>
+    /// <remarks>
+    /// Native Signature: <code>const git_oid * git_object_id(const git_object *obj);</code>
+    /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitObjectID* git_object_id(Git2.Object* instance);
 
     /// <summary>
-    /// 
+    /// Lookup a reference to one of the objects in a repository.
     /// </summary>
-    /// <param name="obj_out"></param>
-    /// <param name="repository"></param>
-    /// <param name="id"></param>
-    /// <param name="type"></param>
-    /// <returns></returns>
+    /// <param name="obj_out">Pointer to the looked-up object</param>
+    /// <param name="repository">The repository to look up the object</param>
+    /// <param name="id">The unique identifier for the object</param>
+    /// <param name="type">The type of the object</param>
+    /// <returns>0 on success, or an error code</returns>
+    /// <remarks>
+    /// The generated reference is owned by the repository and should be closed
+    /// with the <see cref="git_object_free"/> method instead of free'd manually.
+    /// <br/><br/>
+    /// The 'type' parameter must match the type of the object in the odb;
+    /// the method will fail otherwise. The special value <see cref="GitObjectType.Any"/>
+    /// may be passed to let the method guess the object's type.
+    /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_object_lookup(Git2.Object** obj_out, Git2.Repository* repository, GitObjectID* id, GitObjectType type);
 
     /// <summary>
-    /// 
+    /// Lookup an object that represents a tree entry.
     /// </summary>
-    /// <param name="obj_out"></param>
-    /// <param name="treeish"></param>
-    /// <param name="id"></param>
-    /// <param name="type"></param>
-    /// <returns></returns>
+    /// <param name="obj_out">Pointer that receives a pointer to the object (which must be freed by the caller)</param>
+    /// <param name="treeish">Root object that can be peeled to a tree</param>
+    /// <param name="path">Relative path from the root object to the desired object</param>
+    /// <param name="type">Type of object desired</param>
+    /// <returns>0 on success, or an error code</returns>
+    /// <remarks>
+    /// Native Signature: <code>int git_object_lookup_bypath(git_object **out, const git_object *treeish, const char *path, git_object_t type);</code>
+    /// </remarks>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_object_lookup_bypath(Git2.Object** obj_out, Git2.Object* treeish, string path, GitObjectType type);
-    
+
     /// <summary>
-    /// 
+    /// Lookup a reference to one of the objects in a repository, given a prefix of its identifier (short id).
     /// </summary>
-    /// <param name="obj_out"></param>
-    /// <param name="repository"></param>
-    /// <param name="id"></param>
-    /// <param name="length"></param>
-    /// <param name="type"></param>
-    /// <returns></returns>
+    /// <param name="obj_out">Pointer where to store the looked-up object</param>
+    /// <param name="repository">The repository to look up the object</param>
+    /// <param name="id">A short identifier for the object</param>
+    /// <param name="length">The length of the short identifier</param>
+    /// <param name="type">The type of the object</param>
+    /// <returns>0 on success, or an error code</returns>
+    /// <remarks>
+    /// The object obtained will be so that its identifier matches the first <paramref name="length"/>
+    /// hexadecimal characters (packets of 4 bits) of the given <paramref name="id"/>.
+    /// <paramref name="length"/> must be at least GIT_OID_MINPREFIXLEN, and long enough to identify a unique
+    /// object matching the prefix; otherwise the method will fail.
+    /// <br/><br/>
+    /// The generated reference is owned by the repository and should be closed with the git_object_free method instead of free'd manually.
+    /// <br/><br/>
+    /// The <paramref name="type"/> parameter must match the type of the object in the odb; the method will fail otherwise.
+    /// The special value <see cref="GitObjectType.Any"/> may be passed to let the method guess the object's type.
+    /// <br/><br/>
+    /// Native Signature: <code>int git_object_lookup_prefix(git_object **object_out, git_repository *repo, const git_oid *id, size_t len, git_object_t type);</code>
+    /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_object_lookup_prefix(Git2.Object** obj_out, Git2.Repository* repository, GitObjectID* id, nuint length, GitObjectType type);
 
     /// <summary>
-    /// 
+    /// Get the repository that owns this object
     /// </summary>
-    /// <param name="obj"></param>
-    /// <returns></returns>
+    /// <param name="obj">The object</param>
+    /// <returns>The repository who owns this object</returns>
+    /// <remarks>
+    /// Freeing or calling <see cref="git_repository_free"/> on the returned pointer will invalidate the actual object.
+    /// Any other operation may be run on the repository without affecting the object.
+    /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl), typeof(CallConvSuppressGCTransition)])]
     public static partial Git2.Repository* git_object_owner(Git2.Object* obj);
 
     /// <summary>
-    /// 
+    /// Recursively peel an object until an object of the specified type is met.
     /// </summary>
-    /// <param name="obj_out"></param>
-    /// <param name="obj"></param>
-    /// <param name="type"></param>
-    /// <returns></returns>
+    /// <param name="obj_out">Pointer to the peeled git_object</param>
+    /// <param name="obj">The object to be processed</param>
+    /// <param name="type">The type of the requested object</param>
+    /// <returns>0 on success, <see cref="GitError.InvalidSpec"/>, <see cref="GitError.Peel"/>, or an error code</returns>
+    /// <remarks>
+    /// If the query cannot be satisfied due to the object model, GIT_EINVALIDSPEC will be returned
+    /// (e.g. trying to peel a blob to a tree).
+    /// <br/><br/>
+    /// If you pass GIT_OBJECT_ANY as the target type, then the object will be peeled until the type changes.
+    /// A tag will be peeled until the referenced object is no longer a tag, and a commit will be peeled to a tree.
+    /// Any other object type will return <see cref="GitError.InvalidSpec"/>.
+    /// <br/><br/>
+    /// If peeling a tag we discover an object which cannot be peeled to the target type due to the object model,
+    /// <see cref="GitError.Peel"> will be returned.
+    /// <br/><br/>
+    /// You must free the returned object.
+    /// <br/><br/>
+    /// Native Signature: <code>int git_object_peel(git_object **peeled, const git_object *object, git_object_t target_type);</code>
+    /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_object_peel(Git2.Object** obj_out, Git2.Object* obj, GitObjectType type);
 
     /// <summary>
-    /// 
+    /// Analyzes a buffer of raw object content and determines its validity.
+    /// Tree, commit, and tag objects will be parsed and ensured that they
+    /// are valid, parseable content. (Blobs are always valid by definition.)
+    /// An error message will be set with an informative message if the object
+    /// is not valid.
     /// </summary>
-    /// <param name="valid"></param>
-    /// <param name="buffer"></param>
-    /// <param name="length"></param>
-    /// <param name="type"></param>
-    /// <returns></returns>
+    /// <param name="valid">Output pointer to set with validity of the object content</param>
+    /// <param name="buffer">The contents to validate</param>
+    /// <param name="length">The length of the buffer</param>
+    /// <param name="type">The type of the object in the buffer</param>
+    /// <returns>0 on success, or an error code</returns>
+    /// <remarks>
+    /// Native Signature: <code>int git_object_rawcontent_is_valid(int *valid, const char *buf, size_t len, git_object_t object_type);</code>
+    /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_object_rawcontent_is_valid(int* valid, byte* buffer, nuint length, GitObjectType type);
 
     /// <summary>
-    /// 
+    /// Get a short abbreviated OID string for the object
     /// </summary>
-    /// <param name="id_out"></param>
-    /// <param name="obj"></param>
-    /// <returns></returns>
+    /// <param name="id_out">Buffer to write string into</param>
+    /// <param name="obj">The object to get an ID for</param>
+    /// <returns>0 on success, or an error code</returns>
+    /// <remarks>
+    /// This starts at the "core.abbrev" length (default 7 characters)
+    /// and iteratively extends to a longer string if that length is ambiguous.
+    /// The result will be unambiguous (at least until new objects are added to the repository).
+    /// <br/><br/>
+    /// Native Signature: <code>int git_object_short_id(git_buf *out, const git_object *obj);</code>
+    /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_object_short_id(Native.GitBuffer* id_out, Git2.Object* obj);
 
     /// <summary>
-    /// 
+    /// Get the object type of an object
     /// </summary>
-    /// <param name="obj"></param>
-    /// <returns></returns>
+    /// <param name="obj">The repository object</param>
+    /// <returns>The object's type</returns>
+    /// <remarks>
+    /// Native Signature: <code>git_object_t git_object_type(const git_object *obj);</code>
+    /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitObjectType git_object_type(Git2.Object* obj);
 
     /// <summary>
-    /// 
+    /// Determine if the given git_object_t is a valid loose object type.
     /// </summary>
-    /// <param name="type"></param>
-    /// <returns></returns>
+    /// <param name="type">Object type to test</param>
+    /// <returns><see langword="true"/> if the type represents a valid loose object type, <see langword="false"/> otherwise.</returns>
+    /// <remarks>
+    /// Native Signature: <code>int git_object_typeisloose(git_object_t type);</code>
+    /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     [return: MarshalAs(UnmanagedType.I4)]
