@@ -58,6 +58,32 @@ public unsafe readonly struct GitCommit : IDisposable
         return new(result);
     }
 
+    public GitObject GetObjectByPath(string path, GitObjectType type)
+    {
+        Git2.Object* result;
+        Git2.ThrowIfError(git_object_lookup_bypath(&result, (Git2.Object*)this.NativeHandle, path, type));
+
+        return new(result);
+    }
+
+    public bool TryGetObjectByPath(string path, GitObjectType type, out GitObject obj)
+    {
+        Git2.Object* result;
+        var error = git_object_lookup_bypath(&result, (Git2.Object*)this.NativeHandle, path, type);
+
+        switch (error)
+        {
+            case GitError.OK:
+                obj = new(result);
+                return true;
+            case GitError.NotFound:
+                obj = default;
+                return false;
+            default:
+                throw Git2.ExceptionForError(error);
+        }
+    }
+
     public static explicit operator GitCommit(GitObject obj)
     {
         return obj.Type == GitObjectType.Commit
