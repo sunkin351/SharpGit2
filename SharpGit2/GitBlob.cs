@@ -59,12 +59,9 @@ public unsafe readonly struct GitBlob(Git2.Blob* nativeHandle) : IDisposable
 
     public static explicit operator GitBlob(GitObject obj)
     {
-        if (obj.Type != GitObjectType.Blob)
-        {
-            throw new InvalidCastException("Git Object is not of type Blob!");
-        }
-
-        return new((Git2.Blob*)obj.NativeHandle);
+        return obj.Type == GitObjectType.Blob
+            ? new((Git2.Blob*)obj.NativeHandle)
+            : throw new InvalidCastException("Git Object is not of type Blob!");
     }
 
     public static implicit operator GitObject(GitBlob blob)

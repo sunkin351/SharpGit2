@@ -146,8 +146,15 @@ public unsafe readonly struct GitTree : IDisposable
         }
     }
 
+    public static explicit operator GitTree(GitObject obj)
+    {
+        return obj.Type == GitObjectType.Tree
+            ? new GitTree((Git2.Tree*)obj.NativeHandle)
+            : throw new InvalidCastException("Git Object is not of type Tree!");
+    }
+
     public static implicit operator GitObject(GitTree tree)
     {
-        return new GitObject((Git2.Object*)tree.NativeHandle);
+        return new((Git2.Object*)tree.NativeHandle);
     }
 }
