@@ -53,12 +53,4 @@ public unsafe readonly struct GitObject : IDisposable
     {
         git_object_free(NativeHandle);
     }
-
-    public static explicit operator GitCommit(GitObject obj)
-    {
-        if (obj.Type == GitObjectType.Commit)
-            return new GitCommit((Git2.Commit*)obj.NativeHandle);
-
-        throw new InvalidCastException("Git Object is not of type Commit!");
-    }
 }
