@@ -1,4 +1,7 @@
-﻿using System.Runtime.InteropServices;
+﻿using System.Buffers;
+using System.Runtime.InteropServices;
+
+using static SharpGit2.NativeApi;
 
 namespace SharpGit2;
 
@@ -6,12 +9,76 @@ public unsafe readonly struct GitBlob(Git2.Blob* nativeHandle) : IDisposable
 {
     public readonly Git2.Blob* NativeHandle = nativeHandle;
 
-    public void* RawContent => NativeApi.git_blob_rawcontent(NativeHandle);
-    public ulong RawSize => NativeApi.git_blob_rawsize(NativeHandle);
+    public ref readonly GitObjectID Id => ref *git_blob_id(this.NativeHandle);
+
+    public byte* RawContent => git_blob_rawcontent(this.NativeHandle);
+
+    public ulong RawSize => git_blob_rawsize(this.NativeHandle);
+
+    public bool IsBinary => git_blob_is_binary(this.NativeHandle) != 0;
+
+    public GitRepository Owner => new(git_blob_owner(this.NativeHandle));
 
     public void Dispose()
     {
-        NativeApi.git_blob_free(NativeHandle);
+        git_blob_free(NativeHandle);
+    }
+
+    public GitBlob Duplicate()
+    {
+        Git2.Blob* result;
+        Git2.ThrowIfError(git_blob_dup(&result, this.NativeHandle));
+
+        return new(result);
+    }
+
+    public void Filter(IBufferWriter<byte> buffer, string as_path, in GitBlobFilterOptions options)
+    {
+        Native.GitBuffer _buffer = default;
+        Native.GitBlobFilterOptions _options = default;
+        GitError error;
+
+        try
+        {
+            _options.FromManaged(in options);
+
+            error = git_blob_filter(&_buffer, this.NativeHandle, as_path, &_options);
+        }
+        finally
+        {
+            _options.Free();
+        }
+
+        Git2.ThrowIfError(error);
+
+        try
+        {
+            byte* pointer = _buffer.Pointer;
+            nuint length = _buffer.Size;
+
+            while (length > 0)
+            {
+                // Let the buffer writer implementation choose the buffer size.
+                // May be inefficient for implementations like the standard
+                // System.Buffers.ArrayBufferWriter<T> or the
+                // CommunityToolkit.HighPerformance.Buffers.ArrayPoolBufferWriter<T> implementations
+                // of IBufferWriter<T>. (Because they resize their internal array's, copying data each time)
+                var span = buffer.GetSpan();
+
+                int toCopy = (int)nuint.Min((nuint)span.Length, length);
+
+                new ReadOnlySpan<byte>(pointer, toCopy).CopyTo(span);
+
+                buffer.Advance(toCopy);
+                pointer += toCopy;
+                length -= (nuint)toCopy;
+            }
+        }
+        finally
+        {
+            if (_buffer.Pointer != this.RawContent)
+                git_buf_dispose(&_buffer);
+        }
     }
 
     public SafeBuffer GetSafeBuffer(bool ownsBlob = false)
@@ -55,6 +122,14 @@ public unsafe readonly struct GitBlob(Git2.Blob* nativeHandle) : IDisposable
 
         span = default;
         return false;
+    }
+
+    public static bool DataIsBinary(ReadOnlySpan<byte> data)
+    {
+        fixed (byte* _data = data)
+        {
+            return git_blob_data_is_binary(_data, (nuint)data.Length);
+        }
     }
 
     public static explicit operator GitBlob(GitObject obj)

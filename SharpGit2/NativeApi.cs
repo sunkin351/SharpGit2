@@ -1156,7 +1156,7 @@ public static unsafe partial class NativeApi
     /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl), typeof(CallConvSuppressGCTransition)])]
-    public static partial void* git_blob_rawcontent(Git2.Blob* blob);
+    public static partial byte* git_blob_rawcontent(Git2.Blob* blob);
 
     /// <summary>
     /// Get the size in bytes of the contents of a blob

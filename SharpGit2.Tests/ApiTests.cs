@@ -61,7 +61,7 @@ public unsafe class ApiTests : IDisposable
             blobId = stream.Commit();
         }
 
-        using (var blob = (GitBlob)_repository.GetObject(in blobId, GitObjectType.Blob))
+        using (var blob = _repository.GetBlob(in blobId))
         using (var stream = new StreamReader(blob.GetStream()))
         {
             Assert.Equal(content, stream.ReadToEnd());
@@ -79,7 +79,7 @@ public unsafe class ApiTests : IDisposable
 
         GitObjectID id = _repository.CreateBlobFromBuffer(content);
 
-        using (var blob = (GitBlob)_repository.GetObject(in id, GitObjectType.Blob))
+        using (var blob = _repository.GetBlob(in id))
         {
             Assert.True(blob.TryGetContentSpan(out var blobSpan));
             Assert.True(blobSpan.SequenceEqual(content));
