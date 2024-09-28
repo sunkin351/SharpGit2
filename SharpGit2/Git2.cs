@@ -19,6 +19,11 @@ public static unsafe partial class Git2
     internal const GitError ForEachBreak = (GitError)1;
     internal const GitError ForEachException = GitError.User;
 
+    /// <summary>
+    /// Minimum length (in number of hex characters, i.e. packets of 4 bits) of an oid prefix
+    /// </summary>
+    public static int ObjectIDMinPrefixLength => 4; // This is a property to allow future updates without having consumers need to recompile their code.
+
     public static Version NativeLibraryVersion { get; } = GetVersion();
 
     private static Version GetVersion()
