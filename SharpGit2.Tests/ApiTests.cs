@@ -43,4 +43,50 @@ public unsafe class ApiTests : IDisposable
             }
         }
     }
+
+    [Fact]
+    public void BlobStreamsTest()
+    {
+        GitObjectID blobId;
+
+        const string content = "This is a test value!";
+
+        using (var stream = _repository.CreateBlobFromStream(null))
+        {
+            using (var writer = new StreamWriter(stream, encoding: Encoding.UTF8, leaveOpen: true))
+            {
+                writer.Write(content);
+            }
+
+            blobId = stream.Commit();
+        }
+
+        using (var blob = (GitBlob)_repository.GetObject(in blobId, GitObjectType.Blob))
+        using (var stream = new StreamReader(blob.GetStream()))
+        {
+            Assert.Equal(content, stream.ReadToEnd());
+        }
+    }
+
+    [Fact]
+    public void BlobCreateFromBufferTest()
+    {
+        ReadOnlySpan<byte> content = """
+            My Utf8 File Blob!
+
+            This is a multi-line blob!
+            """u8;
+
+        GitObjectID id = _repository.CreateBlobFromBuffer(content);
+
+        using (var blob = (GitBlob)_repository.GetObject(in id, GitObjectType.Blob))
+        {
+            Assert.True(blob.TryGetContentSpan(out var blobSpan));
+            Assert.True(blobSpan.SequenceEqual(content));
+        }
+
+        GitObjectID id2 = _repository.CreateBlobFromBuffer(content);
+
+        Assert.Equal(id, id2);
+    }
 }

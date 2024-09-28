@@ -423,6 +423,49 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
     }
     #endregion
 
+    #region Blob
+    public GitObjectID CreateBlobFromBuffer(ReadOnlySpan<byte> buffer)
+    {
+        GitObjectID result = default;
+        GitError error;
+
+        fixed (byte* _buffer = buffer)
+        {
+            error = git_blob_create_from_buffer(&result, this.NativeHandle, _buffer, (nuint)buffer.Length);
+        }
+
+        Git2.ThrowIfError(error);
+        return result;
+    }
+
+    public GitObjectID CreateBlobFromDisk(string path)
+    {
+        GitObjectID result = default;
+
+        Git2.ThrowIfError(git_blob_create_from_disk(&result, this.NativeHandle, path));
+
+        return result;
+    }
+
+    public GitObjectID CreateBlobFromWorkingDirectory(string relativePath)
+    {
+        GitObjectID result = default;
+
+        Git2.ThrowIfError(git_blob_create_from_workdir(&result, this.NativeHandle, relativePath));
+
+        return result;
+    }
+
+    public GitBlobWriteStream CreateBlobFromStream(string? hintpath = null)
+    {
+        Native.GitWriteStream* resultStream = null;
+
+        Git2.ThrowIfError(git_blob_create_from_stream(&resultStream, this.NativeHandle, hintpath));
+
+        return new GitBlobWriteStream(resultStream);
+    }
+    #endregion
+
     #region Checkout
     public void Checkout(GitCommit commit)
     {
