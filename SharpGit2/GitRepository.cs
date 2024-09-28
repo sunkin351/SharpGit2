@@ -355,6 +355,124 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
     }
     #endregion
 
+    #region Blob
+    public GitObjectID CreateBlobFromBuffer(ReadOnlySpan<byte> buffer)
+    {
+        GitObjectID result = default;
+        GitError error;
+
+        fixed (byte* _buffer = buffer)
+        {
+            error = git_blob_create_from_buffer(&result, this.NativeHandle, _buffer, (nuint)buffer.Length);
+        }
+
+        Git2.ThrowIfError(error);
+        return result;
+    }
+
+    public GitObjectID CreateBlobFromDisk(string path)
+    {
+        GitObjectID result = default;
+
+        Git2.ThrowIfError(git_blob_create_from_disk(&result, this.NativeHandle, path));
+
+        return result;
+    }
+
+    public GitObjectID CreateBlobFromWorkingDirectory(string relativePath)
+    {
+        GitObjectID result = default;
+
+        Git2.ThrowIfError(git_blob_create_from_workdir(&result, this.NativeHandle, relativePath));
+
+        return result;
+    }
+
+    public GitBlobWriteStream CreateBlobFromStream(string? hintpath = null)
+    {
+        Native.GitWriteStream* resultStream = null;
+
+        Git2.ThrowIfError(git_blob_create_from_stream(&resultStream, this.NativeHandle, hintpath));
+
+        return new GitBlobWriteStream(resultStream);
+    }
+
+    public GitBlob GetBlob(in GitObjectID id)
+    {
+        Git2.Blob* result;
+        GitError error;
+
+        fixed (GitObjectID* pId = &id)
+        {
+            error = git_blob_lookup(&result, this.NativeHandle, pId);
+        }
+
+        Git2.ThrowIfError(error);
+        return new(result);
+    }
+
+    public GitBlob GetBlob(in GitObjectID id, uint length)
+    {
+        Git2.Blob* result;
+        GitError error;
+
+        fixed (GitObjectID* pId = &id)
+        {
+            error = git_blob_lookup_prefix(&result, this.NativeHandle, pId, length);
+        }
+
+        Git2.ThrowIfError(error);
+        return new(result);
+    }
+
+    public bool TryGetBlob(in GitObjectID id, out GitBlob blob)
+    {
+        Git2.Blob* result;
+        GitError error;
+
+        fixed (GitObjectID* pId = &id)
+        {
+            error = git_blob_lookup(&result, this.NativeHandle, pId);
+        }
+
+        switch (error)
+        {
+            case GitError.OK:
+                blob = new(result);
+                return true;
+            case GitError.NotFound:
+                blob = default;
+                return false;
+            default:
+                throw Git2.ExceptionForError(error);
+        }
+    }
+
+    public bool TryGetBlob(in GitObjectID id, uint length, out GitBlob blob)
+    {
+        Git2.Blob* result;
+        GitError error;
+
+        fixed (GitObjectID* pId = &id)
+        {
+            error = git_blob_lookup_prefix(&result, this.NativeHandle, pId, length);
+        }
+
+        switch (error)
+        {
+            case GitError.OK:
+                blob = new(result);
+                return true;
+            case GitError.NotFound:
+            case GitError.Ambiguous:
+                blob = default;
+                return false;
+            default:
+                throw Git2.ExceptionForError(error);
+        }
+    }
+    #endregion
+
     #region Branch
     public GitBranch CreateBranch(string branchName, GitCommit target, bool force)
     {
@@ -527,124 +645,6 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
         void IEnumerator.Reset()
         {
             throw new NotSupportedException();
-        }
-    }
-    #endregion
-
-    #region Blob
-    public GitObjectID CreateBlobFromBuffer(ReadOnlySpan<byte> buffer)
-    {
-        GitObjectID result = default;
-        GitError error;
-
-        fixed (byte* _buffer = buffer)
-        {
-            error = git_blob_create_from_buffer(&result, this.NativeHandle, _buffer, (nuint)buffer.Length);
-        }
-
-        Git2.ThrowIfError(error);
-        return result;
-    }
-
-    public GitObjectID CreateBlobFromDisk(string path)
-    {
-        GitObjectID result = default;
-
-        Git2.ThrowIfError(git_blob_create_from_disk(&result, this.NativeHandle, path));
-
-        return result;
-    }
-
-    public GitObjectID CreateBlobFromWorkingDirectory(string relativePath)
-    {
-        GitObjectID result = default;
-
-        Git2.ThrowIfError(git_blob_create_from_workdir(&result, this.NativeHandle, relativePath));
-
-        return result;
-    }
-
-    public GitBlobWriteStream CreateBlobFromStream(string? hintpath = null)
-    {
-        Native.GitWriteStream* resultStream = null;
-
-        Git2.ThrowIfError(git_blob_create_from_stream(&resultStream, this.NativeHandle, hintpath));
-
-        return new GitBlobWriteStream(resultStream);
-    }
-
-    public GitBlob GetBlob(in GitObjectID id)
-    {
-        Git2.Blob* result;
-        GitError error;
-
-        fixed (GitObjectID* pId = &id)
-        {
-            error = git_blob_lookup(&result, this.NativeHandle, pId);
-        }
-
-        Git2.ThrowIfError(error);
-        return new(result);
-    }
-
-    public GitBlob GetBlob(in GitObjectID id, uint length)
-    {
-        Git2.Blob* result;
-        GitError error;
-
-        fixed (GitObjectID* pId = &id)
-        {
-            error = git_blob_lookup_prefix(&result, this.NativeHandle, pId, length);
-        }
-
-        Git2.ThrowIfError(error);
-        return new(result);
-    }
-
-    public bool TryGetBlob(in GitObjectID id, out GitBlob blob)
-    {
-        Git2.Blob* result;
-        GitError error;
-
-        fixed (GitObjectID* pId = &id)
-        {
-            error = git_blob_lookup(&result, this.NativeHandle, pId);
-        }
-
-        switch (error)
-        {
-            case GitError.OK:
-                blob = new(result);
-                return true;
-            case GitError.NotFound:
-                blob = default;
-                return false;
-            default:
-                throw Git2.ExceptionForError(error);
-        }
-    }
-
-    public bool TryGetBlob(in GitObjectID id, uint length, out GitBlob blob)
-    {
-        Git2.Blob* result;
-        GitError error;
-
-        fixed (GitObjectID* pId = &id)
-        {
-            error = git_blob_lookup_prefix(&result, this.NativeHandle, pId, length);
-        }
-
-        switch (error)
-        {
-            case GitError.OK:
-                blob = new(result);
-                return true;
-            case GitError.NotFound:
-            case GitError.Ambiguous:
-                blob = default;
-                return false;
-            default:
-                throw Git2.ExceptionForError(error);
         }
     }
     #endregion

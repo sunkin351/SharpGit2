@@ -78,4 +78,9 @@ public unsafe readonly struct GitBranch : IDisposable
 
         return new(reference);
     }
+
+    public static implicit operator GitReference(GitBranch branch)
+    {
+        return branch.Reference;
+    }
 }
