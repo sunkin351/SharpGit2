@@ -593,6 +593,60 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
     }
     #endregion
 
+    #region Cherrypick
+    public void Cherrypick(GitCommit commit, in GitCherrypickOptions options)
+    {
+        Native.GitCherrypickOptions _options = default;
+        List<GCHandle> gchandles = [];
+        GitError error;
+
+        try
+        {
+            _options.FromManaged(in options, gchandles);
+
+            error = git_cherrypick(this.NativeHandle, commit.NativeHandle, &_options);
+        }
+        finally
+        {
+            foreach (var handle in gchandles)
+            {
+                handle.Free();
+            }
+
+            _options.Free();
+        }
+
+        Git2.ThrowIfError(error);
+    }
+
+    public GitIndex Cherrypick(GitCommit cherrypick_commit, GitCommit our_commit, uint mainline, in GitMergeOptions options)
+    {
+        Native.GitMergeOptions _options = default;
+        List<GCHandle> gchandles = [];
+        Git2.Index* result;
+        GitError error;
+
+        try
+        {
+            _options.FromManaged(in options, gchandles);
+
+            error = git_cherrypick_commit(&result, this.NativeHandle, cherrypick_commit.NativeHandle, our_commit.NativeHandle, mainline, &_options);
+        }
+        finally
+        {
+            foreach (var handle in gchandles)
+            {
+                handle.Free();
+            }
+
+            _options.Free();
+        }
+
+        Git2.ThrowIfError(error);
+        return new(result);
+    }
+    #endregion
+
     #region Clone
     public static GitRepository Clone(string url, string localDirectory)
     {
