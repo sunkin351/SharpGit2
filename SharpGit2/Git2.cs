@@ -140,12 +140,12 @@ public static unsafe partial class Git2
         return repository;
     }
 
-    public static string? GlobalConfigFile { get; } = GetPathFromFunction(&NativeApi.git_config_find_global);
-    public static string? ProgramDataConfigFile { get; } = GetPathFromFunction(&NativeApi.git_config_find_programdata);
-    public static string? SystemConfigFile { get; } = GetPathFromFunction(&NativeApi.git_config_find_system);
-    public static string? XDGConfigFile { get; } = GetPathFromFunction(&NativeApi.git_config_find_xdg);
+    public static string? GlobalConfigFile { get; } = GetPathFromFunction(&NativeApi.git_config_find_global, nameof(GlobalConfigFile));
+    public static string? ProgramDataConfigFile { get; } = GetPathFromFunction(&NativeApi.git_config_find_programdata, nameof(ProgramDataConfigFile));
+    public static string? SystemConfigFile { get; } = GetPathFromFunction(&NativeApi.git_config_find_system, nameof(SystemConfigFile));
+    public static string? XDGConfigFile { get; } = GetPathFromFunction(&NativeApi.git_config_find_xdg, nameof(XDGConfigFile));
 
-    private static string? GetPathFromFunction(delegate* managed<Native.GitBuffer*, GitError> func)
+    private static string? GetPathFromFunction(delegate* managed<Native.GitBuffer*, GitError> func, string propertyName)
     {
         Native.GitBuffer buffer = default;
         var error = func(&buffer);
@@ -164,53 +164,42 @@ public static unsafe partial class Git2
             case GitError.NotFound:
                 return null;
             default:
-                throw ExceptionForError(error);
+                throw ExceptionForError(error, propertyName);
         }
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    internal static Exception ExceptionForError(GitError error, string? message = null)
+    internal static Exception ExceptionForError(GitError error, [CallerMemberName] string? callerName = null)
     {
         var err = NativeApi.git_error_last();
 
         Debug.Assert(err != null);
 
         GitErrorClass @class = err->Class;
-        message = Utf8StringMarshaller.ConvertToManaged(err->Message)!;
+        var message = Utf8StringMarshaller.ConvertToManaged(err->Message)!;
 
         return error switch
         {
-            GitError.NotSupported => new NotSupportedException(message ?? "LibGit2 has returned that it does not support this operation!"),
-            _ => new Git2Exception(error, @class, message ?? "LibGit2 has returned an error!"),
+            GitError.NotSupported => new NotSupportedException($"{callerName}: {message ?? "LibGit2 has returned that it does not support this operation!"}"),
+            _ => new Git2Exception(error, @class, $"{callerName}: {message ?? "LibGit2 has returned an error!"}"),
         };
     }
 
-    internal static void ThrowError(GitError code)
+    internal static void ThrowError(GitError code, [CallerMemberName] string? callerName = null)
     {
-        throw ExceptionForError(code);
+        throw ExceptionForError(code, callerName);
     }
 
-    internal static void ThrowError(GitError code, string message)
-    {
-        throw ExceptionForError(code, message);
-    }
-
-    internal static void ThrowIfError(GitError code)
+    internal static void ThrowIfError(GitError code, [CallerMemberName] string? callerName = null)
     {
         if (code < 0)
-            ThrowError(code);
+            ThrowError(code, callerName);
     }
 
-    internal static void ThrowIfError(GitError code, string message)
+    internal static bool ErrorOrBoolean(int code, [CallerMemberName] string? callerName = null)
     {
         if (code < 0)
-            ThrowError(code, message);
-    }
-
-    internal static bool ErrorOrBoolean(int code)
-    {
-        if (code < 0)
-            ThrowError((GitError)code);
+            ThrowError((GitError)code, callerName);
 
         return code != 0;
     }
