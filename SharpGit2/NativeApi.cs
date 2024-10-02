@@ -994,7 +994,7 @@ public static unsafe partial class NativeApi
     public static partial GitError git_blob_create_from_stream(
         Native.GitWriteStream** stream_out,
         Git2.Repository* repository,
-        string hintpath);
+        string? hintpath);
 
     /// <summary>
     /// Close the stream and write the blob to the object db
