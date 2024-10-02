@@ -8672,6 +8672,95 @@ public static unsafe partial class NativeApi
         GitSortType sort_mode);
     #endregion
 
+    #region Signature
+    /// <summary>
+    /// Create a new action signature with default user and now timestamp.
+    /// </summary>
+    /// <param name="sig_out">New signature</param>
+    /// <param name="repository">The Repository</param>
+    /// <returns>
+    /// 0 on success, <see cref="GitError.NotFound"/> if config is missing, or error code
+    /// </returns>
+    /// <remarks>
+    /// This looks up the user.name and user.email from the configuration
+    /// and uses the current time as the timestamp, and creates a new signature
+    /// based on that information. It will return <see cref="GitError.NotFound"/> if either
+    /// the <c>user.name</c> or <c>user.email</c> are not set.
+    /// </remarks>
+    [LibraryImport(Git2.LibraryName)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    public static partial GitError git_signature_default(Native.GitSignature** sig_out, Git2.Repository* repository);
+
+    /// <summary>
+    /// Create a copy of an existing signature. All internal strings are also duplicated.
+    /// </summary>
+    /// <param name="sig_out">Pointer where to store the copy</param>
+    /// <param name="signature">Signature to duplicate</param>
+    /// <returns>0 on success, or an error code</returns>
+    /// <remarks>
+    /// Call <see cref="git_signature_free(Native.GitSignature*)"/> to free the data.
+    /// </remarks>
+    [LibraryImport(Git2.LibraryName)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    public static partial GitError git_signature_dup(Native.GitSignature** sig_out, Native.GitSignature* signature);
+
+    /// <summary>
+    /// Free an existing signature.
+    /// </summary>
+    /// <param name="signature">The signature to free</param>
+    /// <remarks>
+    /// Because the signature is not an opaque structure, it is legal to free it manually,
+    /// but be sure to free the "name" and "email" strings in addition to the structure itself.
+    /// <br/><br/>
+    /// WARNING: Do not free a signature that isn't allocated by libgit2 with this method!
+    ///     Those must be freed by whatever means they were allocated with.
+    /// </remarks>
+    [LibraryImport(Git2.LibraryName)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    public static partial void git_signature_free(Native.GitSignature* signature);
+
+    /// <summary>
+    /// Create a new signature by parsing the given buffer, which is expected to be in the format
+    /// <code>Real Name &lt;Email&gt; timestamp tzoffset</code>
+    /// where <c>timestamp</c> is the number of seconds since the Unix epoch and <c>tzoffset</c> is the timezone offset in hhmm format (note the lack of a colon separator).
+    /// </summary>
+    /// <param name="sig_out">The new signature</param>
+    /// <param name="signatureString">Signature string</param>
+    /// <returns>0 on success, <see cref="GitError.Invalid"/> if the signature is not parseable, or an error code</returns>
+    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    public static partial GitError git_signature_from_buffer(Native.GitSignature** sig_out, string signatureString);
+
+    /// <summary>
+    /// Create a new action signature.
+    /// </summary>
+    /// <param name="sig_out">The new signature, or null in case of error</param>
+    /// <param name="name">Name of the person</param>
+    /// <param name="email">Email of the person</param>
+    /// <param name="time">Time (in seconds from epoch) when the action happened</param>
+    /// <param name="offset">Timezone Offset (in minutes) for the time</param>
+    /// <remarks>
+    /// Call <see cref="git_signature_free"/> to free the data.
+    /// 
+    /// Note: angle brackets ('&lt;' and '&gt;') characters are not allowed to be used in either the name or the email parameter.
+    /// </remarks>
+    /// <returns></returns>
+    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    public static partial GitError git_signature_new(Native.GitSignature** sig_out, string name, string email, ulong time, int offset);
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="sig_out"></param>
+    /// <param name="name"></param>
+    /// <param name="email"></param>
+    /// <returns></returns>
+    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    public static partial GitError git_signature_now(Native.GitSignature** sig_out, string name, string email);
+    #endregion
+
     #region Stash
     /// <summary>
     /// 

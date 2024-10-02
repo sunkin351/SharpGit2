@@ -1756,6 +1756,49 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
 
     #endregion
 
+    #region Signature
+    public GitSignature DefaultSignature()
+    {
+        Native.GitSignature* result = null;
+        Git2.ThrowIfError(git_signature_default(&result, this.NativeHandle));
+
+        try
+        {
+            return new(in *result);
+        }
+        finally
+        {
+            git_signature_free(result);
+        }
+    }
+
+    public bool TryGetDefaultSignature(out GitSignature signature)
+    {
+        Native.GitSignature* result = null;
+        
+        var error = git_signature_default(&result, this.NativeHandle);
+
+        switch (error)
+        {
+            case GitError.OK:
+                try
+                {
+                    signature = new(in *result);
+                    return true;
+                }
+                finally
+                {
+                    git_signature_free(result);
+                }
+            case GitError.NotFound:
+                signature = default;
+                return false;
+            default:
+                throw Git2.ExceptionForError(error);
+        }
+    }
+    #endregion
+
     #region Tree
     public GitObjectID CreateUpdatedTree(GitTree baseline, ReadOnlySpan<GitTreeUpdate> updates)
     {

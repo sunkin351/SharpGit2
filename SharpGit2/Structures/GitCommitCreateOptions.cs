@@ -44,18 +44,8 @@ namespace SharpGit2.Native
 
         public void Free()
         {
-            if (Author != null)
-            {
-                Author->Free();
-                NativeMemory.Free(Author);
-            }
-
-            if (Committer != null)
-            {
-                Committer->Free();
-                NativeMemory.Free(Committer);
-            }
-
+            GitSignature.Free(Author);
+            GitSignature.Free(Committer);
             Utf8StringMarshaller.Free(MessageEncoding);
         }
     }
