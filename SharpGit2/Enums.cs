@@ -842,11 +842,11 @@ public enum GitFetchPruneType
 public enum GitFileMode
 {
     Unreadable = 0,
-    Tree = 0040000,
-    Blob = 0100644,
-    BlobExecutable = 0100755,
-    Link = 0120000,
-    Commit = 0160000,
+    Tree = 0x4000,
+    Blob = 0x81A4,
+    BlobExecutable = 0x81ED,
+    Link = 0xA000,
+    Commit = 0xE000,
 }
 
 [Flags]
