@@ -128,7 +128,27 @@ public static unsafe partial class Git2
         internal Git2.Commit** commits;
         internal nuint count;
 
-        public readonly ReadOnlySpan<GitCommit> Span => new(commits, checked((int)count));
+        public readonly ReadOnlySpan<GitCommit> Span
+        {
+            get
+            {
+                Debug.Assert(sizeof(GitCommit) == sizeof(Git2.Commit*));
+
+                return new(commits, checked((int)count));
+            }
+        }
+
+        public readonly nuint Count => count;
+
+        public readonly GitCommit this[nuint i]
+        {
+            get
+            {
+                ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(i, this.Count);
+
+                return new(commits[i]);
+            }
+        }
 
         public void Dispose()
         {
