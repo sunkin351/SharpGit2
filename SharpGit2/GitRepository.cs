@@ -2007,7 +2007,7 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
         return new(config);
     }
 
-    public GitError GetHead(out GitReference head)
+    public GitReference GetHead(out bool unborn)
     {
         Git2.Reference* result;
         var error = git_repository_head(&result, this.NativeHandle);
@@ -2015,12 +2015,11 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
         switch (error)
         {
             case GitError.OK:
+                unborn = false;
+                return new(result);
             case GitError.UnbornBranch:
-                head = new(result);
-                return error;
-            case GitError.NotFound:
-                head = default;
-                return error;
+                unborn = true;
+                return new(result);
             default:
                 throw Git2.ExceptionForError(error);
         }
