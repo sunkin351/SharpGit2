@@ -202,34 +202,6 @@ namespace SharpGit2.Native
         public readonly byte* Email;
         public readonly GitTime When;
 
-        public static GitSignature* FromManaged(SharpGit2.GitSignature? signature)
-        {
-            if (!signature.HasValue)
-                return null;
-
-            var value = signature.GetValueOrDefault();
-            var seconds = value.When.ToUnixTimeSeconds();
-            var offset = value.When.TotalOffsetMinutes;
-
-            GitSignature* result = null;
-            Git2.ThrowIfError(git_signature_new(&result, value.Name!, value.Email!, (ulong)seconds, offset));
-
-            return result;
-        }
-
-        public static void Free(GitSignature* signature)
-        {
-            git_signature_free(signature);
-        }
-
-        public static GitSignature* Now(string name, string email)
-        {
-            GitSignature* result = null;
-            Git2.ThrowIfError(git_signature_now(&result, name, email));
-
-            return result;
-        }
-
         public override string ToString()
         {
             if (this.Name is null || *this.Name == 0
