@@ -53,26 +53,7 @@ public unsafe readonly struct GitBlob(Git2.Blob* nativeHandle) : IDisposable
 
         try
         {
-            byte* pointer = _buffer.Pointer;
-            nuint length = _buffer.Size;
-
-            while (length > 0)
-            {
-                // Let the buffer writer implementation choose the buffer size.
-                // May be inefficient for implementations like the standard
-                // System.Buffers.ArrayBufferWriter<T> or the
-                // CommunityToolkit.HighPerformance.Buffers.ArrayPoolBufferWriter<T> implementations
-                // of IBufferWriter<T>. (Because they resize their internal array's, copying data each time)
-                var span = buffer.GetSpan();
-
-                int toCopy = (int)nuint.Min((nuint)span.Length, length);
-
-                new ReadOnlySpan<byte>(pointer, toCopy).CopyTo(span);
-
-                buffer.Advance(toCopy);
-                pointer += toCopy;
-                length -= (nuint)toCopy;
-            }
+            _buffer.CopyToBufferWriter(buffer);
         }
         finally
         {

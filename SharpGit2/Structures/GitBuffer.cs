@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System.Buffers;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using System.Text;
@@ -98,6 +99,30 @@ public unsafe struct GitBuffer
             }
 
             return false;
+        }
+    }
+
+    public readonly void CopyToBufferWriter(IBufferWriter<byte> writer)
+    {
+        byte* pointer = this.Pointer;
+        nuint length = this.Size;
+
+        while (length > 0)
+        {
+            // Let the buffer writer implementation choose the buffer size.
+            // May be inefficient for implementations like the standard
+            // System.Buffers.ArrayBufferWriter<T> or the
+            // CommunityToolkit.HighPerformance.Buffers.ArrayPoolBufferWriter<T> implementations
+            // of IBufferWriter<T>. (Because they resize their internal array's, copying data each time)
+            var span = writer.GetSpan();
+
+            int toCopy = (int)nuint.Min((nuint)span.Length, length);
+
+            new ReadOnlySpan<byte>(pointer, toCopy).CopyTo(span);
+
+            writer.Advance(toCopy);
+            pointer += toCopy;
+            length -= (nuint)toCopy;
         }
     }
 }
