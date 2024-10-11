@@ -1,14 +1,15 @@
-﻿using System.Collections;
+﻿using System.Buffers;
+using System.Collections;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.Marshalling;
 using System.Text;
 
-using static SharpGit2.Git2;
+using SharpGit2.Marshalling;
+
 using static SharpGit2.NativeApi;
 
 namespace SharpGit2;
@@ -804,7 +805,7 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
 
     #region Commit
 
-    public GitCommit GetCommitForID(in GitObjectID id)
+    public GitCommit GetCommit(in GitObjectID id)
     {
         Git2.Commit* result;
 
@@ -817,12 +818,23 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
         return new(result);
     }
 
-    public bool TryLookupCommit(in GitObjectID id, out GitCommit commit)
+    public GitCommit GetCommit(in GitObjectID id, ushort prefixLength)
+    {
+        Git2.Commit* result;
+
+        fixed (GitObjectID* ptr = &id)
+        {
+            Git2.ThrowIfError(git_commit_lookup_prefix(&result, this.NativeHandle, ptr, prefixLength));
+        }
+
+        return new(result);
+    }
+
+    public bool TryGetCommit(in GitObjectID id, out GitCommit commit)
     {
         GitError error;
         Git2.Commit* result;
 
-        // Relatively heavy struct, pin the reference instead of copying for performance
         fixed (GitObjectID* ptr = &id)
         {
             error = git_commit_lookup(&result, this.NativeHandle, ptr);
@@ -838,6 +850,151 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
                 return false;
             default:
                 throw Git2.ExceptionForError(error);
+        }
+    }
+
+    public bool TryGetCommit(in GitObjectID id, ushort prefixLength, out GitCommit commit)
+    {
+        GitError error;
+        Git2.Commit* result;
+
+        fixed (GitObjectID* ptr = &id)
+        {
+            error = git_commit_lookup_prefix(&result, this.NativeHandle, ptr, prefixLength);
+        }
+
+        switch (error)
+        {
+            case GitError.OK:
+                commit = new(result);
+                return true;
+            case GitError.NotFound:
+            case GitError.Ambiguous:
+                commit = default;
+                return false;
+            default:
+                throw Git2.ExceptionForError(error);
+        }
+    }
+
+    public GitObjectID CreateCommit(
+        string? updateRef,
+        GitSignature author,
+        GitSignature committer,
+        string message,
+        GitTree tree,
+        ReadOnlySpan<GitCommit> parents)
+    {
+        Debug.Assert(sizeof(GitCommit) == sizeof(Git2.Commit*));
+
+        GitObjectID result = default;
+        Native.GitSignature* _author = null, _committer = null;
+        GitError error;
+        try
+        {
+            _author = GitSignatureMarshaller.ConvertToUnmanaged(author);
+            _committer = GitSignatureMarshaller.ConvertToUnmanaged(committer);
+
+            fixed (GitCommit* _parents = parents)
+            {
+                error = git_commit_create(
+                    &result,
+                    this.NativeHandle,
+                    updateRef,
+                    _author,
+                    _committer,
+                    null,
+                    message,
+                    tree.NativeHandle,
+                    (nuint)parents.Length,
+                    (Git2.Commit**)_parents);
+            }
+        }
+        finally
+        {
+            GitSignatureMarshaller.Free(_author);
+            GitSignatureMarshaller.Free(_committer);
+        }
+
+        Git2.ThrowIfError(error);
+        return result;
+    }
+
+    public void CreateCommitToBuffer(
+        IBufferWriter<byte> writer,
+        GitSignature author,
+        GitSignature committer,
+        string message,
+        GitTree tree,
+        ReadOnlySpan<GitCommit> parents)
+    {
+        Debug.Assert(sizeof(GitCommit) == sizeof(Git2.Commit*));
+
+        Native.GitBuffer result = default;
+        Native.GitSignature* _author = null, _committer = null;
+        GitError error;
+        try
+        {
+            _author = GitSignatureMarshaller.ConvertToUnmanaged(author);
+            _committer = GitSignatureMarshaller.ConvertToUnmanaged(committer);
+
+            fixed (GitCommit* _parents = parents)
+            {
+                error = git_commit_create_buffer(
+                    &result,
+                    this.NativeHandle,
+                    _author,
+                    _committer,
+                    null,
+                    message,
+                    tree.NativeHandle,
+                    (nuint)parents.Length,
+                    (Git2.Commit**)_parents);
+            }
+        }
+        finally
+        {
+            GitSignatureMarshaller.Free(_author);
+            GitSignatureMarshaller.Free(_committer);
+        }
+
+        Git2.ThrowIfError(error);
+
+        try
+        {
+            result.CopyToBufferWriter(writer);
+        }
+        finally
+        {
+            git_buf_dispose(&result);
+        }
+    }
+
+    public GitObjectID CreateCommitWithSignature(byte* commitContent, byte* signature, string? signature_field)
+    {
+        GitObjectID result = default;
+        Git2.ThrowIfError(git_commit_create_with_signature(&result, this.NativeHandle, commitContent, signature, signature_field));
+
+        return result;
+    }
+
+    public (byte[] signature, byte[] signed_data) ExtractCommitSignature(in GitObjectID commitId, string? field)
+    {
+        Native.GitBuffer signature = default, signed_data = default;
+
+        fixed (GitObjectID* _id = &commitId)
+        {
+            Git2.ThrowIfError(git_commit_extract_signature(&signature, &signed_data, this.NativeHandle, _id, field));
+        }
+
+        try
+        {
+            return (signature.Span.ToArray(), signed_data.Span.ToArray());
+        }
+        finally
+        {
+            git_buf_dispose(&signature);
+            git_buf_dispose(&signed_data);
         }
     }
 

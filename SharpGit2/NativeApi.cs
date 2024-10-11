@@ -1667,53 +1667,132 @@ public static unsafe partial class NativeApi
     #endregion
 
     #region Commit
+    /// <summary>
+    /// Amend an existing commit by replacing only non-NULL values. 
+    /// </summary>
+    /// <param name="id">Pointer in which to store the OID of the newly created commit</param>
+    /// <param name="commit_to_amend">The commit to amend</param>
+    /// <param name="update_ref">
+    /// If not NULL, name of the reference that will be updated to point to this commit.
+    /// If the reference is not direct, it will be resolved to a direct reference.
+    /// Use "HEAD" to update the HEAD of the current branch and make it point to this commit.
+    /// If the reference doesn't exist yet, it will be created.
+    /// If it does exist, the first parent must be the tip of this branch.
+    /// </param>
+    /// <param name="author">
+    /// Signature with author and author time of the commit
+    /// </param>
+    /// <param name="committer">
+    /// Signature with committer and commit time of the commit
+    /// </param>
+    /// <param name="message_encoding">
+    /// The encoding for the message in the commit, represented with a standard encoding name.
+    /// E.g. "UTF-8". If NULL, no encoding header is written and UTF-8 is assumed.
+    /// </param>
+    /// <param name="message">Full message for this commit</param>
+    /// <param name="tree">
+    /// An instance of a `git_tree` object that will be used as the tree for the commit.
+    /// This tree object must also be owned by the same repository as <paramref name="commit_to_amend"/>.
+    /// </param>
+    /// <returns>0 on success, or an error code</returns>
+    /// <remarks>
+    /// This creates a new commit that is exactly the same as the old commit, except that any non-NULL values will be updated.
+    /// The new commit has the same parents as the old commit.
+    /// <br/><br/>
+    /// The <paramref name="update_ref"/> value works as in the regular <see cref="git_commit_create"/>,
+    /// updating the ref to point to the newly rewritten commit. If you want to amend a commit that is not
+    /// currently the tip of the branch and then rewrite the following commits to reach a ref, pass this as NULL
+    /// and update the rest of the commit chain and ref separately.
+    /// <br/><br/>
+    /// Unlike <see cref="git_commit_create"/>, the <paramref name="author"/>, <paramref name="committer"/>, <paramref name="message"/>, <paramref name="message_encoding"/>,
+    /// and <paramref name="tree"/> parameters can be null, in which case this will use the values from the original <paramref name="commit_to_amend"/>.
+    /// <br/><br/>
+    /// All parameters have the same meanings as in <see cref="git_commit_create"/>.
+    /// </remarks>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    private static partial GitError git_commit_amend(
+    public static partial GitError git_commit_amend(
         GitObjectID* id,
         Git2.Commit* commit_to_amend,
-        string update_ref,
+        string? update_ref,
         Native.GitSignature* author,
         Native.GitSignature* committer,
-        string message_encoding,
+        string? message_encoding,
         byte* message,
         Git2.Tree* tree);
 
     /// <summary>
-    /// 
+    /// Amend an existing commit by replacing only non-NULL values
     /// </summary>
-    /// <param name="id"></param>
-    /// <param name="commit_to_amend"></param>
-    /// <param name="update_ref"></param>
-    /// <param name="author"></param>
-    /// <param name="committer"></param>
-    /// <param name="message_encoding"></param>
-    /// <param name="message"></param>
-    /// <param name="tree"></param>
-    /// <returns></returns>
-    /// <exception cref="NotSupportedException"></exception>
+    /// <param name="id">Pointer in which to store the OID of the newly created commit</param>
+    /// <param name="commit_to_amend">The commit to amend</param>
+    /// <param name="update_ref">
+    /// If not NULL, name of the reference that will be updated to point to this commit.
+    /// If the reference is not direct, it will be resolved to a direct reference.
+    /// Use "HEAD" to update the HEAD of the current branch and make it point to this commit.
+    /// If the reference doesn't exist yet, it will be created.
+    /// If it does exist, the first parent must be the tip of this branch.
+    /// </param>
+    /// <param name="author">
+    /// Signature with author and author time of the commit
+    /// </param>
+    /// <param name="committer">
+    /// Signature with committer and commit time of the commit
+    /// </param>
+    /// <param name="message_encoding">
+    /// The encoding for the message in the commit, represented with a standard encoding name.
+    /// E.g. "UTF-8". If NULL, no encoding header is written and UTF-8 is assumed.
+    /// </param>
+    /// <param name="message">Full message for this commit</param>
+    /// <param name="tree">
+    /// An instance of a `git_tree` object that will be used as the tree for the commit.
+    /// This tree object must also be owned by the same repository as <paramref name="commit_to_amend"/>.
+    /// </param>
+    /// <returns>0 on success, or an error code</returns>
+    /// <remarks>
+    /// This creates a new commit that is exactly the same as the old commit, except that any non-NULL values will be updated.
+    /// The new commit has the same parents as the old commit.
+    /// <br/><br/>
+    /// The <paramref name="update_ref"/> value works as in the regular <see cref="git_commit_create"/>,
+    /// updating the ref to point to the newly rewritten commit. If you want to amend a commit that is not
+    /// currently the tip of the branch and then rewrite the following commits to reach a ref, pass this as NULL
+    /// and update the rest of the commit chain and ref separately.
+    /// <br/><br/>
+    /// Unlike <see cref="git_commit_create"/>, the <paramref name="author"/>, <paramref name="committer"/>, <paramref name="message"/>, <paramref name="message_encoding"/>,
+    /// and <paramref name="tree"/> parameters can be null, in which case this will use the values from the original <paramref name="commit_to_amend"/>.
+    /// <br/><br/>
+    /// All parameters have the same meanings as in <see cref="git_commit_create"/>.
+    /// </remarks>
+    /// <exception cref="NotSupportedException"/>
     public static GitError git_commit_amend(
         GitObjectID* id,
         Git2.Commit* commit_to_amend,
-        string update_ref,
+        string? update_ref,
         Native.GitSignature* author,
         Native.GitSignature* committer,
-        Encoding message_encoding,
-        string message,
+        Encoding? message_encoding,
+        string? message,
         Git2.Tree* tree)
     {
-        if (!message_encoding.IsSingleByte)
+        if (message is null)
+        {
+            return git_commit_amend(id, commit_to_amend, update_ref, author, committer, null, (byte*)null, tree);
+        }
+
+        if (message_encoding is not null && message_encoding.GetByteCount("\0") != 1)
             throw new NotSupportedException("Multibyte encodings are not supported! (i.e. encodings who's code unit is more than 1 byte wide)");
 
-        var array = ArrayPool<byte>.Shared.Rent(message_encoding.GetMaxByteCount(message.Length + 1));
+        var effectiveEncoding = message_encoding ?? Encoding.UTF8;
+
+        var array = ArrayPool<byte>.Shared.Rent(checked(effectiveEncoding.GetByteCount(message) + 1));
         try
         {
-            var written = message_encoding.GetBytes(message, array);
+            var written = effectiveEncoding.GetBytes(message, array);
             array[written] = 0;
 
             fixed (byte* pMessage = array)
             {
-                return git_commit_amend(id, commit_to_amend, update_ref, author, committer, message_encoding.EncodingName, pMessage, tree);
+                return git_commit_amend(id, commit_to_amend, update_ref, author, committer, message_encoding?.WebName, pMessage, tree);
             }
         }
         finally
@@ -1723,68 +1802,99 @@ public static unsafe partial class NativeApi
     }
 
     /// <summary>
-    /// 
+    /// Get the author of a commit
     /// </summary>
-    /// <param name="commit"></param>
-    /// <returns></returns>
+    /// <param name="commit">A previously loaded commit</param>
+    /// <returns>The author of the commit</returns>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial Native.GitSignature* git_commit_author(Git2.Commit* commit);
 
     /// <summary>
-    /// 
+    /// Get the author of a commit, using the mailmap to map names and email addresses to canonical real names and email addresses.
     /// </summary>
-    /// <param name="signature_out"></param>
-    /// <param name="commit"></param>
-    /// <param name="mailmap"></param>
-    /// <returns></returns>
+    /// <param name="signature_out">A pointer to store the resolved signature</param>
+    /// <param name="commit">A previously loaded commit</param>
+    /// <param name="mailmap">The mailmap to resolve with. (may be NULL)</param>
+    /// <returns>0 on success, or an error code</returns>
+    /// <remarks>
+    /// Call <see cref="git_signature_free"/> to free the signature.
+    /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_commit_author_with_mailmap(Native.GitSignature** signature_out, Git2.Commit* commit, Git2.MailMap* mailmap);
 
     /// <summary>
-    /// 
+    /// Get the long "body" of the git commit message
     /// </summary>
-    /// <param name="commit"></param>
-    /// <returns></returns>
+    /// <param name="commit">A previously loaded commit</param>
+    /// <returns>The body of a commit or NULL when no the message only consists of a summary</returns>
+    /// <remarks>
+    /// The returned message is the body of the commit, comprising everything but the first paragraph of the message.
+    /// Leading and trailing whitespaces are trimmed.
+    /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial byte* git_commit_body(Git2.Commit* commit);
 
     /// <summary>
-    /// 
+    /// Get the committer of a commit
     /// </summary>
-    /// <param name="commit"></param>
-    /// <returns></returns>
+    /// <param name="commit">A previously loaded commit</param>
+    /// <returns>The committer of the commit</returns>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial Native.GitSignature* git_commit_committer(Git2.Commit* commit);
 
     /// <summary>
-    /// 
+    /// Get the committer of a commit, using the mailmap to map names and email addresses to canonical real names and email addresses.
     /// </summary>
-    /// <param name="signature_out"></param>
-    /// <param name="commit"></param>
-    /// <param name="mailmap"></param>
-    /// <returns></returns>
+    /// <param name="signature_out">A pointer to store the resolved signature</param>
+    /// <param name="commit">A previously loaded commit</param>
+    /// <param name="mailmap">The mailmap to resolve with. (may be NULL)</param>
+    /// <returns>0 on success, or an error code</returns>
+    /// <remarks>
+    /// Call <see cref="git_signature_free"/> to free the signature.
+    /// </remarks>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_commit_committer_with_mailmap(Native.GitSignature** signature_out, Git2.Commit* commit, Git2.MailMap* mailmap);
 
     /// <summary>
-    /// 
+    /// Create new commit in the repository
     /// </summary>
-    /// <param name="id"></param>
-    /// <param name="repository"></param>
-    /// <param name="update_ref"></param>
-    /// <param name="author"></param>
-    /// <param name="committer"></param>
-    /// <param name="message_encoding"></param>
-    /// <param name="message"></param>
-    /// <param name="tree"></param>
-    /// <param name="parent_count"></param>
-    /// <param name="parents"></param>
-    /// <returns></returns>
+    /// <param name="id">Pointer in which to store the OID of the newly created commit</param>
+    /// <param name="repository">Repository where to store the commit</param>
+    /// <param name="update_ref">
+    /// If not NULL, name of the reference that will be updated to point to this commit.
+    /// If the reference is not direct, it will be resolved to a direct reference.
+    /// Use "HEAD" to update the HEAD of the current branch and make it point to this commit.
+    /// If the reference doesn't exist yet, it will be created.
+    /// If it does exist, the first parent must be the tip of this branch.
+    /// </param>
+    /// <param name="author">Signature with author and author time of commit</param>
+    /// <param name="committer">Signature with committer and * commit time of commit</param>
+    /// <param name="message_encoding">
+    /// The encoding for the message in the commit, represented with a standard encoding name.
+    /// E.g. "UTF-8". If NULL, no encoding header is written and UTF-8 is assumed.
+    /// </param>
+    /// <param name="message">Full message for this commit</param>
+    /// <param name="tree">
+    /// An instance of a `git_tree` object that will be used as the tree for the commit.
+    /// This tree object must also be owned by the given <paramref name="repository"/>.
+    /// </param>
+    /// <param name="parent_count">Number of parents for this commit</param>
+    /// <param name="parents">
+    /// Array of `parent_count` pointers to `git_commit` objects that will be used as the parents for this commit.
+    /// This array may be NULL if `parent_count` is 0 (root commit).
+    /// All the given commits must be owned by the `repo`.
+    /// </param>
+    /// <returns>0 on success, or an error code</returns>
+    /// <remarks>
+    /// The created commit will be written to the Object Database and the given reference will be updated to point to it.
+    /// <br/><br/>
+    /// The message will not be cleaned up automatically. You can do that with the <see cref="git_message_prettify"/> function.
+    /// </remarks>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_commit_create(
@@ -1793,39 +1903,178 @@ public static unsafe partial class NativeApi
         string update_ref,
         Native.GitSignature* author,
         Native.GitSignature* committer,
-        byte* message_encoding,
+        string? message_encoding,
         byte* message,
         Git2.Tree* tree,
         nuint parent_count,
         Git2.Commit** parents);
 
     /// <summary>
-    /// 
+    /// Create new commit in the repository
     /// </summary>
-    /// <param name="buffer"></param>
-    /// <param name="repository"></param>
-    /// <param name="update_ref"></param>
-    /// <param name="author"></param>
-    /// <param name="committer"></param>
-    /// <param name="message_encoding"></param>
-    /// <param name="message"></param>
-    /// <param name="tree"></param>
-    /// <param name="parent_count"></param>
-    /// <param name="parents"></param>
-    /// <returns></returns>
+    /// <param name="id">Pointer in which to store the OID of the newly created commit</param>
+    /// <param name="repository">Repository where to store the commit</param>
+    /// <param name="update_ref">
+    /// If not NULL, name of the reference that will be updated to point to this commit.
+    /// If the reference is not direct, it will be resolved to a direct reference.
+    /// Use "HEAD" to update the HEAD of the current branch and make it point to this commit.
+    /// If the reference doesn't exist yet, it will be created.
+    /// If it does exist, the first parent must be the tip of this branch.
+    /// </param>
+    /// <param name="author">Signature with author and author time of commit</param>
+    /// <param name="committer">Signature with committer and * commit time of commit</param>
+    /// <param name="message_encoding">
+    /// The encoding for the message in the commit, represented with a standard encoding name.
+    /// E.g. "UTF-8". If NULL, no encoding header is written and UTF-8 is assumed.
+    /// </param>
+    /// <param name="message">Full message for this commit</param>
+    /// <param name="tree">
+    /// An instance of a `git_tree` object that will be used as the tree for the commit.
+    /// This tree object must also be owned by the given <paramref name="repository"/>.
+    /// </param>
+    /// <param name="parent_count">Number of parents for this commit</param>
+    /// <param name="parents">
+    /// Array of `parent_count` pointers to `git_commit` objects that will be used as the parents for this commit.
+    /// This array may be NULL if `parent_count` is 0 (root commit).
+    /// All the given commits must be owned by the `repo`.
+    /// </param>
+    /// <returns>0 on success, or an error code</returns>
+    /// <remarks>
+    /// The created commit will be written to the Object Database and the given reference will be updated to point to it.
+    /// <br/><br/>
+    /// The message will not be cleaned up automatically. You can do that with the <see cref="git_message_prettify"/> function.
+    /// </remarks>
+    /// <exception cref="NotSupportedException"/>
+    public static GitError git_commit_create(
+        GitObjectID* id,
+        Git2.Repository* repository,
+        string? update_ref,
+        Native.GitSignature* author,
+        Native.GitSignature* committer,
+        Encoding? message_encoding,
+        string message,
+        Git2.Tree* tree,
+        nuint parent_count,
+        Git2.Commit** parents)
+    {
+        if (message_encoding is not null && message_encoding.GetByteCount("\0") != 1)
+            throw new NotSupportedException("Multibyte encodings are not supported! (i.e. encodings who's code unit is more than 1 byte wide)");
+
+        var effectiveEncoding = message_encoding ?? Encoding.UTF8;
+
+        var array = ArrayPool<byte>.Shared.Rent(effectiveEncoding.GetMaxByteCount(message.Length + 1));
+        try
+        {
+            var written = effectiveEncoding.GetBytes(message, array);
+            array[written] = 0;
+
+            fixed (byte* pMessage = array)
+            {
+                return git_commit_create(id, repository, update_ref, author, committer, message_encoding?.WebName, pMessage, tree, parent_count, parents);
+            }
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(array);
+        }
+    }
+
+    /// <summary>
+    /// Create a commit and write it into a buffer
+    /// </summary>
+    /// <param name="buffer">The buffer into which to write the commit object content</param>
+    /// <param name="repository">The repository where the referenced tree and parents live</param>
+    /// <param name="author">Signature with author and author time of the commit</param>
+    /// <param name="committer">Signature with committer and commit time of the commit</param>
+    /// <param name="message_encoding">
+    /// The encoding for the message in the commit, represented with a standard encoding name.
+    /// E.g. "UTF-8". If NULL, no encoding header is written and UTF-8 is assumed.
+    /// </param>
+    /// <param name="message">Full message for this commit</param>
+    /// <param name="tree">
+    /// An instance of a `git_tree` object that will be used as the tree for the commit.
+    /// This tree object must also be owned by the given <paramref name="repository"/>.
+    /// </param>
+    /// <param name="parent_count">Number of parents for this commit</param>
+    /// <param name="parents">
+    /// Array of `parent_count` pointers to `git_commit` objects that will be used as the parents for this commit.
+    /// This array may be NULL if `parent_count` is 0 (root commit). All the given commits must be owned by the `repo`.
+    /// </param>
+    /// <returns>0 on success, or an error code</returns>
+    /// <remarks>
+    /// Create a commit as with <see cref="git_commit_create"/>, but instead of writing it to the objectdb, write the contents of the object into a buffer.
+    /// </remarks>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_commit_create_buffer(
         Native.GitBuffer* buffer,
         Git2.Repository* repository,
-        string update_ref,
         Native.GitSignature* author,
         Native.GitSignature* committer,
-        byte* message_encoding,
+        string? message_encoding,
         byte* message,
         Git2.Tree* tree,
         nuint parent_count,
         Git2.Commit** parents);
+
+    /// <summary>
+    /// Create a commit and write it into a buffer
+    /// </summary>
+    /// <param name="buffer">The buffer into which to write the commit object content</param>
+    /// <param name="repository">The repository where the referenced tree and parents live</param>
+    /// <param name="author">Signature with author and author time of the commit</param>
+    /// <param name="committer">Signature with committer and commit time of the commit</param>
+    /// <param name="message_encoding">
+    /// The encoding for the message in the commit, represented with a standard encoding name.
+    /// E.g. "UTF-8". If NULL, no encoding header is written and UTF-8 is assumed.
+    /// </param>
+    /// <param name="message">Full message for this commit</param>
+    /// <param name="tree">
+    /// An instance of a `git_tree` object that will be used as the tree for the commit.
+    /// This tree object must also be owned by the given <paramref name="repository"/>.
+    /// </param>
+    /// <param name="parent_count">Number of parents for this commit</param>
+    /// <param name="parents">
+    /// Array of `parent_count` pointers to `git_commit` objects that will be used as the parents for this commit.
+    /// This array may be NULL if `parent_count` is 0 (root commit). All the given commits must be owned by the `repo`.
+    /// </param>
+    /// <returns>0 on success, or an error code</returns>
+    /// <remarks>
+    /// Create a commit as with <see cref="git_commit_create"/>, but instead of writing it to the objectdb, write the contents of the object into a buffer.
+    /// </remarks>
+    /// <exception cref="NotSupportedException"/>
+    public static GitError git_commit_create_buffer(
+        Native.GitBuffer* buffer,
+        Git2.Repository* repository,
+        Native.GitSignature* author,
+        Native.GitSignature* committer,
+        Encoding? message_encoding,
+        string message,
+        Git2.Tree* tree,
+        nuint parent_count,
+        Git2.Commit** parents)
+    {
+        if (message_encoding is not null && message_encoding.GetByteCount("\0") != 1)
+            throw new NotSupportedException("Message Encoding not supported!");
+
+        var effectiveEncoding = message_encoding ?? Encoding.UTF8;
+
+        var array = ArrayPool<byte>.Shared.Rent(checked(effectiveEncoding.GetByteCount(message) + 1));
+        try
+        {
+            var written = effectiveEncoding.GetBytes(message, array);
+            array[written] = 0;
+
+            fixed (byte* pMessage = array)
+            {
+                return git_commit_create_buffer(buffer, repository, author, committer, message_encoding?.WebName, pMessage, tree, parent_count, parents);
+            }
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(array);
+        }
+    }
 
     /// <summary>
     /// 
@@ -1841,9 +2090,9 @@ public static unsafe partial class NativeApi
     public static partial GitError git_commit_create_with_signature(
         GitObjectID* id,
         Git2.Repository* repository,
-        string commit_content,
-        string signature,
-        string signature_field);
+        byte* commit_content,
+        byte* signature,
+        string? signature_field);
 
     /// <summary>
     /// 
@@ -1871,7 +2120,7 @@ public static unsafe partial class NativeApi
         Native.GitBuffer* signed_data,
         Git2.Repository* repository,
         GitObjectID* commit_id,
-        string field);
+        string? field);
 
     /// <summary>
     /// 
