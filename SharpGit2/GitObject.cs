@@ -88,14 +88,20 @@ public unsafe readonly struct GitObject : IDisposable
         return result != 0;
     }
 
-    //TODO: We don't like this
-    //public GitBuffer ShortID()
-    //{
-    //    GitBuffer result;
-    //    Git2.ThrowIfError(git_object_short_id(&result, this.NativeHandle));
+    public string GetShortID()
+    {
+        GitBuffer result;
+        Git2.ThrowIfError(git_object_short_id(&result, this.NativeHandle));
 
-    //    return result;
-    //}
+        try
+        {
+            return result.AsString();
+        }
+        finally
+        {
+            git_buf_dispose(&result);
+        }
+    }
 }
 
 public static class GitObjectTypeExtensions
