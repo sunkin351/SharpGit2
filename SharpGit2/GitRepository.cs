@@ -2004,6 +2004,80 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
 
     #endregion
 
+    #region Worktree
+    public GitWorkTree AddWorktree(string name, string path, in GitWorktreeAddOptions options)
+    {
+        Git2.Worktree* result = null;
+        GitError error;
+
+        Native.GitWorktreeAddOptions _options = default;
+        List<GCHandle> gchandles = [];
+        try
+        {
+            _options.FromManaged(in options, gchandles);
+
+            error = git_worktree_add(&result, this.NativeHandle, name, path, &_options);
+        }
+        finally
+        {
+            foreach (var handle in gchandles)
+            {
+                handle.Free();
+            }
+
+            _options.Free();
+        }
+
+        Git2.ThrowIfError(error);
+
+        return new(result);
+    }
+
+    public string[] GetWorktreeList()
+    {
+        Native.GitStringArray _strings = default;
+
+        Git2.ThrowIfError(git_worktree_list(&_strings, this.NativeHandle));
+
+        try
+        {
+            return _strings.ToManaged();
+        }
+        finally
+        {
+            git_strarray_dispose(&_strings);
+        }
+    }
+
+    public GitWorkTree GetWorktree(string name)
+    {
+        Git2.Worktree* result = null;
+
+        Git2.ThrowIfError(git_worktree_lookup(&result, this.NativeHandle, name));
+
+        return new(result);
+    }
+
+    public bool TryGetWorktree(string name, out GitWorkTree worktree)
+    {
+        Git2.Worktree* result = null;
+
+        var error = git_worktree_lookup(&result, this.NativeHandle, name);
+
+        switch (error)
+        {
+            case GitError.OK:
+                worktree = new(result);
+                return true;
+            case GitError.NotFound:
+                worktree = default;
+                return false;
+            default:
+                throw Git2.ExceptionForError(error);
+        }
+    }
+    #endregion
+
     /// <summary>
     /// Remove all the metadata associated with an ongoing command like merge, revert, cherry-pick, etc. For example: MERGE_HEAD, MERGE_MSG, etc.
     /// </summary>

@@ -10386,7 +10386,7 @@ public static unsafe partial class NativeApi
     /// <returns></returns>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    public static partial GitError git_worktree_is_locked(Native.GitBuffer* reason, Git2.Worktree* worktree);
+    public static partial int git_worktree_is_locked(Native.GitBuffer* reason, Git2.Worktree* worktree);
 
     /// <summary>
     /// 
@@ -10396,7 +10396,7 @@ public static unsafe partial class NativeApi
     /// <returns></returns>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    public static partial GitError git_worktree_is_prunable(
+    public static partial int git_worktree_is_prunable(
         Git2.Worktree* worktree,
         Native.GitWorktreePruneOptions* options);
 
@@ -10487,7 +10487,7 @@ public static unsafe partial class NativeApi
     /// <returns></returns>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    public static partial GitError git_worktree_unlock(Git2.Worktree* worktree);
+    public static partial int git_worktree_unlock(Git2.Worktree* worktree);
 
     /// <summary>
     /// 
