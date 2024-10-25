@@ -1000,6 +1000,36 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
 
     #endregion
 
+    #region Describe
+    public GitDescribeResult DescribeWorkingDirectory(in GitDescribeOptions options)
+    {
+        Git2.DescribeResult* result = null;
+        GitError error;
+
+        Native.GitDescribeOptions _options = default;
+        List<GCHandle> gchandles = [];
+        try
+        {
+            _options.FromManaged(in options, gchandles);
+
+            error = git_describe_workdir(&result, this.NativeHandle, &_options);
+        }
+        finally
+        {
+            foreach (var handle in gchandles)
+            {
+                handle.Free();
+            }
+
+            _options.Free();
+        }
+
+        Git2.ThrowIfError(error);
+
+        return new(result);
+    }
+    #endregion
+
     #region Diff
     public GitDiff GetDiff(GitTree oldTree, GitTree newTree, in GitDiffOptions options)
     {
