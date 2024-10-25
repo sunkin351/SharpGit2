@@ -1518,8 +1518,21 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
         return new(result);
     }
 
+    /// <summary>
+    /// Looks up a reference from the repository
+    /// </summary>
+    /// <param name="name">Name of the reference object</param>
+    /// <param name="reference">The returned reference handle</param>
+    /// <returns>true if successful, false if not or if the reference name is malformed</returns>
+    /// <exception cref="Git2Exception"/>
     public bool TryGetReference(string name, out GitReference reference)
     {
+        if (string.IsNullOrEmpty(name))
+        {
+            reference = default;
+            return false;
+        }
+
         Git2.Reference* result;
         var error = git_reference_lookup(&result, this.NativeHandle, name);
 
@@ -1712,39 +1725,6 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
     public void RemoveReference(string name)
     {
         Git2.ThrowIfError(git_reference_remove(this.NativeHandle, name));
-    }
-
-    /// <summary>
-    /// Looks up a reference from the repository
-    /// </summary>
-    /// <param name="name">Name of the reference object</param>
-    /// <param name="reference">The returned reference handle</param>
-    /// <returns>true if successful, false if not or if the reference name is malformed</returns>
-    /// <exception cref="Git2Exception"/>
-    /// <exception cref="ArgumentNullException"/>
-    public bool TryLookupReference(string name, out GitReference reference)
-    {
-        if (string.IsNullOrEmpty(name))
-        {
-            reference = default;
-            return false;
-        }
-
-        Git2.Reference* refPtr;
-        var result = git_reference_lookup(&refPtr, this.NativeHandle, name);
-
-        switch (result)
-        {
-            case GitError.OK:
-                reference = new(refPtr);
-                return true;
-            case GitError.NotFound:
-            case GitError.InvalidSpec:
-                reference = default;
-                return false;
-            default:
-                throw Git2.ExceptionForError(result);
-        }
     }
 
     public bool TryGetReferenceByShorthand(string shorthand, out GitReference reference)
