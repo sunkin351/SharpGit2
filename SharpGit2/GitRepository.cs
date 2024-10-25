@@ -2086,6 +2086,15 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
                 throw Git2.ExceptionForError(error);
         }
     }
+
+    public GitReference GetHeadForWorktree(string worktreeName)
+    {
+        Git2.Reference* result = null;
+
+        Git2.ThrowIfError(git_repository_head_for_worktree(&result, this.NativeHandle, worktreeName));
+
+        return new(result);
+    }
     #endregion
 
     /// <summary>

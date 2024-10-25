@@ -8177,6 +8177,17 @@ public static unsafe partial class NativeApi
     public static partial int git_repository_head_detached_for_worktree(Git2.Repository* repository, string worktreeName);
 
     /// <summary>
+    /// Retrieve the referenced HEAD for the worktree
+    /// </summary>
+    /// <param name="reference_out">Pointer to the reference which will be retrieved</param>
+    /// <param name="repository">A repository object</param>
+    /// <param name="worktreeName">Name of the worktree to retrieve HEAD for</param>
+    /// <returns>0 on success, otherwise an error code</returns>
+    [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    public static partial GitError git_repository_head_for_worktree(Git2.Reference** reference_out, Git2.Repository* repository, string worktreeName);
+
+    /// <summary>
     /// Check if the current branch is unborn
     /// </summary>
     /// <param name="repository">Repo to test</param>
