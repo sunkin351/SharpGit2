@@ -1,4 +1,6 @@
-﻿namespace SharpGit2
+﻿using System.Runtime.InteropServices.Marshalling;
+
+namespace SharpGit2
 {
     public unsafe struct GitRemoteHead
     {
@@ -7,6 +9,15 @@
         public GitObjectID LOID;
         public string Name;
         public string SymRefTarget;
+
+        public GitRemoteHead(in Native.GitRemoteHead native)
+        {
+            Local = native.Local != 0;
+            OID = native.OID;
+            LOID = native.LOID;
+            Name = Utf8StringMarshaller.ConvertToManaged(native.Name)!;
+            SymRefTarget = Utf8StringMarshaller.ConvertToManaged(native.SymRefTarget)!;
+        }
     }
 }
 
