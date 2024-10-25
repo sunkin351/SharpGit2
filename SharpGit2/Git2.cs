@@ -7,6 +7,8 @@ using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.Marshalling;
 using System.Text;
 
+using static SharpGit2.NativeApi;
+
 [assembly: InternalsVisibleTo("SharpGit2.Tests")]
 [assembly: DisableRuntimeMarshalling]
 
@@ -113,6 +115,44 @@ public static unsafe partial class Git2
             ThrowError((GitError)code, callerName);
 
         return code != 0;
+    }
+
+    public static GitDescribeResult DescribeCommit(this GitObject committish, in GitDescribeOptions options)
+    {
+        DescribeResult* result = null;
+        GitError error;
+
+        Native.GitDescribeOptions _options = default;
+        List<GCHandle> gchandles = [];
+        try
+        {
+            _options.FromManaged(in options, gchandles);
+
+            error = git_describe_commit(&result, committish.NativeHandle, &_options);
+        }
+        finally
+        {
+            foreach (var handle in gchandles)
+            {
+                handle.Free();
+            }
+
+            _options.Free();
+        }
+
+        ThrowIfError(error);
+
+        return new(result);
+    }
+
+    public static GitDescribeResult DescribeCommit(this GitCommit commit, in GitDescribeOptions options)
+    {
+        return ((GitObject)commit).DescribeCommit(in options);
+    }
+
+    public static GitDescribeResult DescribeCommit(this GitTag tag, in GitDescribeOptions options)
+    {
+        return ((GitObject)tag).DescribeCommit(in options);
     }
 
     /// <summary>
