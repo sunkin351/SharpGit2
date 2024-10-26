@@ -7656,7 +7656,7 @@ public static unsafe partial class NativeApi
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial GitError git_remote_fetch(
         Git2.Remote* remote,
-        [MarshalUsing(typeof(StringArrayMarshaller))] string[] refspecs,
+        [MarshalUsing(typeof(StringArrayMarshaller))] string[]? refspecs,
         Native.GitFetchOptions* options,
         string? reflog_message);
 
@@ -7720,7 +7720,7 @@ public static unsafe partial class NativeApi
     /// <returns></returns>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    public static partial GitError git_remote_list(Native.GitStringArray* list_out, Git2.Remote* remote);
+    public static partial GitError git_remote_list(Native.GitStringArray* list_out, Git2.Repository* repository);
 
     /// <summary>
     /// 
@@ -7803,9 +7803,9 @@ public static unsafe partial class NativeApi
     /// <returns></returns>
     [LibraryImport(Git2.LibraryName)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    public static partial int git_remote_push(
+    public static partial GitError git_remote_push(
         Git2.Remote* remote,
-        [MarshalUsing(typeof(StringArrayMarshaller))] string[] refspecs,
+        [MarshalUsing(typeof(StringArrayMarshaller))] string[]? refspecs,
         Native.GitPushOptions* options);
 
     /// <summary>

@@ -1923,6 +1923,115 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
 
     #endregion
 
+    #region Remote
+    public GitRemote CreateRemote(string name, string url)
+    {
+        Git2.Remote* result = null;
+
+        Git2.ThrowIfError(git_remote_create(&result, this.NativeHandle, name, url));
+
+        return new(result);
+    }
+
+    public GitRemote CreateAnonymousRemote(string url)
+    {
+        Git2.Remote* result = null;
+
+        Git2.ThrowIfError(git_remote_create_anonymous(&result, this.NativeHandle, url));
+
+        return new(result);
+    }
+
+    public GitRemote CreateRemote(string name, string url, string fetchspec)
+    {
+        Git2.Remote* result = null;
+
+        Git2.ThrowIfError(git_remote_create_with_fetchspec(&result, this.NativeHandle, name, url, fetchspec));
+
+        return new(result);
+    }
+
+    public void DeleteRemote(string name)
+    {
+        Git2.ThrowIfError(git_remote_delete(this.NativeHandle, name));
+    }
+
+    public string[] GetRemoteList()
+    {
+        Native.GitStringArray array = default;
+
+        Git2.ThrowIfError(git_remote_list(&array, this.NativeHandle));
+
+        try
+        {
+            return array.ToManaged();
+        }
+        finally
+        {
+            git_strarray_dispose(&array);
+        }
+    }
+
+    public GitRemote GetRemote(string name)
+    {
+        Git2.Remote* result = null;
+
+        Git2.ThrowIfError(git_remote_lookup(&result, this.NativeHandle, name));
+
+        return new(result);
+    }
+
+    public bool TryGetRemote(string name, out GitRemote remote)
+    {
+        Git2.Remote* result = null;
+
+        var error = git_remote_lookup(&result, this.NativeHandle, name);
+
+        switch (error)
+        {
+            case GitError.OK:
+                remote = new(result);
+                return true;
+            case GitError.NotFound:
+                remote = default;
+                return false;
+            default:
+                throw Git2.ExceptionForError(error);
+        }
+    }
+
+    public void RenameRemote(string current_name, string new_name, out string[] problemRefspecs)
+    {
+        Native.GitStringArray problems = default;
+
+        Git2.ThrowIfError(git_remote_rename(&problems, this.NativeHandle, current_name, new_name));
+
+        try
+        {
+            problemRefspecs = problems.ToManaged();
+        }
+        finally
+        {
+            git_strarray_dispose(&problems);
+        }
+    }
+
+    public void SetRemoteAutotag(string remote_name, GitRemoteAutoTagOption value)
+    {
+        Git2.ThrowIfError(git_remote_set_autotag(this.NativeHandle, remote_name, value));
+    }
+
+    public void SetRemotePushUrl(string remote_name, string remote_pushurl)
+    {
+        Git2.ThrowIfError(git_remote_set_pushurl(this.NativeHandle, remote_name, remote_pushurl));
+    }
+
+    public void SetRemoteUrl(string remote_name, string remote_url)
+    {
+        Git2.ThrowIfError(git_remote_set_pushurl(this.NativeHandle, remote_name, remote_url));
+    }
+    #endregion
+
     #region Signature
     public GitSignature DefaultSignature()
     {

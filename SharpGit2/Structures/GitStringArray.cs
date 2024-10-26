@@ -12,6 +12,9 @@ public unsafe struct GitStringArray(byte** strings, nuint count)
         int count = checked((int)Count);
         byte** ptr = Strings;
 
+        if (count == 0 || ptr == null)
+            return [];
+
         var managedArray = new string[count];
 
         for (int i = 0; i < count; ++i)
