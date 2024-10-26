@@ -128,4 +128,13 @@ public unsafe readonly struct GitWorkTree(Git2.Worktree* handle) : IDisposable
     {
         Git2.ThrowIfError(git_worktree_validate(this.NativeHandle));
     }
+
+    public GitRepository OpenAsRepository()
+    {
+        Git2.Repository* result = null;
+
+        Git2.ThrowIfError(git_repository_open_from_worktree(&result, this.NativeHandle));
+
+        return new(result);
+    }
 }
