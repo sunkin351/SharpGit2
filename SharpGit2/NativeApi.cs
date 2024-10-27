@@ -2967,7 +2967,7 @@ public static unsafe partial class NativeApi
     /// <returns></returns>
     [LibraryImport(Git2.LibraryName, StringMarshalling = StringMarshalling.Utf8)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    public static partial GitError git_credential_ssh_custom_new(
+    public static partial GitError git_credential_ssh_interactive_new(
         Git2.Credential** credential_out,
         string username,
         delegate* unmanaged[Cdecl]<byte*, int, byte*, int, int, void*, void*, void**, void> prompt_callback,
