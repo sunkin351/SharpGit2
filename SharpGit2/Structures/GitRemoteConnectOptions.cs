@@ -7,9 +7,13 @@ namespace SharpGit2
     public unsafe struct GitRemoteConnectOptions
     {
         public IGitRemoteCallbacks? Callbacks;
-        public GitProxyOptions ProxyOptions;
+        public GitProxyOptions ProxyOptions = new();
         public GitRemoteRedirectType FollowRedirects;
-        public string[] CustomHeaders;
+        public string[]? CustomHeaders;
+
+        public GitRemoteConnectOptions()
+        {
+        }
     }
 }
 

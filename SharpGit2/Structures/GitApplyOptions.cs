@@ -3,11 +3,20 @@ using System.Runtime.InteropServices;
 
 namespace SharpGit2
 {
+    /// <summary>
+    /// Apply options structure
+    /// </summary>
     public struct GitApplyOptions
     {
         public ICallbacks Callbacks;
+        /// <summary>
+        /// Behavioral flags for the Apply operation
+        /// </summary>
         public GitApplyFlags Flags;
 
+        /// <summary>
+        /// Callbacks interface 
+        /// </summary>
         public interface ICallbacks
         {
             int OnDelta(in GitDiffDelta delta);
@@ -18,14 +27,35 @@ namespace SharpGit2
 
 namespace SharpGit2.Native
 {
+    /// <summary>
+    /// Apply options structure
+    /// </summary>
     public unsafe struct GitApplyOptions
     {
+        /// <summary>
+        /// The struct version
+        /// </summary>
         public uint Version;
+        /// <summary>
+        /// When applying a patch, callback that will be made per delta (file).
+        /// </summary>
         public delegate* unmanaged[Cdecl]<GitDiffDelta*, nint, int> DeltaCallback;
+        /// <summary>
+        /// When applying a patch, callback that will be made per hunk.
+        /// </summary>
         public delegate* unmanaged[Cdecl]<GitDiffHunk*, nint, int> HunkCallback;
+        /// <summary>
+        /// Payload passed to both delta_cb and hunk_cb.
+        /// </summary>
         public nint Payload;
+        /// <summary>
+        /// Behavioral flags for the Apply operation
+        /// </summary>
         public GitApplyFlags Flags;
 
+        /// <summary>
+        /// Initialize the structure to it's default values
+        /// </summary>
         public GitApplyOptions()
         {
             Version = 1;
@@ -49,7 +79,7 @@ namespace SharpGit2.Native
         }
 
         /// <summary>
-        /// Free unmanaged resources allocated by <see cref="FromManaged"/>
+        /// Free any unmanaged/native resources allocated by <see cref="FromManaged(in SharpGit2.GitApplyOptions, List{GCHandle})"/>
         /// </summary>
         public void Free()
         {
@@ -68,7 +98,7 @@ namespace SharpGit2.Native
             }
             catch (Exception e)
             {
-                NativeApi.git_error_set_str(GitErrorClass.Callback, e.Message);
+                GitNativeApi.git_error_set_str(GitErrorClass.Callback, e.Message);
                 return -1;
             }
         }
@@ -86,7 +116,7 @@ namespace SharpGit2.Native
             }
             catch (Exception e)
             {
-                NativeApi.git_error_set_str(GitErrorClass.Callback, e.Message);
+                GitNativeApi.git_error_set_str(GitErrorClass.Callback, e.Message);
                 return -1;
             }
         }

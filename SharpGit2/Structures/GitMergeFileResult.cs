@@ -2,11 +2,10 @@
 {
     public unsafe struct GitMergeFileResult
     {
-        public uint AutoMergeable;
+        public bool AutoMergeable;
         public string Path;
         public uint Mode;
-        public byte* FileContent;
-        public nuint ContentLength;
+        public byte[] FileContent;
     }
 }
 

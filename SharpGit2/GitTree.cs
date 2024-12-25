@@ -2,36 +2,68 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
-using System.Runtime.InteropServices.Marshalling;
+
+using static SharpGit2.GitNativeApi;
 
 namespace SharpGit2;
 
-public unsafe readonly struct GitTree : IDisposable
+public unsafe readonly struct GitTree(Git2.Tree* nativeHandle) : IGitHandle, IGitObject<GitTree>
 {
-    internal readonly Git2.Tree* NativeHandle;
+    public Git2.Tree* NativeHandle { get; } = nativeHandle;
 
-    internal GitTree(Git2.Tree* nativeHandle)
-    {
-        NativeHandle = nativeHandle;
-    }
-
-    public GitRepository Owner => new(NativeApi.git_tree_owner(NativeHandle));
-
-    public ref readonly GitObjectID Id => ref *NativeApi.git_tree_id(NativeHandle);
-
-    public nuint NativeEntryCount => NativeApi.git_tree_entrycount(NativeHandle);
-
-    public int EntryCount => checked((int)this.NativeEntryCount);
+    public bool IsNull => this.NativeHandle == null;
 
     public void Dispose()
     {
-        throw new NotImplementedException();
+        git_tree_free(this.NativeHandle);
+    }
+
+    public GitRepository Owner
+    {
+        get
+        {
+            var handle = this.ThrowIfNull();
+
+            return new(git_tree_owner(handle.NativeHandle));
+        }
+    }
+
+    public ref readonly GitObjectID Id
+    {
+        get
+        {
+            var handle = this.ThrowIfNull();
+
+            return ref *git_tree_id(handle.NativeHandle);
+        }
+    }
+
+    public nuint NativeEntryCount
+    {
+        get
+        {
+            var handle = this.ThrowIfNull();
+
+            return git_tree_entrycount(handle.NativeHandle);
+        }
+    }
+
+    public int EntryCount
+    {
+        get
+        {
+            var handle = this.ThrowIfNull();
+
+            return checked((int)handle.NativeEntryCount);
+        }
     }
 
     public GitTree Duplicate()
     {
-        Git2.Tree* tree;
-        Git2.ThrowIfError(NativeApi.git_tree_dup(&tree, NativeHandle));
+        var handle = this.ThrowIfNull();
+
+        Git2.Tree* tree = null;
+        Git2.ThrowIfError(git_tree_dup(&tree, handle.NativeHandle));
 
         return new(tree);
     }
@@ -47,10 +79,12 @@ public unsafe readonly struct GitTree : IDisposable
     /// </remarks>
     public GitTreeEntry? GetEntryById(in GitObjectID id)
     {
-        Git2.TreeEntry* entry;
+        var handle = this.ThrowIfNull();
+
+        Git2.TreeEntry* entry = null;
         fixed (GitObjectID* pId = &id)
         {
-            entry = NativeApi.git_tree_entry_byid(NativeHandle, pId);
+            entry = git_tree_entry_byid(handle.NativeHandle, pId);
         }
 
         return entry is null ? null : new(entry);
@@ -60,7 +94,7 @@ public unsafe readonly struct GitTree : IDisposable
     {
         ArgumentOutOfRangeException.ThrowIfNegative(index);
 
-        return GetEntryByIndex((nuint)index);
+        return this.GetEntryByIndex((nuint)index);
     }
 
     /// <summary>
@@ -70,22 +104,38 @@ public unsafe readonly struct GitTree : IDisposable
     /// <returns></returns>
     public GitTreeEntry? GetEntryByIndex(nuint index)
     {
-        var entry = NativeApi.git_tree_entry_byindex(NativeHandle, index);
+        var handle = this.ThrowIfNull();
+
+        var entry = git_tree_entry_byindex(handle.NativeHandle, index);
 
         return entry is null ? null : new(entry);
     }
 
     public GitTreeEntry? GetEntryByName(string filename)
     {
-        var entry = NativeApi.git_tree_entry_byname(NativeHandle, filename);
+        var handle = this.ThrowIfNull();
+
+        var entry = git_tree_entry_byname(handle.NativeHandle, filename);
 
         return entry is null ? null : new(entry);
     }
 
+    public GitTreeEntry GetEntryByPath(string path)
+    {
+        var handle = this.ThrowIfNull();
+
+        Git2.TreeEntry* tmp = null;
+        Git2.ThrowIfError(git_tree_entry_bypath(&tmp, handle.NativeHandle, path));
+
+        return new(tmp);
+    }
+
     public bool TryGetEntryByPath(string path, out GitTreeEntry entry)
     {
-        Git2.TreeEntry* tmp;
-        var error = NativeApi.git_tree_entry_bypath(&tmp, NativeHandle, path);
+        var handle = this.ThrowIfNull();
+
+        Git2.TreeEntry* tmp = null;
+        var error = git_tree_entry_bypath(&tmp, handle.NativeHandle, path);
 
         switch (error)
         {
@@ -100,22 +150,76 @@ public unsafe readonly struct GitTree : IDisposable
         }
     }
 
+    public GitObject GetObjectByPath(string path, GitObjectType type)
+    {
+        var handle = this.ThrowIfNull();
+
+        Git2.Object* result = null;
+        Git2.ThrowIfError(git_object_lookup_bypath(&result, (Git2.Object*)handle.NativeHandle, path, type));
+
+        return new(result);
+    }
+
+    public TObject GetObjectByPath<TObject>(string path)
+        where TObject : struct, IGitHandle, IGitObject<TObject>
+    {
+        var handle = this.ThrowIfNull();
+
+        Git2.Object* result = null;
+        Git2.ThrowIfError(git_object_lookup_bypath(&result, (Git2.Object*)handle.NativeHandle, path, TObject.ObjectType));
+
+        return TObject.FromObjectPointer(result);
+    }
+
+    public bool TryGetObjectByPath(string path, GitObjectType type, out GitObject obj)
+    {
+        var handle = this.ThrowIfNull();
+
+        Git2.Object* result = null;
+        var error = git_object_lookup_bypath(&result, (Git2.Object*)handle.NativeHandle, path, type);
+
+        switch (error)
+        {
+            case GitError.OK:
+                obj = new(result);
+                return true;
+            case GitError.NotFound:
+                obj = default;
+                return false;
+            default:
+                throw Git2.ExceptionForError(error);
+        }
+    }
+
+    public bool TryGetObjectByPath<TObject>(string path, out TObject obj)
+        where TObject : struct, IGitHandle, IGitObject<TObject>
+    {
+        var handle = this.ThrowIfNull();
+
+        Git2.Object* result = null;
+        var error = git_object_lookup_bypath(&result, (Git2.Object*)handle.NativeHandle, path, TObject.ObjectType);
+
+        switch (error)
+        {
+            case GitError.OK:
+                obj = TObject.FromObjectPointer(result);
+                return true;
+            case GitError.NotFound:
+                obj = default;
+                return false;
+            default:
+                throw Git2.ExceptionForError(error);
+        }
+    }
+
     public void WalkTree(GitTreeWalkMode mode, Func<string, GitTreeEntry, int> callback)
     {
+        var handle = this.ThrowIfNull();
+
         ArgumentNullException.ThrowIfNull(callback);
 
         var context = new Git2.CallbackContext<Func<string, GitTreeEntry, int>>() { Callback = callback };
-        var gcHandle = GCHandle.Alloc(context, GCHandleType.Normal);
-        GitError error;
-
-        try
-        {
-            error = NativeApi.git_tree_walk(NativeHandle, mode, &_Callback, (nint)gcHandle);
-        }
-        finally
-        {
-            gcHandle.Free();
-        }
+        GitError error = git_tree_walk(handle.NativeHandle, mode, &_Callback, (nint)(void*)&context);
 
         context.ExceptionInfo?.Throw();
         if (error is < 0 and not GitError.User)
@@ -126,11 +230,11 @@ public unsafe readonly struct GitTree : IDisposable
         [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
         static int _Callback(byte* pRoot, Git2.TreeEntry* pEntry, nint payload)
         {
-            var context = (Git2.CallbackContext<Func<string, GitTreeEntry, int>>)((GCHandle)payload).Target!;
+            ref var context = ref *(Git2.CallbackContext<Func<string, GitTreeEntry, int>>*)payload;
 
             try
             {
-                string root = Utf8StringMarshaller.ConvertToManaged(pRoot)!;
+                string root = Git2.GetPooledString(pRoot);
                 GitTreeEntry entry = new(pEntry);
 
                 var result = context.Callback(root, entry);
@@ -145,4 +249,25 @@ public unsafe readonly struct GitTree : IDisposable
             }
         }
     }
+
+    public static explicit operator GitTree(GitObject obj)
+    {
+        return obj.IsNull || obj.Type == GitObjectType.Tree
+            ? new GitTree((Git2.Tree*)obj.NativeHandle)
+            : throw new InvalidCastException("Git Object is not of type Tree!");
+    }
+
+    public static implicit operator GitObject(GitTree tree)
+    {
+        return new((Git2.Object*)tree.NativeHandle);
+    }
+
+    Git2.Object* IGitObject<GitTree>.NativeHandle => (Git2.Object*)this.NativeHandle;
+
+    static GitTree IGitObject<GitTree>.FromObjectPointer(Git2.Object* obj)
+    {
+        return new((Git2.Tree*)obj);
+    }
+
+    static GitObjectType IGitObject<GitTree>.ObjectType => GitObjectType.Tree;
 }

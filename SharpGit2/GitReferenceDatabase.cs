@@ -1,16 +1,16 @@
-﻿namespace SharpGit2;
+﻿using static SharpGit2.GitNativeApi;
 
-public unsafe readonly struct GitReferenceDatabase : IDisposable
+namespace SharpGit2;
+
+public unsafe readonly struct GitReferenceDatabase(Git2.ReferenceDatabase* handle) : IGitHandle
 {
-    internal readonly Git2.ReferenceDatabase* NativeHandle;
+    public Git2.ReferenceDatabase* NativeHandle { get; } = handle;
 
-    internal GitReferenceDatabase(Git2.ReferenceDatabase* handle)
-    {
-        NativeHandle = handle;
-    }
+    /// <inheritdoc/>
+    public bool IsNull => this.NativeHandle == null;
 
     public void Dispose()
     {
-        throw new NotImplementedException();
+        git_refdb_free(this.NativeHandle);
     }
 }

@@ -1,5 +1,8 @@
 ﻿namespace SharpGit2;
 
+/// <summary>
+/// Error values returned by native functions
+/// </summary>
 public enum GitError : int
 {
     /// <summary>

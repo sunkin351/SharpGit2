@@ -1,8 +1,7 @@
-﻿using System;
+﻿using System.Buffers;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
-using System.Runtime.Intrinsics;
 using System.Text;
 
 namespace SharpGit2.Native;
@@ -41,7 +40,7 @@ public unsafe struct GitBuffer
     
     public readonly bool ContainsNul()
     {
-        if (Size <= int.MaxValue)
+        if (Size <= 1024 * 512)
         {
             return new ReadOnlySpan<byte>(Pointer, (int)Size).Contains((byte)0);
         }
@@ -100,6 +99,30 @@ public unsafe struct GitBuffer
             }
 
             return false;
+        }
+    }
+
+    public readonly void CopyToBufferWriter(IBufferWriter<byte> writer)
+    {
+        byte* pointer = this.Pointer;
+        nuint length = this.Size;
+
+        while (length > 0)
+        {
+            // Let the buffer writer implementation choose the buffer size.
+            // May be inefficient for implementations like the standard
+            // System.Buffers.ArrayBufferWriter<T> or the
+            // CommunityToolkit.HighPerformance.Buffers.ArrayPoolBufferWriter<T> implementations
+            // of IBufferWriter<T>. (Because they resize their internal array's, copying data each time)
+            var span = writer.GetSpan();
+
+            int toCopy = (int)nuint.Min((nuint)span.Length, length);
+
+            new ReadOnlySpan<byte>(pointer, toCopy).CopyTo(span);
+
+            writer.Advance(toCopy);
+            pointer += toCopy;
+            length -= (nuint)toCopy;
         }
     }
 }

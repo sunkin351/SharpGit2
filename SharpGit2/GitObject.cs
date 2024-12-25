@@ -1,4 +1,8 @@
-﻿namespace SharpGit2;
+﻿using SharpGit2.Native;
+
+using static SharpGit2.GitNativeApi;
+
+namespace SharpGit2;
 
 public enum GitObjectType
 {
@@ -36,17 +40,127 @@ public enum GitObjectType
     REF_Delta = 7
 }
 
-public unsafe readonly struct GitObject : IDisposable
+/// <summary>
+/// Representation of a generic object in a repository
+/// </summary>
+/// <param name="nativeHandle">The native object pointer</param>
+public unsafe readonly struct GitObject(Git2.Object* nativeHandle) : IDisposable, IGitObject<GitObject>, IGitHandle
 {
-    internal readonly Git2.Object* NativeHandle;
+    /// <summary>
+    /// The native object pointer
+    /// </summary>
+    public Git2.Object* NativeHandle { get; } = nativeHandle;
 
-    internal GitObject(Git2.Object* nativeHandle)
-    {
-        NativeHandle = nativeHandle;
-    }
+    /// <inheritdoc/>
+    public bool IsNull => NativeHandle == null;
 
+    /// <summary>
+    /// Frees the native object
+    /// </summary>
+    /// <remarks>
+    /// Do not call more than once!!!
+    /// </remarks>
     public void Dispose()
     {
-        throw new NotImplementedException();
+        git_object_free(this.NativeHandle);
+    }
+
+    /// <summary>
+    /// The type of this object
+    /// </summary>
+    public GitObjectType Type
+    {
+        get
+        {
+            var handle = this.ThrowIfNull();
+
+            return git_object_type(handle.NativeHandle);
+        }
+    }
+
+    public ref readonly GitObjectID Id
+    {
+        get
+        {
+            var handle = this.ThrowIfNull();
+
+            return ref *git_object_id(handle.NativeHandle);
+        }
+    }
+
+    public GitRepository Owner
+    {
+        get
+        {
+            var handle = this.ThrowIfNull();
+
+            return new(git_object_owner(handle.NativeHandle));
+        }
+    }
+
+    public GitObject Duplicate()
+    {
+        var handle = this.ThrowIfNull();
+
+        Git2.Object* result = null;
+        Git2.ThrowIfError(git_object_dup(&result, handle.NativeHandle));
+
+        return new(result);
+    }
+
+    public GitObject Peel(GitObjectType type)
+    {
+        var handle = this.ThrowIfNull();
+
+        Git2.Object* result = null;
+        Git2.ThrowIfError(git_object_peel(&result, handle.NativeHandle, type));
+
+        return new(result);
+    }
+
+    public string GetShortID()
+    {
+        var handle = this.ThrowIfNull();
+
+        GitBuffer result;
+        Git2.ThrowIfError(git_object_short_id(&result, handle.NativeHandle));
+
+        try
+        {
+            return result.AsString();
+        }
+        finally
+        {
+            git_buf_dispose(&result);
+        }
+    }
+
+    public static bool IsRawContentValid(ReadOnlySpan<byte> buffer, GitObjectType type)
+    {
+        int result;
+
+        fixed (byte* _buffer = buffer)
+        {
+            Git2.ThrowIfError(git_object_rawcontent_is_valid(&result, _buffer, (nuint)buffer.Length, type));
+        }
+
+        return result != 0;
+    }
+
+    Git2.Object* IGitObject<GitObject>.NativeHandle => this.NativeHandle;
+
+    static GitObject IGitObject<GitObject>.FromObjectPointer(Git2.Object* obj)
+    {
+        return new(obj);
+    }
+
+    static GitObjectType IGitObject<GitObject>.ObjectType => GitObjectType.Any;
+}
+
+public static class GitObjectTypeExtensions
+{
+    public static bool IsLooseType(this GitObjectType type)
+    {
+        return git_object_typeisloose(type);
     }
 }

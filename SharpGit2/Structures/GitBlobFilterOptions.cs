@@ -22,8 +22,7 @@ namespace SharpGit2.Native
     {
         public uint Version;
         public GitBlobFilterFlags Flags;
-        [SuppressMessage("CodeQuality", "IDE0051:Remove unused private members", Justification = "This is a native padding field, reserved for future use")]
-        [SuppressMessage("Style", "IDE0044:Add readonly modifier")]
+        [SuppressMessage("CodeQuality", "IDE0052:Remove unread private members", Justification = "This is a native padding field, reserved for future use")]
         private void* Reserved;
         public GitObjectID AttributeCommitId;
 
@@ -31,6 +30,18 @@ namespace SharpGit2.Native
         {
             Version = 1;
             Flags = GitBlobFilterFlags.CheckForBinary;
+        }
+
+        public void FromManaged(in SharpGit2.GitBlobFilterOptions options)
+        {
+            Version = 1;
+            Flags = options.Flags;
+            Reserved = null;
+            AttributeCommitId = options.AttributeCommitId;
+        }
+
+        public void Free()
+        {
         }
     }
 }

@@ -121,7 +121,7 @@ namespace SharpGit2
                 }
             }
 
-            public void Free()
+            public readonly void Free()
             {
                 StringArrayMarshaller.Free(PathSpec);
                 Utf8StringMarshaller.Free(OldPrefix);
@@ -136,18 +136,16 @@ namespace SharpGit2
                 try
                 {
                     var delta = new SharpGit2.GitDiffDelta(in *deltaToAdd);
-                    var pathSpec = Utf8StringMarshaller.ConvertToManaged(matchedPathSpec);
+                    var pathSpec = Git2.GetPooledString(matchedPathSpec);
 
                     return callbackObj.OnNotify(new(diffSoFar), in delta, pathSpec);
                 }
                 catch (Git2Exception e) // TODO: Figure out what to do to propagate exceptions
                 {
-                    NativeApi.git_error_set_str(e.ErrorClass, e.Message);
                     return (int)e.ErrorCode;
                 }
-                catch (Exception e)
+                catch// (Exception e)
                 {
-                    NativeApi.git_error_set_str(GitErrorClass.Callback, e.Message);
                     return -1;
                 }
             }
@@ -159,19 +157,17 @@ namespace SharpGit2
 
                 try
                 {
-                    var path0 = Utf8StringMarshaller.ConvertToManaged(oldPath);
-                    var path1 = Utf8StringMarshaller.ConvertToManaged(newPath);
+                    var path0 = Git2.GetPooledString(oldPath);
+                    var path1 = Git2.GetPooledString(newPath);
 
                     return callbackObj.OnProgress(new(diffSoFar), path0, path1);
                 }
                 catch (Git2Exception e) // TODO: Figure out what to do to propagate exceptions
                 {
-                    NativeApi.git_error_set_str(e.ErrorClass, e.Message);
                     return (int)e.ErrorCode;
                 }
-                catch (Exception e)
+                catch// (Exception e)
                 {
-                    NativeApi.git_error_set_str(GitErrorClass.Callback, e.Message);
                     return -1;
                 }
             }

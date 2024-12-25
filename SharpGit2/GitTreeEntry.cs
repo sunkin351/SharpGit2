@@ -1,27 +1,62 @@
-﻿using System.Runtime.InteropServices.Marshalling;
+﻿using System.Diagnostics;
+
+using static SharpGit2.GitNativeApi;
 
 namespace SharpGit2;
 
-public unsafe readonly struct GitTreeEntry : IDisposable, IComparable<GitTreeEntry>
+[DebuggerDisplay("{(NativeHandle is null : (string?)null : GetName())}")]
+public unsafe readonly struct GitTreeEntry(Git2.TreeEntry* nativeHandle) : IGitHandle, IComparable<GitTreeEntry>
 {
-    internal readonly Git2.TreeEntry* NativeHandle;
+    /// <summary>
+    /// The native object pointer
+    /// </summary>
+    public Git2.TreeEntry* NativeHandle { get; } = nativeHandle;
 
-    internal GitTreeEntry(Git2.TreeEntry* nativeHandle)
+    public bool IsNull => this.NativeHandle == null;
+
+    public GitFileMode FileMode
     {
-        NativeHandle = nativeHandle;
+        get
+        {
+            var handle = this.ThrowIfNull();
+
+            return git_tree_entry_filemode(handle.NativeHandle);
+        }
     }
 
-    public GitFileMode FileMode => NativeApi.git_tree_entry_filemode(NativeHandle);
+    public GitFileMode FileModeRaw
+    {
+        get
+        {
+            var handle = this.ThrowIfNull();
 
-    public GitFileMode FileModeRaw => NativeApi.git_tree_entry_filemode_raw(NativeHandle);
+            return git_tree_entry_filemode_raw(handle.NativeHandle);
+        }
+    }
 
-    public ref readonly GitObjectID Id => ref *NativeApi.git_tree_entry_id(NativeHandle);
+    public ref readonly GitObjectID Id
+    {
+        get
+        {
+            var handle = this.ThrowIfNull();
 
-    public GitObjectType ObjectType => NativeApi.git_tree_entry_type(NativeHandle);
+            return ref *git_tree_entry_id(handle.NativeHandle);
+        }
+    }
+
+    public GitObjectType ObjectType
+    {
+        get
+        {
+            var handle = this.ThrowIfNull();
+
+            return git_tree_entry_type(handle.NativeHandle);
+        }
+    }
 
     public void Dispose()
     {
-        NativeApi.git_tree_entry_free(NativeHandle);
+        git_tree_entry_free(this.NativeHandle);
     }
 
     /// <summary>
@@ -33,27 +68,33 @@ public unsafe readonly struct GitTreeEntry : IDisposable, IComparable<GitTreeEnt
         ArgumentNullException.ThrowIfNull(e1.NativeHandle);
         ArgumentNullException.ThrowIfNull(e2.NativeHandle);
 
-        return NativeApi.git_tree_entry_cmp(e1.NativeHandle, e2.NativeHandle);
+        return git_tree_entry_cmp(e1.NativeHandle, e2.NativeHandle);
     }
 
     public int CompareTo(GitTreeEntry other)
     {
-        if (NativeHandle is null | other.NativeHandle is null)
-            return ((nint)NativeHandle).CompareTo((nint)other.NativeHandle);
+        if (this.NativeHandle is null | other.NativeHandle is null)
+            return ((nint)this.NativeHandle).CompareTo((nint)other.NativeHandle);
 
-        return NativeApi.git_tree_entry_cmp(NativeHandle, other.NativeHandle);
+        return git_tree_entry_cmp(this.NativeHandle, other.NativeHandle);
     }
 
     public GitTreeEntry Duplicate()
     {
-        Git2.TreeEntry* newEntry;
-        Git2.ThrowIfError(NativeApi.git_tree_entry_dup(&newEntry, NativeHandle));
+        var handle = this.ThrowIfNull();
+
+        Git2.TreeEntry* newEntry = null;
+        Git2.ThrowIfError(git_tree_entry_dup(&newEntry, handle.NativeHandle));
 
         return new(newEntry);
     }
 
     public string GetName()
     {
-        return Utf8StringMarshaller.ConvertToManaged(NativeApi.git_tree_entry_name(NativeHandle))!;
+        var handle = this.ThrowIfNull();
+
+        var nativeName = git_tree_entry_name(handle.NativeHandle);
+
+        return Git2.GetPooledString(nativeName);
     }
 }

@@ -1,6 +1,8 @@
 ﻿using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.Marshalling;
 
+using SharpGit2.Marshalling;
+
 namespace SharpGit2
 {
     public unsafe struct GitCommitCreateOptions
@@ -37,25 +39,15 @@ namespace SharpGit2.Native
         {
             Version = 1;
             AllowEmptyCommit = options.AllowEmptyCommit;
-            Author = GitSignature.FromManaged(options.Author);
-            Committer = GitSignature.FromManaged(options.Committer);
+            Author = GitSignatureMarshaller.ConvertToUnmanaged(options.Author);
+            Committer = GitSignatureMarshaller.ConvertToUnmanaged(options.Committer);
             MessageEncoding = Utf8StringMarshaller.ConvertToUnmanaged(options.MessageEncoding);
         }
 
         public void Free()
         {
-            if (Author != null)
-            {
-                Author->Free();
-                NativeMemory.Free(Author);
-            }
-
-            if (Committer != null)
-            {
-                Committer->Free();
-                NativeMemory.Free(Committer);
-            }
-
+            GitSignatureMarshaller.Free(Author);
+            GitSignatureMarshaller.Free(Committer);
             Utf8StringMarshaller.Free(MessageEncoding);
         }
     }

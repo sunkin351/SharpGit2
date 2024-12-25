@@ -2,18 +2,11 @@
 
 namespace SharpGit2
 {
-    public struct GitRebaseOperation
+    public unsafe struct GitRebaseOperation(in Native.GitRebaseOperation op)
     {
-        public GitRebaseOperationType Type;
-        public GitObjectID Id;
-        public string? Exec;
-
-        public unsafe GitRebaseOperation(in Native.GitRebaseOperation op)
-        {
-            Type = op.Type;
-            Id = op.Id;
-            Exec = Utf8StringMarshaller.ConvertToManaged(op.Exec);
-        }
+        public GitRebaseOperationType Type = op.Type;
+        public GitObjectID Id = op.Id;
+        public string? Exec = op.Exec == null ? null : Git2.GetPooledString(op.Exec);
     }
 }
 

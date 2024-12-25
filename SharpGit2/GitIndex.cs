@@ -4,74 +4,213 @@ using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
-using System.Runtime.InteropServices.Marshalling;
+
+using static SharpGit2.GitNativeApi;
 
 namespace SharpGit2;
 
-public unsafe readonly struct GitIndex : IDisposable
+/// <summary>
+/// In-Memory representation of an index file.
+/// </summary>
+/// <param name="nativeHandle">Native Object Pointer</param>
+public unsafe readonly struct GitIndex(Git2.Index* nativeHandle) : IDisposable, IGitHandle
 {
-    internal readonly Git2.Index* NativeHandle;
+    /// <summary>
+    /// The native object pointer
+    /// </summary>
+    public Git2.Index* NativeHandle { get; } = nativeHandle;
 
-    internal GitIndex(Git2.Index* nativeHandle)
-    {
-        NativeHandle = nativeHandle;
-    }
+    /// <inheritdoc/>
+    public bool IsNull => this.NativeHandle == null;
 
+    /// <summary>
+    /// Index capability flags
+    /// </summary>
     public GitIndexCapabilities Capabilities
     {
-        get => NativeApi.git_index_caps(NativeHandle);
+        get
+        {
+            var handle = this.ThrowIfNull();
+
+            return git_index_caps(handle.NativeHandle);
+        }
         set
         {
-            Git2.ThrowIfError(NativeApi.git_index_set_caps(NativeHandle, value));
+            var handle = this.ThrowIfNull();
+
+            Git2.ThrowIfError(git_index_set_caps(handle.NativeHandle, value));
         }
     }
 
-    public ref readonly GitObjectID Checksum => ref *NativeApi.git_index_checksum(NativeHandle);
+    /// <summary>
+    /// The checksum of the Index
+    /// </summary>
+    /// <remarks>
+    /// This checksum is the SHA-1 hash over the index file.
+    /// In cases where the index does not exist on-disk,
+    /// it will be zeroed out.
+    /// </remarks>
+    public ref readonly GitObjectID Checksum
+    {
+        get
+        {
+            var handle = this.ThrowIfNull();
 
-    public nuint EntryCount => NativeApi.git_index_entrycount(NativeHandle);
+            return ref *git_index_checksum(handle.NativeHandle);
+        }
+    }
 
-    public bool HasConflicts => NativeApi.git_index_has_conflicts(NativeHandle);
+    /// <summary>
+    /// The number of entries in this Index
+    /// </summary>
+    public nuint EntryCount
+    {
+        get
+        {
+            var handle = this.ThrowIfNull();
 
-    public GitRepository Owner => new(NativeApi.git_index_owner(NativeHandle));
+            return git_index_entrycount(handle.NativeHandle);
+        }
+    }
+
+    /// <summary>
+    /// Determines if this Index has entries that represent file conflicts
+    /// </summary>
+    public bool HasConflicts
+    {
+        get
+        {
+            var handle = this.ThrowIfNull();
+
+            return git_index_has_conflicts(handle.NativeHandle);
+        }
+    }
+
+    /// <summary>
+    /// Gets the repository that owns this Index
+    /// </summary>
+    public GitRepository Owner
+    {
+        get
+        {
+            var handle = this.ThrowIfNull();
+
+            return new(git_index_owner(handle.NativeHandle));
+        }
+    }
 
     /// <summary>
     /// This Index's on-disk version
     /// </summary>
     /// <remarks>
     /// Valid values are 2, 3, or 4.
-    /// 
+    /// <br/><br/>
     /// If 2 is given, <see cref="Write"/> may write an index with version 3 instead,
     /// if necessary to accurately represent the index.
-    /// 
+    /// <br/><br/>
     /// If 3 is returned, an index with version 2 may be written instead,
     /// if the extension data in version 3 is not necessary.
     /// </remarks>
     public uint Version
     {
-        get => NativeApi.git_index_version(NativeHandle);
-        set => Git2.ThrowIfError(NativeApi.git_index_set_version(NativeHandle, value));
+        get
+        {
+            var handle = this.ThrowIfNull();
+
+            return git_index_version(handle.NativeHandle);
+        }
+
+        set
+        {
+            var handle = this.ThrowIfNull();
+
+            Git2.ThrowIfError(git_index_set_version(handle.NativeHandle, value));
+        }
     }
 
+    /// <summary>
+    /// Free's this Git Index
+    /// </summary>
+    /// <remarks>
+    /// Do not call this more than once!
+    /// </remarks>
     public void Dispose()
     {
-        NativeApi.git_index_free(NativeHandle);
+        git_index_free(this.NativeHandle);
     }
 
-    public void Add(GitIndexEntry entry)
+    /// <summary>
+    /// Add or update an Index entry.
+    /// </summary>
+    /// <param name="entry">The entry</param>
+    /// <remarks>
+    /// If a previous entry is found with the same path and stage as the given entry, it will be replaced.
+    /// Otherwise, the given entry will be added.
+    /// </remarks>
+    public void AddOrUpdate(GitIndexEntry entry)
     {
-        Git2.ThrowIfError(NativeApi.git_index_add(NativeHandle, entry));
+        var handle = this.ThrowIfNull();
+
+        Git2.ThrowIfError(git_index_add(handle.NativeHandle, entry));
     }
 
+    /// <summary>
+    /// Add or Update an Index entry from a file on disk
+    /// </summary>
+    /// <param name="path">Filename to add</param>
+    /// <remarks>
+    /// The <paramref name="path"/> must be relative to the repository's working folder
+    /// and must be readable.
+    /// <br/><br/>
+    /// This method will fail in bare index instances.
+    /// <br/><br/>
+    /// This forces the file to be added to the index, not looking at gitignore rules.
+    /// Those rules can be evaluated through the git_status APIs (in status.h) before
+    /// calling this.
+    /// <br/><br/>
+    /// If this file currently is the result of a merge conflict, this file will no
+    /// longer be marked as conflicting. The data about the conflict will be moved to
+    /// the "resolve undo" (REUC) section.
+    /// </remarks>
+    /// <exception cref="Git2Exception"/>
     public void Add(string path)
     {
-        Git2.ThrowIfError(NativeApi.git_index_add_bypath(NativeHandle, path));
+        var handle = this.ThrowIfNull();
+
+        Git2.ThrowIfError(git_index_add_bypath(handle.NativeHandle, path));
     }
 
+    /// <summary>
+    /// Add or Update an Index entry from a buffer in memory
+    /// </summary>
+    /// <param name="entry">Entry to add</param>
+    /// <param name="blobData">Data to be written into the blob</param>
+    /// <remarks>
+    /// This method will create a blob in the repository that owns
+    /// the index and then add the index entry to the index. The <see cref="GitIndexEntry.Path"/>
+    /// of the entry represents the position of the blob relative to
+    /// the repository's root folder.
+    /// <br/><br/>
+    /// If a previous index entry exists that has the same path as
+    /// the given <paramref name="entry"/>, it will be replaced.
+    /// Otherwise, the <paramref name="entry"/> will be added.
+    /// <br/><br/>
+    /// This forces the file to be added to the index, not looking
+    /// at gitignore rules. Those rules can be evaluated through the
+    /// <c>git_status_*</c> APIs before calling this.
+    /// <br/><br/>
+    /// If this file currently is the result of a merge conflict,
+    /// this file will no longer be marked as conflicting. The data
+    /// about the conflict will be moved to the "resolve undo"
+    /// (REUC) section.
+    /// </remarks>
     public void Add(GitIndexEntry entry, ReadOnlySpan<byte> blobData)
     {
+        var handle = this.ThrowIfNull();
+
         fixed (byte* pBlob = blobData)
         {
-            Git2.ThrowIfError(NativeApi.git_index_add_from_buffer(NativeHandle, entry, pBlob, (nuint)blobData.Length));
+            Git2.ThrowIfError(git_index_add_from_buffer(handle.NativeHandle, entry, pBlob, (nuint)blobData.Length));
         }
     }
 
@@ -83,31 +222,103 @@ public unsafe readonly struct GitIndex : IDisposable
     /// </returns>
     public delegate int MatchedPathCallback(string path, string matchedPathSpec);
 
-    public void AddAll(string[] pathSpec, GitIndexAddOptions options)
+    /// <summary>
+    /// Add or update index entries matching files in the working directory.
+    /// This method will fail if this Index is associated with a bare repository.
+    /// </summary>
+    /// <param name="pathSpec">List of path patterns</param>
+    /// <param name="options">Combination of <see cref="GitIndexAddOptions"/> flags</param>
+    /// <remarks>
+    /// This method will fail in bare index instances.
+    /// <br/><br/>
+    /// The <paramref name="pathSpec"/> is a list of file names or shell glob patterns
+    /// that will be matched against files in the repository's working directory.
+    /// Each file that matches will be added to the index (either updating an existing
+    /// entry or adding a new entry). You can disable glob expansion and force exact
+    /// matching with the <see cref="GitIndexAddOptions.DisablePathspecMatch"/> flag.
+    /// <br/><br/>
+    /// Files that are ignored will be skipped (unlike <see cref="git_index_add_bypath"/>).
+    /// If a file is already tracked in the index, then it will be updated even if it is
+    /// ignored. Pass the <see cref="GitIndexAddOptions.Force"/> flag to skip the checking
+    /// of ignore rules.
+    /// <br/><br/>
+    /// To emulate <c>git add -A</c> and generate an error if the pathspec contains the exact
+    /// path of an ignored file (when not using FORCE), add the <see cref="GitIndexAddOptions.CheckPathspec"/>
+    /// flag. This checks that each entry in the pathspec that is an exact match to a filename
+    /// on disk is either not ignored or already in the index. If this check fails, the function
+    /// will return <see cref="GitError.InvalidSpec"/>.
+    /// <br/><br/>
+    /// To emulate <c>git add -A</c> with the "dry-run" option, just use a callback function that
+    /// always returns a positive value. See below for details.
+    /// <br/><br/>
+    /// If any files are currently the result of a merge conflict, those files will no longer
+    /// be marked as conflicting. The data about the conflicts will be moved to the
+    /// "resolve undo" (REUC) section.
+    /// </remarks>
+    public void AddOrUpdateAll(ReadOnlySpan<string> pathSpec, GitIndexAddOptions options)
     {
-        Git2.ThrowIfError(NativeApi.git_index_add_all(NativeHandle, pathSpec, options, null, 0));
+        var handle = this.ThrowIfNull();
+
+        Git2.ThrowIfError(git_index_add_all(handle.NativeHandle, pathSpec, options, null, 0));
     }
 
-    public void AddAll(string[] pathSpec, GitIndexAddOptions options, MatchedPathCallback? callback)
+    /// <summary>
+    /// Add or update index entries matching files in the working directory.
+    /// This method will fail if this Index is associated with a bare repository.
+    /// </summary>
+    /// <param name="pathSpec">List of path patterns</param>
+    /// <param name="options">Combination of <see cref="GitIndexAddOptions"/> flags</param>
+    /// <param name="callback">
+    /// notification callback for each added/updated path
+    /// (also gets index of matching pathspec entry);
+    /// can be NULL; return 0 to add, greater than 0 to skip, and less than 0 to abort scan.
+    /// </param>
+    /// <remarks>
+    /// This method will fail in bare index instances.
+    /// <br/><br/>
+    /// The <paramref name="pathSpec"/> is a list of file names or shell glob patterns
+    /// that will be matched against files in the repository's working directory.
+    /// Each file that matches will be added to the index (either updating an existing
+    /// entry or adding a new entry). You can disable glob expansion and force exact
+    /// matching with the <see cref="GitIndexAddOptions.DisablePathspecMatch"/> flag.
+    /// <br/><br/>
+    /// Files that are ignored will be skipped (unlike <see cref="git_index_add_bypath"/>).
+    /// If a file is already tracked in the index, then it will be updated even if it is
+    /// ignored. Pass the <see cref="GitIndexAddOptions.Force"/> flag to skip the checking
+    /// of ignore rules.
+    /// <br/><br/>
+    /// To emulate <c>git add -A</c> and generate an error if the pathspec contains the exact
+    /// path of an ignored file (when not using FORCE), add the <see cref="GitIndexAddOptions.CheckPathspec"/>
+    /// flag. This checks that each entry in the pathspec that is an exact match to a filename
+    /// on disk is either not ignored or already in the index. If this check fails, the function
+    /// will return <see cref="GitError.InvalidSpec"/>.
+    /// <br/><br/>
+    /// To emulate <c>git add -A</c> with the "dry-run" option, just use a callback function that
+    /// always returns a positive value. See below for details.
+    /// <br/><br/>
+    /// If any files are currently the result of a merge conflict, those files will no longer
+    /// be marked as conflicting. The data about the conflicts will be moved to the
+    /// "resolve undo" (REUC) section.
+    /// <br/><br/>
+    /// If you provide a callback function, it will be invoked on each matching item in the
+    /// working directory immediately before it is added to / updated in the index. Returning
+    /// zero will add the item to the index, greater than zero will skip the item, and less than
+    /// zero will abort the scan and return that value to the caller.
+    /// </remarks>
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public void AddOrUpdateAll(ReadOnlySpan<string> pathSpec, GitIndexAddOptions options, MatchedPathCallback? callback)
     {
+        var handle = this.ThrowIfNull();
+
         if (callback is null)
         {
-            AddAll(pathSpec, options);
+            Git2.ThrowIfError(git_index_add_all(handle.NativeHandle, pathSpec, options, null, 0));
         }
         else
         {
-            Git2.CallbackContext<MatchedPathCallback> context = new() { Callback = callback };
+            Git2.CallbackContext<MatchedPathCallback> context = new(callback);
 
-            GitError error;
-            var gcHandle = GCHandle.Alloc(context, GCHandleType.Normal);
-            try
-            {
-                error = NativeApi.git_index_add_all(NativeHandle, pathSpec, options, &MatchedPathNativeCallback, (nint)gcHandle);
-            }
-            finally
-            {
-                gcHandle.Free();
-            }
+            var error = git_index_add_all(handle.NativeHandle, pathSpec, options, &MatchedPathNativeCallback, (nint)(void*)&context);
 
             context.ExceptionInfo?.Throw();
 
@@ -116,33 +327,113 @@ public unsafe readonly struct GitIndex : IDisposable
         }
     }
 
+    /// <summary>
+    /// Add or update index entries to represent a conflict.
+    /// Any staged entries that exist at the given paths will be removed.
+    /// </summary>
+    /// <param name="ancestor">The entry data for the ancestor of the conflict</param>
+    /// <param name="our">The entry data for our side of the merge conflict</param>
+    /// <param name="their">The entry data for their side of the merge conflict</param>
+    /// <remarks>
+    /// The entries are the entries from the tree included in the merge.
+    /// Any entry may be null to indicate that that file was not present
+    /// in the trees during the merge. For example, ancestor_entry may be
+    /// <see langword="null"/> to indicate that a file was added in both
+    /// branches and must be resolved.
+    /// </remarks>
     public void AddConflict(GitIndexEntry ancestor, GitIndexEntry our, GitIndexEntry their)
     {
-        Git2.ThrowIfError(NativeApi.git_index_conflict_add(NativeHandle, ancestor, our, their));
+        var handle = this.ThrowIfNull();
+
+        Git2.ThrowIfError(git_index_conflict_add(handle.NativeHandle, ancestor, our, their));
     }
 
+    /// <summary>
+    /// Clear the contents (all the entries) of an index object.
+    /// </summary>
+    /// <remarks>
+    /// This clears the index object in memory; changes must be explicitly
+    /// written to disk for them to take effect persistently.
+    /// </remarks>
     public void Clear()
     {
-        Git2.ThrowIfError(NativeApi.git_index_clear(NativeHandle));
+        var handle = this.ThrowIfNull();
+
+        Git2.ThrowIfError(git_index_clear(handle.NativeHandle));
     }
 
+    /// <summary>
+    /// Remove all conflicts in the index (entries with a stage greater than 0).
+    /// </summary>
     public void ConflictCleanup()
     {
-        Git2.ThrowIfError(NativeApi.git_index_conflict_cleanup(NativeHandle));
+        var handle = this.ThrowIfNull();
+
+        Git2.ThrowIfError(git_index_conflict_cleanup(handle.NativeHandle));
     }
 
+    /// <summary>
+    /// Enumerate the conflicts in the index.
+    /// </summary>
+    /// <returns>An enumerable </returns>
+    /// <remarks>
+    /// The index must not be modified while iterating; the results are undefined.
+    /// <br/><br/>
+    /// <see cref="IDisposable.Dispose()"/> MUST be called on the resulting enumerator. (<see langword="foreach"/> does this automatically)
+    /// </remarks>
     public ConflictEnumerable EnumerateConflicts()
     {
-        return new ConflictEnumerable(this);
+        var handle = this.ThrowIfNull();
+
+        return new ConflictEnumerable(handle);
     }
 
     public Enumerable EnumerateEntries()
     {
-        return new Enumerable(this);
+        var handle = this.ThrowIfNull();
+
+        return new Enumerable(handle);
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="path"></param>
+    /// <returns></returns>
+    public nuint? Find(string path)
+    {
+        var handle = this.ThrowIfNull();
+
+        nuint idx = 0;
+        var error = git_index_find(&idx, handle.NativeHandle, path);
+
+        return error switch
+        {
+            GitError.OK => idx,
+            GitError.NotFound => null,
+            _ => throw Git2.ExceptionForError(error)
+        };
+    }
+
+    public nuint? FindPrefix(string pathPrefix)
+    {
+        var handle = this.ThrowIfNull();
+
+        nuint idx = 0;
+        var error = git_index_find_prefix(&idx, handle.NativeHandle, pathPrefix);
+
+        return error switch
+        {
+            GitError.OK => idx,
+            GitError.NotFound => null,
+            _ => throw Git2.ExceptionForError(error)
+        };
     }
 
     public GitIndexEntry? GetEntry(int index)
     {
+        var handle = this.ThrowIfNull();
+
         ArgumentOutOfRangeException.ThrowIfNegative(index);
 
         return GetEntry((nuint)index);
@@ -150,84 +441,103 @@ public unsafe readonly struct GitIndex : IDisposable
     
     public GitIndexEntry? GetEntry(nuint index)
     {
-        var ptr = NativeApi.git_index_get_byindex(NativeHandle, index);
+        var handle = this.ThrowIfNull();
+
+        var ptr = git_index_get_byindex(handle.NativeHandle, index);
 
         return ptr is null ? null : new GitIndexEntry(ptr);
     }
 
     public GitIndexEntry? GetEntry(string path, GitIndexStageFlags stage)
     {
-        var ptr = NativeApi.git_index_get_bypath(NativeHandle, path, stage);
+        var handle = this.ThrowIfNull();
+
+        var ptr = git_index_get_bypath(handle.NativeHandle, path, stage);
 
         return ptr is null ? null : new GitIndexEntry(ptr);
     }
 
-    ///<inheritdoc cref="NativeApi.git_index_path(Git2.Index*)"/>
     public string? GetPath()
     {
-        return Utf8StringMarshaller.ConvertToManaged(NativeApi.git_index_path(NativeHandle));
+        var handle = this.ThrowIfNull();
+
+        var nativePath = git_index_path(handle.NativeHandle);
+
+        if (nativePath is null)
+            return null;
+
+        return Git2.GetPooledString(nativePath);
     }
 
     public void Read(bool force)
     {
-        Git2.ThrowIfError(NativeApi.git_index_read(NativeHandle, force ? 1 : 0));
+        var handle = this.ThrowIfNull();
+
+        Git2.ThrowIfError(git_index_read(handle.NativeHandle, force ? 1 : 0));
     }
 
     public void ReadTree(GitTree tree)
     {
-        Git2.ThrowIfError(NativeApi.git_index_read_tree(NativeHandle, tree.NativeHandle));
+        var handle = this.ThrowIfNull();
+
+        Git2.ThrowIfError(git_index_read_tree(handle.NativeHandle, tree.NativeHandle));
     }
 
     public void RemoveConflict(string path)
     {
-        Git2.ThrowIfError(NativeApi.git_index_conflict_remove(NativeHandle, path));
+        var handle = this.ThrowIfNull();
+
+        Git2.ThrowIfError(git_index_conflict_remove(handle.NativeHandle, path));
     }
 
     public void Remove(string path, GitIndexStageFlags stage)
     {
-        Git2.ThrowIfError(NativeApi.git_index_remove(NativeHandle, path, stage));
+        var handle = this.ThrowIfNull();
+
+        Git2.ThrowIfError(git_index_remove(handle.NativeHandle, path, stage));
     }
 
-    public void RemoveAll(string[] pathSpec)
+    public void RemoveAll(ReadOnlySpan<string> pathSpec)
     {
-        Git2.ThrowIfError(NativeApi.git_index_remove_all(NativeHandle, pathSpec, null, 0));
+        var handle = this.ThrowIfNull();
+
+        Git2.ThrowIfError(git_index_remove_all(handle.NativeHandle, pathSpec, null, 0));
     }
 
-    public void RemoveAll(string[] pathSpec, MatchedPathCallback? callback)
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public void RemoveAll(ReadOnlySpan<string> pathSpec, MatchedPathCallback? callback)
     {
+        var handle = this.ThrowIfNull();
+
         if (callback is null)
         {
-            RemoveAll(pathSpec);
+            Git2.ThrowIfError(git_index_remove_all(handle.NativeHandle, pathSpec, null, 0));
         }
         else
         {
-            var context = new Git2.CallbackContext<MatchedPathCallback>() { Callback = callback };
+            Git2.CallbackContext<MatchedPathCallback> context = new(callback);
 
-            var gcHandle = GCHandle.Alloc(context, GCHandleType.Normal);
-
-            GitError error;
-            try
-            {
-                error = NativeApi.git_index_remove_all(NativeHandle, pathSpec, &MatchedPathNativeCallback, (nint)gcHandle);
-            }
-            finally
-            {
-                gcHandle.Free();
-            }
+            var error = git_index_remove_all(handle.NativeHandle, pathSpec, &MatchedPathNativeCallback, (nint)(void*)&context);
 
             context.ExceptionInfo?.Throw();
-            Git2.ThrowIfError(error);
+
+            if (error is < 0 and not GitError.User)
+                Git2.ThrowError(error);
         }
     }
 
     public void RemoveByPath(string path)
     {
-        Git2.ThrowIfError(NativeApi.git_index_remove_bypath(NativeHandle, path));
+        var handle = this.ThrowIfNull();
+
+        Git2.ThrowIfError(git_index_remove_bypath(handle.NativeHandle, path));
     }
 
     public void RemoveDirectory(string directory, GitIndexStageFlags stage)
     {
-        Git2.ThrowIfError(NativeApi.git_index_remove_directory(NativeHandle, directory, stage));
+        var handle = this.ThrowIfNull();
+
+        Git2.ThrowIfError(git_index_remove_directory(handle.NativeHandle, directory, stage));
     }
 
     public bool TryGetConflict(
@@ -236,9 +546,11 @@ public unsafe readonly struct GitIndex : IDisposable
         [NotNullWhen(true)] out GitIndexEntry? ours,
         [NotNullWhen(true)] out GitIndexEntry? theirs)
     {
-        Native.GitIndexEntry* pAncestor, pOurs, pTheirs;
+        var handle = this.ThrowIfNull();
 
-        var error = NativeApi.git_index_conflict_get(&pAncestor, &pOurs, &pTheirs, NativeHandle, path);
+        Native.GitIndexEntry* pAncestor = null, pOurs = null, pTheirs = null;
+
+        var error = git_index_conflict_get(&pAncestor, &pOurs, &pTheirs, NativeHandle, path);
 
         switch (error)
         {
@@ -257,32 +569,27 @@ public unsafe readonly struct GitIndex : IDisposable
         }
     }
 
-    public void UpdateAll(string[] pathSpec)
+    public void UpdateAll(ReadOnlySpan<string> pathSpec)
     {
-        Git2.ThrowIfError(NativeApi.git_index_update_all(NativeHandle, pathSpec, null, 0));
+        var handle = this.ThrowIfNull();
+
+        Git2.ThrowIfError(git_index_update_all(handle.NativeHandle, pathSpec, null, 0));
     }
 
-    public void UpdateAll(string[] pathSpec, MatchedPathCallback? callback)
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public void UpdateAll(ReadOnlySpan<string> pathSpec, MatchedPathCallback? callback)
     {
+        var handle = this.ThrowIfNull();
+
         if (callback is null)
         {
-            UpdateAll(pathSpec);
+            Git2.ThrowIfError(git_index_update_all(handle.NativeHandle, pathSpec, null, 0));
         }
         else
         {
-            var context = new Git2.CallbackContext<MatchedPathCallback>() { Callback = callback };
+            Git2.CallbackContext<MatchedPathCallback> context = new(callback);
 
-            var gcHandle = GCHandle.Alloc(context, GCHandleType.Normal);
-
-            GitError error;
-            try
-            {
-                error = NativeApi.git_index_update_all(NativeHandle, pathSpec, &MatchedPathNativeCallback, (nint)gcHandle);
-            }
-            finally
-            {
-                gcHandle.Free();
-            }
+            var error = git_index_update_all(handle.NativeHandle, pathSpec, &MatchedPathNativeCallback, (nint)(void*)&context);
 
             context.ExceptionInfo?.Throw();
 
@@ -296,7 +603,9 @@ public unsafe readonly struct GitIndex : IDisposable
     /// </summary>
     public void Write()
     {
-        Git2.ThrowIfError(NativeApi.git_index_write(NativeHandle));
+        var handle = this.ThrowIfNull();
+
+        Git2.ThrowIfError(git_index_write(handle.NativeHandle));
     }
 
     /// <summary>
@@ -314,8 +623,10 @@ public unsafe readonly struct GitIndex : IDisposable
     /// </remarks>
     public GitObjectID WriteTree()
     {
+        var handle = this.ThrowIfNull();
+
         GitObjectID id;
-        Git2.ThrowIfError(NativeApi.git_index_write_tree(&id, NativeHandle));
+        Git2.ThrowIfError(git_index_write_tree(&id, NativeHandle));
 
         return id;
     }
@@ -330,10 +641,12 @@ public unsafe readonly struct GitIndex : IDisposable
     /// </remarks>
     public GitObjectID WriteTreeTo(GitRepository repository)
     {
+        var handle = this.ThrowIfNull();
+
         ArgumentNullException.ThrowIfNull(repository.NativeHandle);
 
         GitObjectID id;
-        Git2.ThrowIfError(NativeApi.git_index_write_tree_to(&id, NativeHandle, repository.NativeHandle));
+        Git2.ThrowIfError(git_index_write_tree_to(&id, NativeHandle, repository.NativeHandle));
 
         return id;
     }
@@ -341,11 +654,14 @@ public unsafe readonly struct GitIndex : IDisposable
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
     private static int MatchedPathNativeCallback(byte* path, byte* matched_pathspec, nint payload)
     {
-        var context = (Git2.CallbackContext<MatchedPathCallback>)((GCHandle)payload).Target!;
+        ref var context = ref *(Git2.CallbackContext<MatchedPathCallback>*)payload;
 
         try
         {
-            int ret = context.Callback(Utf8StringMarshaller.ConvertToManaged(path)!, Utf8StringMarshaller.ConvertToManaged(matched_pathspec)!);
+            string _path = Git2.GetPooledString(path);
+            string _pathSpec = Git2.GetPooledString(matched_pathspec);
+
+            int ret = context.Callback(_path, _pathSpec);
 
             return ret < 0 ? (int)GitError.User : ret;
         }
@@ -361,10 +677,21 @@ public unsafe readonly struct GitIndex : IDisposable
     {
         private readonly GitIndex _index = index;
 
+        /// <summary>
+        /// Create an Enumerator that will return every entry contained
+        /// in the index at the time of creation. Entries are returned
+        /// in order, sorted by path. This iterator is backed by a snapshot
+        /// that allows callers to modify the index while iterating without
+        /// affecting the iterator.
+        /// </summary>
+        /// <returns>The iterator</returns>
+        /// <remarks>
+        /// <see cref="IDisposable.Dispose()"/> MUST be called on the resulting enumerator. (Using <see langword="foreach"/> on the Enumerable does this automatically)
+        /// </remarks>
         public Enumerator GetEnumerator()
         {
-            Git2.IndexIterator* iterator;
-            Git2.ThrowIfError(NativeApi.git_index_iterator_new(&iterator, _index.NativeHandle));
+            Git2.IndexIterator* iterator = null;
+            Git2.ThrowIfError(git_index_iterator_new(&iterator, _index.NativeHandle));
 
             return new Enumerator(iterator);
         }
@@ -387,9 +714,9 @@ public unsafe readonly struct GitIndex : IDisposable
 
         public bool MoveNext()
         {
-            Native.GitIndexEntry* entry;
+            Native.GitIndexEntry* entry = null;
 
-            var error = NativeApi.git_index_iterator_next(&entry, _iterator);
+            var error = git_index_iterator_next(&entry, _iterator);
 
             switch (error)
             {
@@ -406,18 +733,18 @@ public unsafe readonly struct GitIndex : IDisposable
             }
         }
 
-        public void Reset()
+        void IEnumerator.Reset()
         {
             throw new NotSupportedException();
         }
 
-        object IEnumerator.Current => Current;
+        readonly object IEnumerator.Current => Current;
 
         public void Dispose()
         {
             if (_iterator != null)
             {
-                NativeApi.git_index_iterator_free(_iterator);
+                git_index_iterator_free(_iterator);
                 _iterator = null;
             }
         }
@@ -429,8 +756,8 @@ public unsafe readonly struct GitIndex : IDisposable
 
         public ConflictEnumerator GetEnumerator()
         {
-            Git2.IndexConflictIterator* iterator;
-            Git2.ThrowIfError(NativeApi.git_index_conflict_iterator_new(&iterator, _handle.NativeHandle));
+            Git2.IndexConflictIterator* iterator = null;
+            Git2.ThrowIfError(git_index_conflict_iterator_new(&iterator, _handle.NativeHandle));
 
             return new ConflictEnumerator(iterator);
         }
@@ -440,6 +767,9 @@ public unsafe readonly struct GitIndex : IDisposable
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     }
 
+    /// <summary>
+    /// The conflict iterator
+    /// </summary>
     public struct ConflictEnumerator : IEnumerator<(GitIndexEntry ancestor, GitIndexEntry ours, GitIndexEntry theirs)>
     {
         private Git2.IndexConflictIterator* _iterator;
@@ -449,13 +779,15 @@ public unsafe readonly struct GitIndex : IDisposable
             _iterator = iterator;
         }
 
+        /// <inheritdoc/>
         public (GitIndexEntry ancestor, GitIndexEntry ours, GitIndexEntry theirs) Current { get; private set; }
 
+        /// <inheritdoc/>
         public bool MoveNext()
         {
-            Native.GitIndexEntry* ancestor, ours, theirs;
+            Native.GitIndexEntry* ancestor = null, ours = null, theirs = null;
 
-            var error = NativeApi.git_index_conflict_next(&ancestor, &ours, &theirs, _iterator);
+            var error = git_index_conflict_next(&ancestor, &ours, &theirs, _iterator);
 
             switch (error)
             {
@@ -472,18 +804,19 @@ public unsafe readonly struct GitIndex : IDisposable
             }
         }
 
-        public void Reset()
+        void IEnumerator.Reset()
         {
             throw new NotSupportedException();
         }
 
         readonly object IEnumerator.Current => Current;
 
+        /// <inheritdoc/>
         public void Dispose()
         {
             if (_iterator != null)
             {
-                NativeApi.git_index_conflict_iterator_free(_iterator);
+                git_index_conflict_iterator_free(_iterator);
                 _iterator = null;
             }
         }
