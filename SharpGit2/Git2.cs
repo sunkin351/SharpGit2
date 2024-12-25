@@ -1,10 +1,14 @@
 ﻿using System.Diagnostics;
-using System.Numerics;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.Marshalling;
 using System.Text;
+
+using CommunityToolkit.HighPerformance.Buffers;
+
+using static SharpGit2.GitNativeApi;
 
 [assembly: InternalsVisibleTo("SharpGit2.Tests")]
 [assembly: DisableRuntimeMarshalling]
@@ -18,17 +22,22 @@ public static unsafe partial class Git2
     internal const GitError ForEachBreak = (GitError)1;
     internal const GitError ForEachException = GitError.User;
 
+    /// <summary>
+    /// Minimum length (in number of hex characters, i.e. packets of 4 bits) of an oid prefix
+    /// </summary>
+    public static int ObjectIDMinPrefixLength => 4; // This is a property to allow future updates without having consumers need to recompile their code.
+
     public static Version NativeLibraryVersion { get; } = GetVersion();
 
     private static Version GetVersion()
     {
         int major, minor, rev;
-        Git2.ThrowIfError(NativeApi.git_libgit2_version(&major, &minor, &rev));
+        Git2.ThrowIfError(GitNativeApi.git_libgit2_version(&major, &minor, &rev));
 
         return new Version(major, minor, rev);
     }
 
-    public static GitFeatures NativeLibraryFeatures { get; } = NativeApi.git_libgit2_features();
+    public static GitFeatures NativeLibraryFeatures { get; } = GitNativeApi.git_libgit2_features();
 
     public static string PathListSeparator
     {
@@ -45,159 +54,14 @@ public static unsafe partial class Git2
         }
     }
 
-    ///<inheritdoc cref="Discover(string, bool, string?)"/>
-    public static string? Discover(string startPath)
-    {
-        return Discover(startPath, true, null);
-    }
+    public static string? GlobalConfigFile { get; } = GetPathFromFunction(&GitNativeApi.git_config_find_global, nameof(GlobalConfigFile));
+    public static string? ProgramDataConfigFile { get; } = GetPathFromFunction(&GitNativeApi.git_config_find_programdata, nameof(ProgramDataConfigFile));
+    public static string? SystemConfigFile { get; } = GetPathFromFunction(&GitNativeApi.git_config_find_system, nameof(SystemConfigFile));
+    public static string? XDGConfigFile { get; } = GetPathFromFunction(&GitNativeApi.git_config_find_xdg, nameof(XDGConfigFile));
 
-    ///<inheritdoc cref="Discover(string, bool, string?)"/>
-    public static string? Discover(string startPath, bool acrossFileSystems)
-    {
-        return Discover(startPath, acrossFileSystems, null);
-    }
+    internal static StringPool StringPool { get; } = new StringPool();
 
-    /// <summary>
-    /// Look for a Git repository and return it's path as a string.
-    /// Starts searching from <paramref name="startPath"/> and if
-    /// it doesn't find a repository, searches each parent directory
-    /// until it finds one.
-    /// </summary>
-    /// <param name="startPath">The base path where the lookup starts</param>
-    /// <param name="acrossFileSystems">
-    /// If true, then the lookup will not stop when a filesystem device change is detected while exploring parent directories.
-    /// </param>
-    /// <param name="ceilingDirs">
-    /// A <see cref="Git2.PathListSeparator"/> separated list of absolute symbolic link free paths.
-    /// The lookup will stop when any of this paths is reached. Note that the lookup
-    /// always performs on <paramref name="startPath"/> no matter <paramref name="startPath"/>
-    /// appears in <paramref name="ceilingDirs"/>. <paramref name="ceilingDirs"/> might be
-    /// <see langword="null"/> (which is equivalent to an empty string).
-    /// </param>
-    /// <returns>
-    /// Returns the found git repository path, or <see langword="null"/> is one isn't found.
-    /// </returns>
-    public static string? Discover(string startPath, bool acrossFileSystems, string? ceilingDirs)
-    {
-        ArgumentException.ThrowIfNullOrEmpty(startPath);
-
-        Native.GitBuffer buffer = default;
-
-        var error = NativeApi.git_repository_discover(&buffer, startPath, acrossFileSystems ? 1 : 0, ceilingDirs);
-
-        switch (error)
-        {
-            case GitError.OK:
-                try
-                {
-                    return Encoding.UTF8.GetString(buffer.Pointer, checked((int)buffer.Size));
-                }
-                finally
-                {
-                    NativeApi.git_buf_dispose(&buffer);
-                }
-            case GitError.NotFound:
-                return null;
-            default:
-                throw Git2.ExceptionForError(error);
-        }
-    }
-
-    public static GitRepository InitRepository(string path)
-    {
-        return InitRepository(path, false);
-    }
-
-    public static GitRepository InitRepository(string path, bool isBare)
-    {
-        GitRepository handle;
-        Git2.ThrowIfError(NativeApi.git_repository_init((Git2.Repository**)&handle, path, isBare ? 1u : 0u));
-
-        return handle;
-    }
-
-    public static GitRepository InitRepository(string path, in GitRepositoryInitOptions options)
-    {
-        Git2.Repository* result;
-        GitError error;
-
-        Native.GitRepositoryInitOptions nOptions = default;
-        try
-        {
-            nOptions.FromManaged(in options);
-
-            error = NativeApi.git_repository_init_ext(&result, path, &nOptions);
-        }
-        finally
-        {
-            nOptions.Free();
-        }
-
-        Git2.ThrowIfError(error);
-
-        return new(result);
-    }
-
-    public static GitRepository InitRepository(string path, in Native.GitRepositoryInitOptions options)
-    {
-        Git2.Repository* result;
-        GitError error;
-
-        fixed (Native.GitRepositoryInitOptions* pOptions = &options)
-            error = NativeApi.git_repository_init_ext(&result, path, pOptions);
-
-        Git2.ThrowIfError(error);
-
-        return new(result);
-    }
-
-    public static GitRepository OpenRepository(string path)
-    {
-        ArgumentException.ThrowIfNullOrEmpty(path);
-
-        GitRepository repository;
-        Git2.ThrowIfError(NativeApi.git_repository_open((Git2.Repository**)&repository, path));
-
-        return repository;
-    }
-
-    public static GitRepository OpenRepository(string? path, GitRepositoryOpenFlags flags, string? ceiling_dirs)
-    {
-        if ((flags & GitRepositoryOpenFlags.FromEnvironment) == 0)
-            ArgumentException.ThrowIfNullOrEmpty(path);
-
-        GitRepository repository;
-        Git2.ThrowIfError(NativeApi.git_repository_open_ext((Git2.Repository**)&repository, path, flags, ceiling_dirs));
-
-        return repository;
-    }
-
-    public static GitRepository OpenBareRepository(string path)
-    {
-        ArgumentException.ThrowIfNullOrEmpty(path);
-
-        GitRepository repository;
-        Git2.ThrowIfError(NativeApi.git_repository_open_bare((Git2.Repository**)&repository, path));
-
-        return repository;
-    }
-
-    public static GitRepository OpenRepositoryFromWorktree(GitWorkTree worktree)
-    {
-        ArgumentNullException.ThrowIfNull(worktree.NativeHandle);
-
-        GitRepository repository;
-        Git2.ThrowIfError(NativeApi.git_repository_open_from_worktree((Git2.Repository**)&repository, worktree.NativeHandle));
-
-        return repository;
-    }
-
-    public static string? GlobalConfigFile { get; } = GetPathFromFunction(&NativeApi.git_config_find_global);
-    public static string? ProgramDataConfigFile { get; } = GetPathFromFunction(&NativeApi.git_config_find_programdata);
-    public static string? SystemConfigFile { get; } = GetPathFromFunction(&NativeApi.git_config_find_system);
-    public static string? XDGConfigFile { get; } = GetPathFromFunction(&NativeApi.git_config_find_xdg);
-
-    private static string? GetPathFromFunction(delegate* managed<Native.GitBuffer*, GitError> func)
+    private static string? GetPathFromFunction(delegate* managed<Native.GitBuffer*, GitError> func, string propertyName)
     {
         Native.GitBuffer buffer = default;
         var error = func(&buffer);
@@ -207,64 +71,160 @@ public static unsafe partial class Git2
             case GitError.OK:
                 try
                 {
-                    return Encoding.UTF8.GetString(buffer.Pointer, checked((int)buffer.Size));
+                    return buffer.AsString();
                 }
                 finally
                 {
-                    NativeApi.git_buf_dispose(&buffer);
+                    GitNativeApi.git_buf_dispose(&buffer);
                 }
             case GitError.NotFound:
                 return null;
             default:
-                throw ExceptionForError(error);
+                throw ExceptionForError(error, propertyName);
         }
     }
 
-    [MethodImpl(MethodImplOptions.NoInlining)]
-    internal static Exception ExceptionForError(GitError error, string? message = null)
+    /// <summary>
+    /// Returns the last error generated by the current thread.
+    /// </summary>
+    /// <returns>The last error's details</returns>
+    /// <remarks>
+    /// Do not use to determine if an error was produced, that's what API return values are for.
+    /// <br/><br/>
+    /// Intended to be used when calling <see cref="GitNativeApi"/> functions directly, as those don't throw on error.
+    /// </remarks>
+    public static (string Message, GitErrorClass ErrorClass)? GetLastError()
     {
-        var err = NativeApi.git_error_last();
+        var err = git_error_last();
 
-        Debug.Assert(err != null);
+        return err is null ? null : (Utf8StringMarshaller.ConvertToManaged(err->Message)!, err->Class);
+    }
 
-        GitErrorClass @class = err->Class;
-        message = Utf8StringMarshaller.ConvertToManaged(err->Message)!;
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    internal static Exception ExceptionForError(GitError error, [CallerMemberName] string? callerName = null)
+    {
+        ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual((int)error, 0);
+
+        var (message, klass) = GetLastError() ??
+            (error == GitError.NotSupported ? "LibGit2 has returned that it does not support this operation!" : "LibGit2 has returned an error!", GitErrorClass.None);
 
         return error switch
         {
-            GitError.NotSupported => new NotSupportedException(message ?? "LibGit2 has returned that it does not support this operation!"),
-            _ => new Git2Exception(error, @class, message ?? "LibGit2 has returned an error!"),
+            GitError.NotSupported => new NotSupportedException($"{callerName}: {message}"),
+            _ => new Git2Exception(error, klass, $"{callerName}: {message}"),
         };
     }
 
-    internal static void ThrowError(GitError code)
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="code"></param>
+    /// <param name="callerName"></param>
+    /// <exception cref="Git2Exception"/>
+    internal static void ThrowError(GitError code, [CallerMemberName] string? callerName = null)
     {
-        throw ExceptionForError(code);
+        throw ExceptionForError(code, callerName);
     }
 
-    internal static void ThrowError(GitError code, string message)
-    {
-        throw ExceptionForError(code, message);
-    }
-
-    internal static void ThrowIfError(GitError code)
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="code"></param>
+    /// <param name="callerName"></param>
+    /// <exception cref="Git2Exception"/>
+    internal static void ThrowIfError(GitError code, [CallerMemberName] string? callerName = null)
     {
         if (code < 0)
-            ThrowError(code);
+            ThrowError(code, callerName);
     }
 
-    internal static void ThrowIfError(GitError code, string message)
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="code"></param>
+    /// <param name="callerName"></param>
+    /// <exception cref="Git2Exception"/>
+    internal static bool ErrorOrBoolean(int code, [CallerMemberName] string? callerName = null)
     {
         if (code < 0)
-            ThrowError(code, message);
-    }
-
-    internal static bool ErrorOrBoolean(int code)
-    {
-        if (code < 0)
-            ThrowError((GitError)code);
+            ThrowError((GitError)code, callerName);
 
         return code != 0;
+    }
+
+    public static GitDescribeResult DescribeCommit(GitObject committish, in GitDescribeOptions options)
+    {
+        committish.ThrowIfNull();
+
+        DescribeResult* result = null;
+        GitError error;
+
+        Native.GitDescribeOptions _options = default;
+        List<GCHandle> gchandles = [];
+        try
+        {
+            _options.FromManaged(in options, gchandles);
+
+            error = git_describe_commit(&result, committish.NativeHandle, &_options);
+        }
+        finally
+        {
+            foreach (var handle in gchandles)
+            {
+                handle.Free();
+            }
+
+            _options.Free();
+        }
+
+        ThrowIfError(error);
+
+        return new(result);
+    }
+
+    public static GitDescribeResult DescribeCommit(this GitCommit commit, in GitDescribeOptions options)
+    {
+        return DescribeCommit(commit, in options);
+    }
+
+    public static GitDescribeResult DescribeCommit(this GitTag tag, in GitDescribeOptions options)
+    {
+        return DescribeCommit(tag, in options);
+    }
+
+    internal static string GetPooledString(byte* nativeString)
+    {
+        return StringPool.GetOrAdd(MemoryMarshal.CreateReadOnlySpanFromNullTerminated(nativeString), Encoding.UTF8);
+    }
+
+    internal static string GetPooledString(ReadOnlySpan<byte> nativeString)
+    {
+        return StringPool.GetOrAdd(nativeString, Encoding.UTF8);
+    }
+
+    public static void AddPooledString(string value)
+    {
+        StringPool.Add(value);
+    }
+
+    /// <summary>
+    /// Null check to make absolutely sure the provided handle is not null
+    /// </summary>
+    /// <typeparam name="THandle"></typeparam>
+    /// <param name="handle"></param>
+    /// <returns></returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static THandle ThrowIfNull<THandle>(this THandle handle) where THandle : struct, IGitHandle
+    {
+        if (handle.IsNull)
+            ThrowNull();
+
+        return handle;
+    }
+
+    private static void ThrowNull()
+    {
+        throw new NullReferenceException("Git Object Handle not set to an instance of an object!");
     }
 
     /// <summary>
@@ -280,7 +240,27 @@ public static unsafe partial class Git2
         internal Git2.Commit** commits;
         internal nuint count;
 
-        public readonly ReadOnlySpan<GitCommit> Span => new(commits, checked((int)count));
+        public readonly ReadOnlySpan<GitCommit> Span
+        {
+            get
+            {
+                Debug.Assert(sizeof(GitCommit) == sizeof(Git2.Commit*));
+
+                return new(commits, checked((int)count));
+            }
+        }
+
+        public readonly nuint Count => count;
+
+        public readonly GitCommit this[nuint i]
+        {
+            get
+            {
+                ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(i, this.Count);
+
+                return new(commits[i]);
+            }
+        }
 
         public void Dispose()
         {
@@ -289,7 +269,7 @@ public static unsafe partial class Git2
 
             var copy = this;
 
-            NativeApi.git_commitarray_dispose(&copy);
+            GitNativeApi.git_commitarray_dispose(&copy);
 
             this = default;
         }
@@ -327,7 +307,6 @@ public static unsafe partial class Git2
     public struct PathSpec { }
     public struct PathSpecMatchList { }
     public struct Rebase { }
-    public struct RefDB { }
     public struct Reference { }
     public struct ReferenceIterator { }
     public struct ReferenceDatabase { }
@@ -349,60 +328,57 @@ public static unsafe partial class Git2
 
     #endregion
 
-    internal class CallbackContext<TDelegate> where TDelegate : Delegate
+    [method: SetsRequiredMembers]
+    internal ref struct CallbackContext<TCallback>(TCallback callback) where TCallback : class
     {
-        public required TDelegate Callback { get; init; }
+        public required TCallback Callback { get; init; } = callback;
 
         internal ExceptionDispatchInfo? ExceptionInfo { get; set; }
     }
 
     public readonly record struct Version : IComparable<Version>, ISpanFormattable
     {
-        public int Major { get; }
-        public int Minor { get; }
-        public int Revision { get; }
+        private readonly uint _version;
+
+        public int Major { get => (int)(_version >> 20); }
+        public int Minor { get => (int)((_version >> 10) & 0x03FF); }
+        public int Revision { get => (int)(_version & 0x03FF); }
 
         public Version(int major, int minor, int revision)
         {
             ArgumentOutOfRangeException.ThrowIfNegative(major);
             ArgumentOutOfRangeException.ThrowIfNegative(minor);
             ArgumentOutOfRangeException.ThrowIfNegative(revision);
+            ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(major, 1 << 12);
+            ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(minor, 1 << 10);
+            ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(revision, 1 << 10);
 
-            Major = major;
-            Minor = minor;
-            Revision = revision;
+            _version = (uint)((major << 20) | (minor << 10) | revision);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int CompareTo(Version other)
         {
-            if (Major != other.Major)
-                return Major.CompareTo(other.Major);
-
-            if (Minor != other.Minor)
-                return Minor.CompareTo(other.Minor);
-
-            return Revision.CompareTo(other.Revision);
+            return this._version.CompareTo(other._version);
         }
 
         public static bool operator <(Version a, Version b)
         {
-            return a.CompareTo(b) < 0;
+            return a._version < b._version;
         }
 
         public static bool operator >(Version a, Version b)
         {
-            return a.CompareTo(b) > 0;
+            return a._version > b._version;
         }
 
         public static bool operator <=(Version a, Version b)
         {
-            return a.CompareTo(b) <= 0;
+            return a._version <= b._version;
         }
 
         public static bool operator >=(Version a, Version b)
         {
-            return a.CompareTo(b) >= 0;
+            return a._version >= b._version;
         }
 
         public bool TryFormat(Span<char> destination, out int charsWritten, ReadOnlySpan<char> format, IFormatProvider? provider)
@@ -418,84 +394,6 @@ public static unsafe partial class Git2
         public override string ToString()
         {
             return ToString(null, null);
-        }
-    }
-
-    /// <summary>
-    /// Unmanaged string allocated on the pinned object heap
-    /// </summary>
-    internal struct UnmanagedString
-    {
-        public string? Value { get; private set; }
-        private byte[]? _memory;
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="initialCapacity">UTF8 byte count</param>
-        public UnmanagedString(int initialCapacity)
-        {
-            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(initialCapacity);
-
-            _memory = GC.AllocateUninitializedArray<byte>(initialCapacity, pinned: true);
-            _memory[0] = 0;
-        }
-
-        public readonly byte* NativePointer
-        {
-            get
-            {
-                if (Value is null)
-                    return null;
-
-                return (byte*)Unsafe.AsPointer(ref MemoryMarshal.GetArrayDataReference(_memory!));
-            }
-        }
-
-        /// <summary>
-        /// Sets the value of the unmanaged string.
-        /// </summary>
-        /// <param name="value">The new value</param>
-        /// <returns><see langword="true"/> if the NativePointer property changed, <see langword="false"/> if not.</returns>
-        public bool SetValue(string? value, bool reusableAllocation)
-        {
-            string? currentValue = this.Value;
-            if (currentValue == value)
-                return false;
-
-            if (string.IsNullOrEmpty(value))
-            {
-                Value = null;
-                return true;
-            }
-
-            const int MaxUtf8BytesPerChar = 3;
-
-            Span<byte> buffer = _memory;
-            bool allocationChanged = currentValue is null;
-
-            if (value.Length * MaxUtf8BytesPerChar >= buffer.Length)
-            {
-                int byteCount = checked(Encoding.UTF8.GetByteCount(value) + 1);
-
-                if (byteCount > buffer.Length)
-                {
-                    if (reusableAllocation)
-                    {
-                        // Saturates down to int.MaxValue if ever exceeded
-                        byteCount = int.CreateSaturating(BitOperations.RoundUpToPowerOf2((uint)byteCount));
-                    }
-
-                    buffer = (_memory = GC.AllocateUninitializedArray<byte>(byteCount, pinned: true));
-                    allocationChanged = true;
-                }
-            }
-
-            int written = Encoding.UTF8.GetBytes(value, buffer[..^1]);
-            buffer[written] = 0;
-
-            Value = value;
-            return allocationChanged;
         }
     }
 }

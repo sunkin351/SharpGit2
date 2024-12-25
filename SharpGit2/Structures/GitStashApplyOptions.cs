@@ -62,7 +62,7 @@ namespace SharpGit2.Native
             catch (Exception e)
             {
                 // TODO: Figure out exception propagation here
-                NativeApi.git_error_set_str(GitErrorClass.Callback, e.Message);
+                GitNativeApi.git_error_set_str(GitErrorClass.Callback, e.Message);
                 return -1;
             }
         }

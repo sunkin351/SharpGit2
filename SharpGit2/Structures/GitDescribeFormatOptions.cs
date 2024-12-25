@@ -1,5 +1,4 @@
-﻿using System.Runtime.InteropServices;
-using System.Runtime.InteropServices.Marshalling;
+﻿using System.Runtime.InteropServices.Marshalling;
 
 namespace SharpGit2
 {
@@ -31,7 +30,7 @@ namespace SharpGit2.Native
             AbbreviatedSize = 7;
         }
 
-        public void FromManaged(in SharpGit2.GitDescribeFormatOptions options, List<GCHandle> gchandles)
+        public void FromManaged(in SharpGit2.GitDescribeFormatOptions options)
         {
             Version = 1;
             AbbreviatedSize = options.AbbreviatedSize;

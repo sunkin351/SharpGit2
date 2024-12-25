@@ -54,18 +54,16 @@ namespace SharpGit2.Native
             try
             {
                 SharpGit2.GitDiffFile _file = new(in *file);
-                var path = Utf8StringMarshaller.ConvertToManaged(fullPath)!;
+                var path = Git2.GetPooledString(fullPath)!;
 
                 return callbacks.FromFile(in _file, path, out *(nint*)out_handle);
             }
             catch (Git2Exception e)
             {
-                NativeApi.git_error_set_str(e.ErrorClass, e.Message);
                 return (int)e.ErrorCode;
             }
-            catch (Exception e)
+            catch// (Exception e)
             {
-                NativeApi.git_error_set_str(GitErrorClass.Callback, e.Message);
                 return -1;
             }
         }
@@ -76,7 +74,7 @@ namespace SharpGit2.Native
         {
             if (bufferLength > int.MaxValue)
             {
-                NativeApi.git_error_set_str(
+                GitNativeApi.git_error_set_str(
                     GitErrorClass.Callback,
                     "Buffer length too large to represent with 32-bit signed integer! To get around this, please implement the SharpGit2.Native.GitDiffSimilarityMetric method table yourself.");
                 return (int)GitError.Invalid;
@@ -94,12 +92,12 @@ namespace SharpGit2.Native
             }
             catch (Git2Exception e)
             {
-                NativeApi.git_error_set_str(e.ErrorClass, e.Message);
+                GitNativeApi.git_error_set_str(e.ErrorClass, e.Message);
                 return (int)e.ErrorCode;
             }
             catch (Exception e)
             {
-                NativeApi.git_error_set_str(GitErrorClass.Callback, e.Message);
+                GitNativeApi.git_error_set_str(GitErrorClass.Callback, e.Message);
                 return -1;
             }
         }
@@ -130,12 +128,12 @@ namespace SharpGit2.Native
             }
             catch (Git2Exception e)
             {
-                NativeApi.git_error_set_str(e.ErrorClass, e.Message);
+                GitNativeApi.git_error_set_str(e.ErrorClass, e.Message);
                 return (int)e.ErrorCode;
             }
             catch (Exception e)
             {
-                NativeApi.git_error_set_str(GitErrorClass.Callback, e.Message);
+                GitNativeApi.git_error_set_str(GitErrorClass.Callback, e.Message);
                 return -1;
             }
         }

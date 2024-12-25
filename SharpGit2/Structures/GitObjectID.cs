@@ -1,4 +1,5 @@
 ﻿using System.Buffers;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -16,7 +17,7 @@ public enum GitObjectIDType : byte
 #if !GIT_EXPERIMENTAL_SHA256
 
 [StructLayout(LayoutKind.Sequential)]
-public unsafe struct GitObjectID : IEquatable<GitObjectID>, IComparable<GitObjectID>
+public unsafe record struct GitObjectID : IEquatable<GitObjectID>, IComparable<GitObjectID>
 {
     public IdArray Id;
 
@@ -31,11 +32,6 @@ public unsafe struct GitObjectID : IEquatable<GitObjectID>, IComparable<GitObjec
     public readonly bool Equals(GitObjectID other)
     {
         return ((ReadOnlySpan<byte>)this.Id).SequenceEqual(other.Id);
-    }
-
-    public readonly override bool Equals(object? obj)
-    {
-        return obj is GitObjectID other && this.Equals(other);
     }
 
     public readonly override int GetHashCode()
@@ -61,33 +57,62 @@ public unsafe struct GitObjectID : IEquatable<GitObjectID>, IComparable<GitObjec
         return ((ReadOnlySpan<byte>)this.Id).SequenceCompareTo(other.Id);
     }
 
-    public static GitObjectID FromHexString(string hexString)
+    public static GitObjectID Parse(ReadOnlySpan<char> hexString)
     {
-        ArgumentNullException.ThrowIfNull(hexString);
-
         if (hexString.Length != 40)
         {
             throw new ArgumentException("Invalid Hex String Length!");
         }
 
-        ReadOnlySpan<byte> idBytes = Convert.FromHexString(hexString);
-
         GitObjectID result = default;
-        idBytes.CopyTo(result.Id);
+        var status = Convert.FromHexString(hexString, result.Id, out var consumed, out var written);
+
+        if (status == OperationStatus.InvalidData)
+        {
+            throw new ArgumentException("Invalid Hex String Content!");
+        }
+
+        Debug.Assert(status == OperationStatus.Done && consumed == hexString.Length && written == hexString.Length / 2);
 
         return result;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool operator ==(GitObjectID left, GitObjectID right)
+    public static bool TryParsePrefix(ReadOnlySpan<char> hexString, out GitObjectID id, out ushort nibblePrefixLength)
     {
-        return left.Equals(right);
-    }
+        if (hexString.Length > 40)
+        {
+            throw new ArgumentException("Invalid Hex String Length!");
+        }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool operator !=(GitObjectID left, GitObjectID right)
-    {
-        return !left.Equals(right);
+        id = default;
+        nibblePrefixLength = 0;
+
+        if (hexString.IsEmpty)
+        {
+            return true;
+        }
+
+        Span<byte> output = id.Id;
+
+        var status = Convert.FromHexString(hexString, output, out int consumed, out int written);
+
+        switch (status)
+        {
+            case OperationStatus.Done:
+                nibblePrefixLength = (ushort)hexString.Length;
+                return true;
+            case OperationStatus.NeedMoreData:
+
+                Debug.Assert(consumed == hexString.Length - 1);
+
+                status = Convert.FromHexString([hexString[^1], '0'], output.Slice(written), out _, out _);
+
+                Debug.Assert(status == OperationStatus.Done); // assume all of the data was verified on the first call
+                goto case OperationStatus.Done;
+
+            default:
+                return false;
+        }
     }
 
     [InlineArray(20)]
@@ -161,7 +186,7 @@ public unsafe struct GitObjectID : IEquatable<GitObjectID>, IComparable<GitObjec
         return ((ReadOnlySpan<byte>)this.Id).SequenceCompareTo(other.Id);
     }
 
-    public static GitObjectID FromHexString(string hexString)
+    public static GitObjectID Parse(string hexString)
     {
         ArgumentNullException.ThrowIfNull(hexString);
 

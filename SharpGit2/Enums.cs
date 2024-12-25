@@ -3,24 +3,73 @@
 [Flags]
 public enum GitApplyFlags : uint
 {
+    /// <summary>
+    /// Don't actually make changes, just test that the patch applies. This is the equivalent of <c>git apply --check</c>.
+    /// </summary>
     Check = 1 << 0,
 }
 
+/// <summary>
+/// Possible application locations for git_apply()
+/// </summary>
 public enum GitApplyLocationType
 {
+    /// <summary>
+    /// Apply the patch to the workdir, leaving the index untouched. This is the equivalent of <c>git apply</c> with no location argument.
+    /// </summary>
     WorkDir = 0,
+    /// <summary>
+    /// Apply the patch to the index, leaving the working directory untouched. This is the equivalent of <c>git apply --cached</c>.
+    /// </summary>
     Index = 1,
+    /// <summary>
+    /// Apply the patch to both the working directory and the index. This is the equivalent of <c>git apply --index</c>.
+    /// </summary>
     Both = 2
 }
 
 [Flags]
 public enum GitAttributeCheckFlags : uint
 {
+    /// <summary>
+    /// Check attribute flags: Reading values from index and working directory.
+    /// <br/><br/>
+    /// When checking attributes, it is possible to check attribute files
+    /// in both the working directory (if there is one) and the index (if
+    /// there is one).  You can explicitly choose where to check and in
+    /// which order using the following flags.
+    /// <br/><br/>
+    /// Core git usually checks the working directory then the index,
+    /// except during a checkout when it checks the index first.  It will
+    /// use index only for creating archives or for a bare repo (if an
+    /// index has been specified for the bare repo).
+    /// </summary>
     FileThenIndex = 0,
+    ///<inheritdoc cref="FileThenIndex"/>
     IndexThenFile = 1,
+    ///<inheritdoc cref="FileThenIndex"/>
     IndexOnly = 1 << 1,
+
+    /// <summary>
+    /// Check attribute flags: controlling extended attribute behavior.
+    /// 
+    /// Normally, attribute checks include looking in the /etc (or system
+    /// equivalent) directory for a `gitattributes` file.  Passing this
+    /// flag will cause attribute checks to ignore that file.
+    /// equivalent) directory for a `gitattributes` file.  Passing the
+    /// `GIT_ATTR_CHECK_NO_SYSTEM` flag will cause attribute checks to
+    /// ignore that file.
+    /// 
+    /// Passing the `GIT_ATTR_CHECK_INCLUDE_HEAD` flag will use attributes
+    /// from a `.gitattributes` file in the repository at the HEAD revision.
+    /// 
+    /// Passing the `GIT_ATTR_CHECK_INCLUDE_COMMIT` flag will use attributes
+    /// from a `.gitattributes` file in a specific commit.
+    /// </summary>
     NoSystem = 1 << 2,
+    ///<inheritdoc cref="NoSystem"/>
     IncludeHead = 1 << 3,
+    ///<inheritdoc cref="NoSystem"/>
     IncludeCommit = 1 << 4,
 }
 
@@ -69,11 +118,23 @@ public enum GitBlobFilterFlags : uint
     AttributesFromCommit = 1 << 3,
 }
 
+/// <summary>
+/// Basic type of any Git branch.
+/// </summary>
 [Flags]
 public enum GitBranchType
 {
+    /// <summary>
+    /// Local branch type
+    /// </summary>
     Local = 1,
+    /// <summary>
+    /// Remote branch type
+    /// </summary>
     Remote = 2,
+    /// <summary>
+    /// Any branch type
+    /// </summary>
     All = Local | Remote
 }
 
@@ -267,11 +328,32 @@ public enum GitCheckoutStrategyFlags : uint
     ConflictStyleZDiff3 = 1 << 25,
 }
 
+/// <summary>
+/// Options for bypassing the git-aware transport on clone. Bypassing
+/// it means that instead of a fetch, libgit2 will copy the object
+/// database directory instead of figuring out what it needs, which is
+/// faster. If possible, it will hardlink the files to save space.
+/// </summary>
 public enum GitCloneLocalType
 {
+    /// <summary>
+    /// Auto-detect (default), libgit2 will bypass the git-aware
+    /// transport for local paths, but use a normal fetch for
+    /// `file://` urls.
+    /// </summary>
     LocalAuto,
+    /// <summary>
+    /// Bypass the git-aware transport even for a `file://` url.
+    /// </summary>
     Local,
+    /// <summary>
+    /// Do no bypass the git-aware transport
+    /// </summary>
     NoLocal,
+    /// <summary>
+    /// Bypass the git-aware transport, but do not try to use
+    /// hardlinks.
+    /// </summary>
     LocalNoLinks
 }
 
@@ -614,7 +696,7 @@ public enum GitDiffOptionFlags : uint
     /// </summary>
     IgnoreBlankLines = 1 << 19,
     /// <summary>
-    /// Treat all files as text, disabling binary attributes & detection
+    /// Treat all files as text, disabling binary attributes and detection
     /// </summary>
     ForceText = 1 << 20,
     /// <summary>
@@ -787,11 +869,11 @@ public enum GitFetchPruneType
 public enum GitFileMode
 {
     Unreadable = 0,
-    Tree = 0040000,
-    Blob = 0100644,
-    BlobExecutable = 0100755,
-    Link = 0120000,
-    Commit = 0160000,
+    Tree = 0x4000,
+    Blob = 0x81A4,
+    BlobExecutable = 0x81ED,
+    Link = 0xA000,
+    Commit = 0xE000,
 }
 
 [Flags]
@@ -952,14 +1034,41 @@ public enum GitMergeFileFavor
 public enum GitMergeFileFlags : uint
 {
     Default = 0,
+    /// <summary>
+    /// Create standard conflicted merge files
+    /// </summary>
     StyleMerge = 1,
+    /// <summary>
+    /// Create diff3-style files
+    /// </summary>
     StyleDiff3 = 1 << 1,
+    /// <summary>
+    /// Condense non-alphanumeric regions for simplified diff file
+    /// </summary>
     SimplifyAlphaNumeric = 1 << 2,
+    /// <summary>
+    /// Ignore all whitespace
+    /// </summary>
     IgnoreWhitespace = 1 << 3,
+    /// <summary>
+    /// Ignore changes in amount of whitespace
+    /// </summary>
     IgnoreWhitespaceChange = 1 << 4,
+    /// <summary>
+    /// Ignore whitespace at end of line
+    /// </summary>
     IgnoreWhitespaceEOL = 1 << 5,
+    /// <summary>
+    /// Use the "patience diff" algorithm
+    /// </summary>
     DiffPatience = 1 << 6,
+    /// <summary>
+    /// Take extra time to find minimal diff
+    /// </summary>
     DiffMinimal = 1 << 7,
+    /// <summary>
+    /// Create zdiff3 ("zealous diff3")-style files
+    /// </summary>
     StyleZDiff3 = 1 << 8,
     /// <summary>
     /// Do not produce file conflicts when common regions have
@@ -976,10 +1085,29 @@ public enum GitMergeFileFlags : uint
 [Flags]
 public enum GitMergeFlags : uint
 {
+    /// <summary>
+    /// Detect renames that occur between the common ancestor and the "ours" side or the common ancestor and the "theirs" side.
+    /// This will enable the ability to merge between a modified and renamed file.
+    /// </summary>
     FindRenames = 1,
+    /// <summary>
+    /// If a conflict occurs, exit immediately instead of attempting to continue resolving conflicts.
+    /// The merge operation will fail with <see cref="GitError.MergeConflict"/> and no index will be returned.
+    /// </summary>
     FailOnConflict = 1 << 1,
+    /// <summary>
+    /// Do not write the REUC extension on the generated index
+    /// </summary>
     SkipREUC = 1 << 2,
+    /// <summary>
+    /// If the commits being merged have multiple merge bases, do not build a recursive merge base (by merging the multiple merge bases),
+    /// instead simply use the first base. This flag provides a similar merge base to <c>git-merge-resolve</c>.
+    /// </summary>
     NoRecursive = 1 << 3,
+    /// <summary>
+    /// Treat this merge as if it is to produce the virtual base of a recursive merge.
+    /// This will ensure that there are no conflicts, any conflicting regions will keep conflict markers in the merge result.
+    /// </summary>
     VirtualBase = 1 << 4,
 }
 
@@ -1040,15 +1168,53 @@ public enum GitPackBuilderStageType
     Deltafication = 1,
 }
 
+/// <summary>
+/// Options controlling how pathspec match should be executed
+/// </summary>
 [Flags]
 public enum GitPathSpecFlags : uint
 {
     Default = 0,
+
+    /// <summary>
+    /// Forces match to ignore case. Otherwise match will
+    /// use native case sensitivity of platform filesystem
+    /// </summary>
     IgnoreCase = 1,
+
+    /// <summary>
+    /// Forces case sensitive match. Otherwise match will
+    /// use native case sensitivity of platform filesystem
+    /// </summary>
     UseCase = 1 << 1,
+
+    /// <summary>
+    /// Disables glob patterns and just uses simple
+    /// string comparison for matching
+    /// </summary>
     NoGlob = 1 << 2,
+
+    /// <summary>
+    /// This means the match functions return error code <see cref="GitError.NotFound"/>
+    /// if no matches are found; otherwise no matches is still success (return 0) but
+    /// <see cref="GitNativeApi.git_pathspec_match_list_entrycount(Git2.PathSpecMatchList*)"/>
+    /// will indicate 0 matches.
+    /// </summary>
     NoMatchError = 1 << 3,
+
+    /// <summary>
+    /// This means that the <see cref="GitPathSpecMatchList"/>
+    /// should track which patterns matched which files so that at the end of
+    /// the match we can identify patterns that did not match any files.
+    /// </summary>
     FindFailures = 1 << 4,
+
+    /// <summary>
+    /// This means that the <see cref="GitPathSpecMatchList"/>
+    /// does not need to keep the actual matching filenames.  Use this to
+    /// just test if there were any matches at all or in combination with
+    /// <see cref="FindFailures"/> to validate a pathspec.
+    /// </summary>
     FailuresOnly = 1 << 5,
 }
 
@@ -1339,12 +1505,33 @@ public enum GitStashApplyProgressType
     Done
 }
 
+/// <summary>
+/// Stash Flags
+/// </summary>
 public enum GitStashFlags
 {
+    /// <summary>
+    /// No options, default
+    /// </summary>
     Default = 0,
+    /// <summary>
+    /// All changes already added to the index are left intact in
+    /// the working directory
+    /// </summary>
     KeepIndex = 1,
+    /// <summary>
+    /// All untracked files are also stashed and then cleaned up
+    /// from the working directory
+    /// </summary>
     IncludeUntracked = 1 << 1,
+    /// <summary>
+    /// All ignored files are also stashed and then cleaned up from
+    /// the working directory
+    /// </summary>
     IncludeIgnore = 1 << 2,
+    /// <summary>
+    /// All changes in the index and working directory are left intact
+    /// </summary>
     KeepAll = 1 << 3,
 }
 
@@ -1382,38 +1569,114 @@ public enum GitStatusFlags
 }
 
 /// <summary>
-/// Flags to control status callbacks
+/// Flags to control what files are included in a status enumeration.
 /// </summary>
 [Flags]
 public enum GitStatusOptionFlags
 {
+    /// <summary>
+    /// Says that callbacks should be called on untracked files. These will only
+    /// be called if the workdir files are included in the status "show" option.
+    /// </summary>
     IncludeUntracked = 1,
+    /// <summary>
+    /// Says that ignored files get callbacks. Again, these callbacks will only
+    /// be made if the workdir files are included in the status "show" option.
+    /// </summary>
     IncludeIgnored = 1 << 1,
+    /// <summary>
+    /// Indicates that callback should be made even on unmodified files.
+    /// </summary>
     IncludeUnmodified = 1 << 2,
+    /// <summary>
+    /// Indicates that submodules should be skipped. This only applies if there
+    /// are no pending typechanges to the submodule (either from or to another type).
+    /// </summary>
     ExcludeSubmodules = 1 << 3,
+    /// <summary>
+    /// Indicates that all files in untracked directories should be included.
+    /// Normally if an entire directory is new, then just the top-level directory
+    /// is included (with a trailing slash on the entry name). This flag says to
+    /// include all of the individual files in the directory instead.
+    /// </summary>
     RecurseUntrackedDirectories = 1 << 4,
+    /// <summary>
+    /// Indicates that the given path should be treated as a literal path,
+    /// and not as a pathspec pattern.
+    /// </summary>
     DisablePathSpecMatch = 1 << 5,
+    /// <summary>
+    /// Indicates that the contents of ignored directories should be included in the status.
+    /// This is like doing <c>git ls-files -o -i --exclude-standard</c> with core git.
+    /// </summary>
     RecurseIgnoredDirectories = 1 << 6,
+    /// <summary>
+    /// Indicates that rename detection should be processed between the head and the
+    /// index and enables the <see cref="GitStatusFlags.IndexRenamed"/> as a possible status flag.
+    /// </summary>
     RenamesHeadToIndex = 1 << 7,
+    /// <summary>
+    /// Indicates that rename detection should be run between the index and the working directory
+    /// and enabled <see cref="GitStatusFlags.WorkingTreeRenamed"/> as a possible status flag.
+    /// </summary>
     RenamesIndexToWorkDirectory = 1 << 8,
+    /// <summary>
+    /// Overrides the native case sensitivity for the file system and forces the output to be in case-sensitive order.
+    /// </summary>
     SortCaseSensitively = 1 << 9,
+    /// <summary>
+    /// Overrides the native case sensitivity for the file system and forces the output to be in case-insensitive order.
+    /// </summary>
     SortCaseInsensitively = 1 << 10,
+    /// <summary>
+    /// Indicates that rename detection should include rewritten files.
+    /// </summary>
     RenamesFromRewrites = 1 << 11,
+    /// <summary>
+    /// Bypasses the default status behavior of doing a "soft" index reload (i.e. reloading the index data if the file on disk has been modified outside libgit2).
+    /// </summary>
     NoRefresh = 1 << 12,
+    /// <summary>
+    /// Tells libgit2 to refresh the stat cache in the index for files that are unchanged but have out of date stat einformation in the index.
+    /// It will result in less work being done on subsequent calls to get status. This is mutually exclusive with the NO_REFRESH option.
+    /// </summary>
     UpdateIndex = 1 << 13,
+    /// <summary>
+    /// Normally files that cannot be opened or read are ignored as these are often transient files;
+    /// this option will return unreadable files as <see cref="GitStatusFlags.WorkingTreeUnreadable"/>
+    /// </summary>
     IncludeUnreadable = 1 << 14,
+    /// <summary>
+    /// Unreadable files will be detected and given the status untracked instead of unreadable.
+    /// </summary>
     IncludeUnreadableAsUntracked = 1 << 15,
 
+    /// <summary>
+    /// The default flags
+    /// </summary>
     Defaults = IncludeIgnored | IncludeUntracked | RecurseUntrackedDirectories
 }
 
 /// <summary>
 /// Select the files on which to report status.
 /// </summary>
+/// <remarks>
+/// With git_status_foreach_ext(), this will control which changes get callbacks. <br/>
+/// With git_status_list_new(), these will control which changes are included in the list.
+/// </remarks>
 public enum GitStatusShow
 {
+    /// <summary>
+    /// The default. This roughly matches <c>git status --porcelain</c> regarding which files are included and in what order.
+    /// </summary>
     IndexAndWorkDir,
+    /// <summary>
+    /// Only gives status based on HEAD to index comparison, not looking at working directory changes.
+    /// </summary>
     IndexOnly,
+    /// <summary>
+    /// Only gives status based on index to working directory comparison, not comparing the index to the HEAD.
+    /// </summary>
     WorkDirOnly,
 }
 

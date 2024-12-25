@@ -1,14 +1,34 @@
 ﻿
 using System;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.Marshalling;
 
 namespace SharpGit2
 {
+    [Flags]
+    public enum GitRemoteCallbackRegisterFlags
+    {
+        OnSidebandProgress = 1 << 0,
+        OnCompletion = 1 << 1,
+        GetCredentials = 1 << 2,
+        OnCertificateCheck = 1 << 3,
+        OnTransferProgress = 1 << 4,
+        OnUpdateTips = 1 << 5,
+        OnPackProgress = 1 << 6,
+        OnPushTransferProgress = 1 << 7,
+        OnPushUpdateReference = 1 << 8,
+        OnPushNegotiation = 1 << 9,
+        GetTransport = 1 << 10,
+        OnRemoteReady = 1 << 11,
+    }
+
     public interface IGitRemoteCallbacks
     {
+        GitRemoteCallbackRegisterFlags CallbacksToRegister { get; }
+
         /// <summary>
         /// Callback for messages received by the transport.
         /// </summary>
@@ -21,13 +41,19 @@ namespace SharpGit2
         /// progress side-band will be passed to this function (this is
         /// the 'counting objects' output).
         /// </remarks>
-        int OnSidebandProgress(ReadOnlySpan<byte> message);
+        int OnSidebandProgress(ReadOnlySpan<byte> message)
+        {
+            return 0;
+        }
 
         /// <summary>
         /// Completion is called when different parts of the download
         /// process are done (currently unused).
         /// </summary>
-        int OnCompletion(GitRemoteCompletionType type);
+        int OnCompletion(GitRemoteCompletionType type)
+        {
+            return 0;
+        }
 
         /// <summary>
         /// Credential acquisition callback.
@@ -96,7 +122,10 @@ namespace SharpGit2
         /// called with the current count of progress done by the
         /// indexer.
         /// </remarks>
-        int OnTransferProgress(in GitIndexerProgress gitIndexerProgress);
+        int OnTransferProgress(in GitIndexerProgress gitIndexerProgress)
+        {
+            return 0;
+        }
 
         /// <summary>
         /// Each time a reference is updated locally, this function
@@ -108,7 +137,10 @@ namespace SharpGit2
         /// <returns>
         /// Less than 0 to cancel operation, 0 to continue
         /// </returns>
-        int OnUpdateTips(string? refName, in GitObjectID a, in GitObjectID b);
+        int OnUpdateTips(string? refName, in GitObjectID a, in GitObjectID b)
+        {
+            return 0;
+        }
 
         /// <summary>
         /// Function to call with progress information
@@ -122,7 +154,10 @@ namespace SharpGit2
         /// Be aware that this is called inline with pack building operations,
         /// so performance may be affected.
         /// </remarks>
-        int OnPackProgress(int stage, uint current, uint total);
+        int OnPackProgress(int stage, uint current, uint total)
+        {
+            return 0;
+        }
 
         /// <summary>
         /// Function to call with progress information during the
@@ -136,7 +171,10 @@ namespace SharpGit2
         /// Be aware that this is called inline with pack building operations,
         /// so performance may be affected.
         /// </remarks>
-        int OnPushTransferProgress(uint current, uint total, nuint bytes);
+        int OnPushTransferProgress(uint current, uint total, nuint bytes)
+        {
+            return 0;
+        }
 
         /// <summary>
         /// Callback used to inform of the update status from the remote.
@@ -152,7 +190,10 @@ namespace SharpGit2
         /// the update was rejected by the remote server
         /// and `status` contains the reason given.
         /// </remarks>
-        int OnPushUpdateReference(string refname, string? status);
+        int OnPushUpdateReference(string refname, string? status)
+        {
+            return 0;
+        }
 
         /// <summary>
         /// Called once between the negotiation step and the upload. It
@@ -163,7 +204,10 @@ namespace SharpGit2
         /// as commands to the destination.
         /// </param>
         /// <returns></returns>
-        int OnPushNegotiation(GitPushUpdate[] updates);
+        int OnPushNegotiation(GitPushUpdate[] updates)
+        {
+            return 0;
+        }
 
         /// <summary>
         /// Provide the transport to use for this operation.
@@ -185,7 +229,10 @@ namespace SharpGit2
         /// <param name="gitRemote"></param>
         /// <param name="direction"></param>
         /// <returns></returns>
-        int OnRemoteReady(GitRemote gitRemote, GitDirection direction);
+        int OnRemoteReady(GitRemote gitRemote, GitDirection direction)
+        {
+            return 0;
+        }
     }
 }
 
@@ -207,6 +254,7 @@ namespace SharpGit2.Native
         public delegate* unmanaged[Cdecl]<Git2.Transport**, Git2.Remote*, nint, int> Transport;
         public delegate* unmanaged[Cdecl]<Git2.Remote*, GitDirection, nint, int> RemoteReady;
         public nint Payload;
+        [SuppressMessage("Style", "IDE0044:Add readonly modifier")]
         private nint Reserved;
 
         public GitRemoteCallbacks()
@@ -225,23 +273,56 @@ namespace SharpGit2.Native
             gchandles.Add(gch);
 
             Payload = (nint)gch;
-            SidebandProgress = &OnSidebandProgress;
-            Completion = &OnCompletion;
-            Credentials = &OnGetCredentials;
-            TransferProgress = &OnTransferProgress;
-            UpdateTips = &OnUpdateTips;
-            PackProgress = &OnPackProgress;
-            PushTransferProgress = &OnPushTransferProgress;
-            PushUpdateReference = &OnPushUpdateReference;
-            PushNegotiation = &OnPushNegotiation;
-            Transport = &GetTransport;
-            RemoteReady = &OnRemoteReady;
+            SetDefaultCallbacks(callbacks);
+        }
+
+        private static bool HasFlag(GitRemoteCallbackRegisterFlags flags, GitRemoteCallbackRegisterFlags flags2)
+        {
+            return (flags & flags2) == flags2;
+        }
+
+        internal void SetDefaultCallbacks(IGitRemoteCallbacks callbacks)
+        {
+            var flags = callbacks.CallbacksToRegister;
+
+            if (HasFlag(flags, GitRemoteCallbackRegisterFlags.OnSidebandProgress))
+                SidebandProgress = &OnSidebandProgress;
+            
+            if (HasFlag(flags, GitRemoteCallbackRegisterFlags.OnCompletion))
+                Completion = &OnCompletion;
+            
+            if (HasFlag(flags, GitRemoteCallbackRegisterFlags.GetCredentials))
+                Credentials = &OnGetCredentials;
+            
+            if (HasFlag(flags, GitRemoteCallbackRegisterFlags.OnTransferProgress))
+                TransferProgress = &OnTransferProgress;
+
+            if (HasFlag(flags, GitRemoteCallbackRegisterFlags.OnUpdateTips))
+                UpdateTips = &OnUpdateTips;
+
+            if (HasFlag(flags, GitRemoteCallbackRegisterFlags.OnPackProgress))
+                PackProgress = &OnPackProgress;
+
+            if (HasFlag(flags, GitRemoteCallbackRegisterFlags.OnPushTransferProgress))
+                PushTransferProgress = &OnPushTransferProgress;
+
+            if (HasFlag(flags, GitRemoteCallbackRegisterFlags.OnPushUpdateReference))
+                PushUpdateReference = &OnPushUpdateReference;
+
+            if (HasFlag(flags, GitRemoteCallbackRegisterFlags.OnPushNegotiation))
+                PushNegotiation = &OnPushNegotiation;
+
+            if (HasFlag(flags, GitRemoteCallbackRegisterFlags.GetTransport))
+                Transport = &GetTransport;
+
+            if (HasFlag(flags, GitRemoteCallbackRegisterFlags.OnRemoteReady))
+                RemoteReady = &OnRemoteReady;
         }
 
         /// <summary>
         /// Free unmanaged resources allocated by <see cref="FromManaged"/>
         /// </summary>
-        public void Free()
+        public readonly void Free()
         {
         }
 
@@ -254,9 +335,8 @@ namespace SharpGit2.Native
             {
                 return callbacks.OnSidebandProgress(new ReadOnlySpan<byte>(message, messageLength));
             }
-            catch (Exception e)
+            catch// (Exception e)
             {
-                NativeApi.git_error_set_str(GitErrorClass.Callback, e.Message);
                 return -1;
             }
         }
@@ -270,9 +350,8 @@ namespace SharpGit2.Native
             {
                 return callbacks.OnCompletion(type);
             }
-            catch (Exception e)
+            catch// (Exception e)
             {
-                NativeApi.git_error_set_str(GitErrorClass.Callback, e.Message);
                 return -1;
             }
         }
@@ -284,16 +363,15 @@ namespace SharpGit2.Native
 
             try
             {
-                string mUrl = Utf8StringMarshaller.ConvertToManaged(url)!;
-                string? mUsernameFromUrl = Utf8StringMarshaller.ConvertToManaged(usernameFromUrl);
+                string mUrl = Git2.GetPooledString(url);
+                string? mUsernameFromUrl = usernameFromUrl == null ? null : Git2.GetPooledString(usernameFromUrl);
 
                 Debug.Assert(sizeof(GitCredential) == sizeof(void*)); // Ensure struct size assumption
 
                 return callbacks.GetCredentials(mUrl, mUsernameFromUrl, allowedTypes, out *(GitCredential*)out_credential);
             }
-            catch (Exception e)
+            catch// (Exception e)
             {
-                NativeApi.git_error_set_str(GitErrorClass.Callback, e.Message);
                 return -1;
             }
         }
@@ -307,14 +385,17 @@ namespace SharpGit2.Native
             {
                 var cert = GitCertificate.FromUnmanaged(certificate);
 
-                string mHost = Utf8StringMarshaller.ConvertToManaged(host)!;
+                string mHost = Git2.GetPooledString(host)!;
 
                 return callbacks.OnCertificateCheck(cert, isValid != 0, mHost);
             }
-            catch (Exception e)
+            catch (NotSupportedException)
             {
-                NativeApi.git_error_set_str(GitErrorClass.Callback, e.Message);
-                return e is NotSupportedException ? (int)GitError.NotSupported : -1;
+                return (int)GitError.NotSupported;
+            }
+            catch// (Exception e)
+            {
+                return -1;
             }
         }
 
@@ -327,9 +408,8 @@ namespace SharpGit2.Native
             {
                 return callbacks.OnTransferProgress(in *stats);
             }
-            catch (Exception e)
+            catch// (Exception e)
             {
-                NativeApi.git_error_set_str(GitErrorClass.Callback, e.Message);
                 return -1;
             }
         }
@@ -341,13 +421,12 @@ namespace SharpGit2.Native
 
             try
             {
-                var refName = Utf8StringMarshaller.ConvertToManaged(refname);
+                var refName = Git2.GetPooledString(refname);
 
                 return callbacks.OnUpdateTips(refName, in *a, in *b);
             }
-            catch (Exception e)
+            catch// (Exception e)
             {
-                NativeApi.git_error_set_str(GitErrorClass.Callback, e.Message);
                 return -1;
             }
         }
@@ -361,9 +440,8 @@ namespace SharpGit2.Native
             {
                 return callbacks.OnPackProgress(stage, current, total);
             }
-            catch (Exception e)
+            catch// (Exception e)
             {
-                NativeApi.git_error_set_str(GitErrorClass.Callback, e.Message);
                 return -1;
             }
         }
@@ -377,9 +455,8 @@ namespace SharpGit2.Native
             {
                 return callbacks.OnPushTransferProgress(current, total, bytes);
             }
-            catch (Exception e)
+            catch// (Exception e)
             {
-                NativeApi.git_error_set_str(GitErrorClass.Callback, e.Message);
                 return -1;
             }
         }
@@ -391,14 +468,13 @@ namespace SharpGit2.Native
 
             try
             {
-                string mRefName = Utf8StringMarshaller.ConvertToManaged(refname)!;
-                string? mStatus = Utf8StringMarshaller.ConvertToManaged(status);
+                string mRefName = Git2.GetPooledString(refname)!;
+                string? mStatus = status == null ? null : Git2.GetPooledString(status);
 
                 return callbacks.OnPushUpdateReference(mRefName, mStatus);
             }
-            catch (Exception e)
+            catch// (Exception e)
             {
-                NativeApi.git_error_set_str(GitErrorClass.Callback, e.Message);
                 return -1;
             }
         }
@@ -420,9 +496,8 @@ namespace SharpGit2.Native
 
                 return callbacks.OnPushNegotiation(array);
             }
-            catch (Exception e)
+            catch// (Exception e)
             {
-                NativeApi.git_error_set_str(GitErrorClass.Callback, e.Message);
                 return -1;
             }
         }
@@ -438,9 +513,8 @@ namespace SharpGit2.Native
 
                 return callbacks.GetTransport(new(owner), out *(GitTransport*)transport_out);
             }
-            catch (Exception e)
+            catch// (Exception e)
             {
-                NativeApi.git_error_set_str(GitErrorClass.Callback, e.Message);
                 return -1;
             }
         }
@@ -454,9 +528,8 @@ namespace SharpGit2.Native
             {
                 return callbacks.OnRemoteReady(new(remote), direction);
             }
-            catch (Exception e)
+            catch// (Exception e)
             {
-                NativeApi.git_error_set_str(GitErrorClass.Callback, e.Message);
                 return -1;
             }
         }

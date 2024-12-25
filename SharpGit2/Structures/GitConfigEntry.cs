@@ -5,7 +5,7 @@ namespace SharpGit2
     /// <summary>
     /// An entry in a configuration file
     /// </summary>
-    public unsafe struct GitConfigEntry
+    public unsafe readonly struct GitConfigEntry
     {
         /// <summary>
         /// Name of the configuration entry (normalized)
@@ -50,17 +50,17 @@ namespace SharpGit2
             {
                 var ptr2 = (Native.GitConfigEntry.V1_7_2*)ptr; // actual type, given the lib version
 
-                Name = Utf8StringMarshaller.ConvertToManaged(ptr2->Name)!;
+                Name = Git2.GetPooledString(ptr2->Name)!;
                 Value = Utf8StringMarshaller.ConvertToManaged(ptr2->Value)!;
                 IncludeDepth = ptr2->IncludeDepth;
                 Level = ptr2->Level;
             }
             else
             {
-                Name = Utf8StringMarshaller.ConvertToManaged(ptr->Name)!;
+                Name = Git2.GetPooledString(ptr->Name)!;
                 Value = Utf8StringMarshaller.ConvertToManaged(ptr->Value)!;
-                BackendType = Utf8StringMarshaller.ConvertToManaged(ptr->BackendType);
-                OriginPath = Utf8StringMarshaller.ConvertToManaged(ptr->OriginPath);
+                BackendType = Git2.GetPooledString(ptr->BackendType);
+                OriginPath = Git2.GetPooledString(ptr->OriginPath);
                 IncludeDepth = ptr->IncludeDepth;
                 Level = ptr->Level;
             }

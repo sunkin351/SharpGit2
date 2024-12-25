@@ -119,7 +119,7 @@ namespace SharpGit2.Native
         /// <summary>
         /// Free unmanaged resources allocated by <see cref="FromManaged"/>
         /// </summary>
-        public void Free()
+        public readonly void Free()
         {
             StringArrayMarshaller.Free(Paths);
             Utf8StringMarshaller.Free(TargetDirectory);
@@ -135,17 +135,17 @@ namespace SharpGit2.Native
 
             try
             {
-                string mPath = Utf8StringMarshaller.ConvertToManaged(path)!;
+                string _path = Git2.GetPooledString(path);
+
                 SharpGit2.GitDiffFile mBaseline = new(in *baseline),
                     mTarget = new(in *target),
                     mWorkDir = new(in *workDir);
 
-                return callback(why, mPath, mBaseline, mTarget, mWorkDir);
+                return callback(why, _path, mBaseline, mTarget, mWorkDir);
             }
-            catch (Exception e)
+            catch// (Exception e)
             {
                 // TODO: Figure out exception propagation here
-                NativeApi.git_error_set_str(GitErrorClass.Callback, e.Message);
                 return -1;
             }
         }
@@ -157,7 +157,7 @@ namespace SharpGit2.Native
 
             try
             {
-                string mPath = Utf8StringMarshaller.ConvertToManaged(path)!;
+                string mPath = Git2.GetPooledString(path);
 
                 callback(mPath, completedSteps, totalSteps);
             }

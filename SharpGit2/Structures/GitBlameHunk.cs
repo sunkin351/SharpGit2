@@ -1,4 +1,6 @@
-﻿using System.Runtime.InteropServices.Marshalling;
+﻿using System.Runtime.InteropServices;
+using System.Runtime.InteropServices.Marshalling;
+using System.Text;
 
 namespace SharpGit2
 {
@@ -21,7 +23,11 @@ namespace SharpGit2
             FinalStartLineNumber = hunk.FinalStartLineNumber;
             FinalSignature = hunk.FinalSignature != null ? new GitSignature(in *hunk.FinalSignature) : null;
             OriginalCommitId = hunk.OriginalCommitId;
-            OriginalPath = Utf8StringMarshaller.ConvertToManaged(hunk.OriginalPath);
+
+            var nativeOPath = hunk.OriginalPath;
+
+            OriginalPath = nativeOPath == null ? null : Git2.GetPooledString(nativeOPath);
+
             OriginalStartLineNumber = hunk.OriginalStartLineNumber;
             OriginalSignature = hunk.OriginalSignature != null ? new GitSignature(in *hunk.OriginalSignature) : null;
             Boundary = hunk.Boundary;

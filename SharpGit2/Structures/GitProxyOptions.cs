@@ -106,7 +106,7 @@ namespace SharpGit2.Native
         /// <summary>
         /// Free unmanaged resources allocated by <see cref="FromManaged"/>
         /// </summary>
-        public void Free()
+        public readonly void Free()
         {
             Utf8StringMarshaller.Free(Url);
         }
@@ -118,16 +118,15 @@ namespace SharpGit2.Native
 
             try
             {
-                string mUrl = Utf8StringMarshaller.ConvertToManaged(url)!;
-                string? mUsernameFromUrl = Utf8StringMarshaller.ConvertToManaged(usernameFromUrl);
+                string mUrl = Git2.GetPooledString(url)!;
+                string? mUsernameFromUrl = usernameFromUrl == null ? null : Git2.GetPooledString(usernameFromUrl);
 
                 Debug.Assert(sizeof(GitCredential) == sizeof(void*)); // Ensure struct size assumption
 
                 return callbacks.GetCredentials(mUrl, mUsernameFromUrl, allowedTypes, out *(GitCredential*)out_credential);
             }
-            catch (Exception e)
+            catch// (Exception e)
             {
-                NativeApi.git_error_set_str(GitErrorClass.Callback, e.Message);
                 return -1;
             }
         }
@@ -141,13 +140,12 @@ namespace SharpGit2.Native
             {
                 var cert = GitCertificate.FromUnmanaged(certificate);
 
-                string mHost = Utf8StringMarshaller.ConvertToManaged(host)!;
+                string _host = Git2.GetPooledString(host)!;
 
-                return callbacks.OnCertificateCheck(cert, isValid != 0, mHost);
+                return callbacks.OnCertificateCheck(cert, isValid != 0, _host);
             }
             catch (Exception e)
             {
-                NativeApi.git_error_set_str(GitErrorClass.Callback, e.Message);
                 return e is NotSupportedException ? (int)GitError.NotSupported : -1;
             }
         }

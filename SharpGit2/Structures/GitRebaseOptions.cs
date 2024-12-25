@@ -39,7 +39,6 @@ namespace SharpGit2.Native
         public GitMergeOptions MergeOptions;
         public GitCheckoutOptions CheckoutOptions;
         public delegate* unmanaged[Cdecl]<GitObjectID*, GitSignature*, GitSignature*, byte*, byte*, Git2.Tree*, nuint, Git2.Commit**, nint, int> CreateCommit;
-        [SuppressMessage("CodeQuality", "IDE0051:Remove unused private members", Justification = "This is a native padding field, reserved for future use")]
         [SuppressMessage("Style", "IDE0044:Add readonly modifier")]
         private void* Reserved;
         public nint Payload;
@@ -93,14 +92,21 @@ namespace SharpGit2.Native
 
             try
             {
-                var encoding = Utf8StringMarshaller.ConvertToManaged(message_encoding) is string encodingName
-                    ? Encoding.GetEncoding(encodingName)
-                    : Encoding.UTF8;
+                Encoding encoding;
 
-                if (!encoding.IsSingleByte)
+                if (message_encoding != null)
                 {
-                    NativeApi.git_error_set_str(GitErrorClass.Callback, "Multi-byte code unit string encodings are not supported! (utf-16/32 and the like)");
-                    return (int)GitError.NotSupported;
+                    encoding = Encoding.GetEncoding(Git2.GetPooledString(message_encoding));
+
+                    if (encoding.GetByteCount("\0") != 1)
+                    {
+                        GitNativeApi.git_error_set_str(GitErrorClass.Callback, "Multi-byte code unit string encodings are not supported! (utf-16/32 and the like)");
+                        return (int)GitError.NotSupported;
+                    }
+                }
+                else
+                {
+                    encoding = Encoding.UTF8;
                 }
 
                 string messageStr = encoding.GetString(MemoryMarshal.CreateReadOnlySpanFromNullTerminated(message));
@@ -120,7 +126,6 @@ namespace SharpGit2.Native
             }
             catch (Exception e)
             {
-                NativeApi.git_error_set_str(GitErrorClass.Callback, e.Message);
                 return e is ArgumentException ? (int)GitError.Invalid : -1;
             }
         }
