@@ -1,22 +1,54 @@
-﻿using System.Runtime.InteropServices.Marshalling;
-
-using static SharpGit2.NativeApi;
+﻿using static SharpGit2.GitNativeApi;
 
 namespace SharpGit2;
 
-public unsafe readonly struct GitAnnotatedCommit(Git2.AnnotatedCommit* nativeHandle) : IDisposable
+/// <summary>
+/// An Annotated commit, the input to merge and rebase.
+/// </summary>
+/// <param name="nativeHandle">The native object pointer</param>
+public unsafe readonly struct GitAnnotatedCommit(Git2.AnnotatedCommit* nativeHandle) : IDisposable, IGitHandle
 {
-    public readonly Git2.AnnotatedCommit* NativeHandle = nativeHandle;
+    /// <summary>
+    /// The native object pointer
+    /// </summary>
+    public Git2.AnnotatedCommit* NativeHandle { get; } = nativeHandle;
 
+    public bool IsNull => NativeHandle == null;
+
+    /// <summary>
+    /// Frees this Annotated Commit
+    /// </summary>
+    /// <remarks>
+    /// Do not call this twice!
+    /// </remarks>
     public void Dispose()
     {
-        git_annotated_commit_free(NativeHandle);
+        git_annotated_commit_free(this.NativeHandle);
     }
 
-    public ref readonly GitObjectID Id => ref *git_annotated_commit_id(this.NativeHandle);
+    /// <summary>
+    /// The commit ID that this annotated commit refers to.
+    /// </summary>
+    public ref readonly GitObjectID Id
+    {
+        get
+        {
+            var handle = this.ThrowIfNull();
 
+            return ref *git_annotated_commit_id(handle.NativeHandle);
+        }
+    }
+
+    /// <summary>
+    /// Gets the refname this annotated commit refers to.
+    /// </summary>
+    /// <returns>The ref name</returns>
     public string? GetRefName()
     {
-        return Utf8StringMarshaller.ConvertToManaged(git_annotated_commit_ref(this.NativeHandle));
+        var handle = this.ThrowIfNull();
+
+        var nativeName = git_annotated_commit_ref(handle.NativeHandle);
+        
+        return nativeName is null ? null : Git2.GetPooledString(nativeName);
     }
 }

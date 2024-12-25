@@ -1,17 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.InteropServices.Marshalling;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Buffers;
 
-using static SharpGit2.NativeApi;
+using static SharpGit2.GitNativeApi;
 
 namespace SharpGit2;
 
-public unsafe readonly struct GitBranch : IDisposable
+public unsafe readonly struct GitBranch : IDisposable, IGitHandle
 {
+    /// <summary>
+    /// Underlying reference of this branch
+    /// </summary>
     public GitReference Reference { get; }
+
+    public bool IsNull => Reference.IsNull;
 
     internal GitBranch(GitReference reference)
     {
@@ -29,49 +29,108 @@ public unsafe readonly struct GitBranch : IDisposable
         this.Reference.Dispose();
     }
 
-    public bool IsCheckedOut => Git2.ErrorOrBoolean(git_branch_is_checked_out(this.Reference.NativeHandle));
+    public bool IsCheckedOut
+    {
+        get
+        {
+            var handle = this.ThrowIfNull();
 
-    public bool IsHead => Git2.ErrorOrBoolean(git_branch_is_head(this.Reference.NativeHandle));
+            return Git2.ErrorOrBoolean(git_branch_is_checked_out(handle.Reference.NativeHandle));
+        }
+    }
+
+    public bool IsHead
+    {
+        get
+        {
+            var handle = this.ThrowIfNull();
+
+            return Git2.ErrorOrBoolean(git_branch_is_head(handle.Reference.NativeHandle));
+        }
+    }
 
     public void Delete()
     {
-        Git2.ThrowIfError(git_branch_delete(this.Reference.NativeHandle));
+        var handle = this.ThrowIfNull();
+
+        Git2.ThrowIfError(git_branch_delete(handle.Reference.NativeHandle));
     }
 
-    // rename
-    public GitBranch Move(string new_branch_name, bool force)
+    /// <summary>
+    /// Rename the branch
+    /// </summary>
+    /// <param name="new_branch_name"></param>
+    /// <param name="force"></param>
+    /// <returns></returns>
+    public GitBranch Rename(string new_branch_name, bool force)
     {
-        Git2.Reference* result;
-        Git2.ThrowIfError(git_branch_move(&result, this.Reference.NativeHandle, new_branch_name, force ? 1 : 0));
+        var handle = this.ThrowIfNull();
+
+        Git2.Reference* result = null;
+        Git2.ThrowIfError(git_branch_move(&result, handle.Reference.NativeHandle, new_branch_name, force ? 1 : 0));
 
         return new(result);
     }
 
     public string GetBranchName()
     {
+        var handle = this.ThrowIfNull();
+
         byte* _name = null;
 
-        Git2.ThrowIfError(git_branch_name(&_name, this.Reference.NativeHandle));
+        Git2.ThrowIfError(git_branch_name(&_name, handle.Reference.NativeHandle));
 
-        return Utf8StringMarshaller.ConvertToManaged(_name)!;
+        return Git2.GetPooledString(_name);
     }
 
     public void SetUpstream(string branch_name)
     {
-        Git2.ThrowIfError(git_branch_set_upstream(this.Reference.NativeHandle, branch_name));
+        var handle = this.ThrowIfNull();
+
+        Git2.ThrowIfError(git_branch_set_upstream(handle.Reference.NativeHandle, branch_name));
     }
 
     public GitBranch GetUpstream()
     {
-        Git2.Reference* result;
-        Git2.ThrowIfError(git_branch_upstream(&result, this.Reference.NativeHandle));
+        var handle = this.ThrowIfNull();
+
+        Git2.Reference* result = null;
+        Git2.ThrowIfError(git_branch_upstream(&result, handle.Reference.NativeHandle));
 
         return new(result);
     }
 
+    public GitObjectID? GetTarget()
+    {
+        var handle = this.ThrowIfNull();
+
+        return handle.Reference.GetTarget();
+    }
+
+    public GitBranch SetTarget(GitObjectID target, string? reflog_message)
+    {
+        var handle = this.ThrowIfNull();
+
+        return new(handle.Reference.SetTarget(target, reflog_message));
+    }
+
+    public GitBranch SetTarget(in GitObjectID target, string? reflog_message)
+    {
+        var handle = this.ThrowIfNull();
+
+        return new(handle.Reference.SetTarget(in target, reflog_message));
+    }
+
+    public ref readonly GitObjectID DangerousGetTarget()
+    {
+        var handle = this.ThrowIfNull();
+
+        return ref handle.Reference.DangerousGetTarget();
+    }
+
     public static explicit operator GitBranch(GitReference reference)
     {
-        if (!reference.IsBranch)
+        if (!reference.IsNull && !reference.IsBranch)
         {
             throw new InvalidCastException("GitReference isn't a branch reference!");
         }
@@ -79,8 +138,43 @@ public unsafe readonly struct GitBranch : IDisposable
         return new(reference);
     }
 
+    /// <summary>
+    /// Implicit conversion to a git reference
+    /// </summary>
+    /// <param name="branch">The branch to convert</param>
     public static implicit operator GitReference(GitBranch branch)
     {
         return branch.Reference;
+    }
+
+    public static bool IsValidBranchName(ReadOnlySpan<char> name)
+    {
+        if (name.IsEmpty)
+        {
+            return false;
+        }
+
+        if (name[0] == '-' || name.SequenceEqual("HEAD"))
+        {
+            return false;
+        }
+
+        const string RefsHeadsDirectory = "refs/heads/";
+
+        var length = RefsHeadsDirectory.Length + name.Length;
+        char[] array = ArrayPool<char>.Shared.Rent(length);
+        try
+        {
+            Span<char> buffer = array;
+            RefsHeadsDirectory.CopyTo(buffer);
+
+            name.CopyTo(buffer[RefsHeadsDirectory.Length..]);
+
+            return GitReference.IsValidReferenceName(buffer[..length]);
+        }
+        finally
+        {
+            ArrayPool<char>.Shared.Return(array);
+        }
     }
 }

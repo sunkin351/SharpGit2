@@ -1,12 +1,22 @@
-﻿using static SharpGit2.NativeApi;
+﻿using static SharpGit2.GitNativeApi;
 
 namespace SharpGit2;
 
-public readonly unsafe struct GitBlame(Git2.Blame* nativeHandle) : IDisposable
+public readonly unsafe struct GitBlame(Git2.Blame* nativeHandle) : IDisposable, IGitHandle
 {
-    public readonly Git2.Blame* NativeHandle = nativeHandle;
+    public Git2.Blame* NativeHandle { get; } = nativeHandle;
 
-    public uint HunkCount => git_blame_get_hunk_count(this.NativeHandle);
+    public bool IsNull => this.NativeHandle == null;
+
+    public uint HunkCount
+    {
+        get
+        {
+            var handle = this.ThrowIfNull();
+
+            return git_blame_get_hunk_count(handle.NativeHandle);
+        }
+    }
 
     public void Dispose()
     {
@@ -15,10 +25,12 @@ public readonly unsafe struct GitBlame(Git2.Blame* nativeHandle) : IDisposable
 
     public GitBlame UpdateFromBuffer(ReadOnlySpan<byte> fileData)
     {
-        Git2.Blame* result;
+        var handle = this.ThrowIfNull();
+
+        Git2.Blame* result = null;
         fixed (byte* data = fileData)
         {
-            Git2.ThrowIfError(git_blame_buffer(&result, this.NativeHandle, data, (nuint)fileData.Length));
+            Git2.ThrowIfError(git_blame_buffer(&result, handle.NativeHandle, data, (nuint)fileData.Length));
         }
 
         return new(result);
@@ -26,11 +38,15 @@ public readonly unsafe struct GitBlame(Git2.Blame* nativeHandle) : IDisposable
 
     public Native.GitBlameHunk* GetHunk(uint index)
     {
-        return git_blame_get_hunk_byindex(this.NativeHandle, index);
+        var handle = this.ThrowIfNull();
+
+        return git_blame_get_hunk_byindex(handle.NativeHandle, index);
     }
 
     public Native.GitBlameHunk* GetHunkByLine(nuint index)
     {
-        return git_blame_get_hunk_byline(this.NativeHandle, index);
+        var handle = this.ThrowIfNull();
+
+        return git_blame_get_hunk_byline(handle.NativeHandle, index);
     }
 }

@@ -6,18 +6,24 @@ using System.Text;
 namespace SharpGit2.Marshalling;
 
 [CustomMarshaller(typeof(string[]), MarshalMode.ManagedToUnmanagedIn, typeof(ManagedToUnmanagedIn))]
+[CustomMarshaller(typeof(ReadOnlySpan<string>), MarshalMode.ManagedToUnmanagedIn, typeof(ManagedToUnmanagedIn))]
 public unsafe static class StringArrayMarshaller
 {
     public static Native.GitStringArray ConvertToUnmanaged(string[]? array)
     {
-        if (array is null or { Length: 0 })
+        return ConvertToUnmanaged(new ReadOnlySpan<string>(array));
+    }
+
+    public static Native.GitStringArray ConvertToUnmanaged(ReadOnlySpan<string> array)
+    {
+        if (array.IsEmpty)
             return default;
 
         byte* strMemTmp = null;
         int countInitialized = 0;
 
         var arrayMemory = (byte**)NativeMemory.Alloc((nuint)array.Length * (nuint)sizeof(void*));
-        
+
         try
         {
             for (int i = 0; i < array.Length; ++i, ++countInitialized)
@@ -33,7 +39,7 @@ public unsafe static class StringArrayMarshaller
                 int exactCount = Encoding.UTF8.GetByteCount(value);
 
                 byte* strMem = strMemTmp = (byte*)NativeMemory.Alloc((nuint)exactCount + 1);
-                
+
                 int written = Encoding.UTF8.GetBytes(value, new Span<byte>(strMem, exactCount));
                 strMem[written] = 0;
                 arrayMemory[i] = strMem;
@@ -78,6 +84,11 @@ public unsafe static class StringArrayMarshaller
         private Native.GitStringArray _array;
 
         public void FromManaged(string[] array)
+        {
+            _array = ConvertToUnmanaged(array);
+        }
+
+        public void FromManaged(ReadOnlySpan<string> array)
         {
             _array = ConvertToUnmanaged(array);
         }

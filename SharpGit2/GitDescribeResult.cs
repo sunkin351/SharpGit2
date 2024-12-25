@@ -1,10 +1,12 @@
-﻿using static SharpGit2.NativeApi;
+﻿using static SharpGit2.GitNativeApi;
 
 namespace SharpGit2;
 
-public unsafe readonly struct GitDescribeResult(Git2.DescribeResult* nativeHandle) : IDisposable
+public unsafe readonly struct GitDescribeResult(Git2.DescribeResult* nativeHandle) : IDisposable, IGitHandle
 {
     public readonly Git2.DescribeResult* NativeHandle = nativeHandle;
+
+    public bool IsNull => this.NativeHandle == null;
 
     public void Dispose()
     {
@@ -13,6 +15,8 @@ public unsafe readonly struct GitDescribeResult(Git2.DescribeResult* nativeHandl
 
     public string Format(in GitDescribeFormatOptions options)
     {
+        var handle = this.ThrowIfNull();
+
         GitError error;
         Native.GitBuffer buffer = default;
 
@@ -21,7 +25,7 @@ public unsafe readonly struct GitDescribeResult(Git2.DescribeResult* nativeHandl
         {
             _options.FromManaged(in options);
 
-            error = git_describe_format(&buffer, this.NativeHandle, &_options);
+            error = git_describe_format(&buffer, handle.NativeHandle, &_options);
         }
         finally
         {

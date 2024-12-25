@@ -88,7 +88,8 @@ namespace SharpGit2.Native
 
             try
             {
-                string mPath = Utf8StringMarshaller.ConvertToManaged(path)!;
+                string mPath = Git2.GetPooledString(path);
+
                 Debug.Assert(sizeof(GitRepository) == sizeof(void*));
 
                 return callback(mPath, bare != 0, out *(GitRepository*)repo_out);
@@ -96,7 +97,7 @@ namespace SharpGit2.Native
             catch (Exception e)
             {
                 // TODO: Figure out exception propagation here
-                NativeApi.git_error_set_str(GitErrorClass.Callback, e.Message);
+                GitNativeApi.git_error_set_str(GitErrorClass.Callback, e.Message);
                 return -1;
             }
         }
@@ -108,17 +109,16 @@ namespace SharpGit2.Native
 
             try
             {
-                string mName = Utf8StringMarshaller.ConvertToManaged(name)!;
-                string mUrl = Utf8StringMarshaller.ConvertToManaged(url)!;
+                string mName = Git2.GetPooledString(name);
+                string mUrl = Git2.GetPooledString(url);
 
                 Debug.Assert(sizeof(GitRemote) == sizeof(void*));
 
                 return callback(new(repo), mName, mUrl, out *(GitRemote*)remote_out);
             }
-            catch (Exception e)
+            catch// (Exception e)
             {
                 // TODO: Figure out exception propagation here
-                NativeApi.git_error_set_str(GitErrorClass.Callback, e.Message);
                 return -1;
             }
         }

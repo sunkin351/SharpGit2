@@ -4,13 +4,15 @@ using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using System.Text;
 
-using static SharpGit2.NativeApi;
+using static SharpGit2.GitNativeApi;
 
 namespace SharpGit2;
 
-public unsafe readonly struct GitDiff(Git2.Diff* nativeHandle) : IDisposable
+public unsafe readonly struct GitDiff(Git2.Diff* nativeHandle) : IDisposable, IGitHandle
 {
-    internal readonly Git2.Diff* NativeHandle = nativeHandle;
+    public Git2.Diff* NativeHandle { get; } = nativeHandle;
+
+    public bool IsNull => this.NativeHandle == null;
 
     public void Dispose()
     {
@@ -19,6 +21,8 @@ public unsafe readonly struct GitDiff(Git2.Diff* nativeHandle) : IDisposable
 
     public void FindSimilar(in GitDiffFindOptions options)
     {
+        var handle = this.ThrowIfNull();
+
         Native.GitDiffFindOptions nOptions = default;
         List<GCHandle> gchandles = [];
         GitError error;
@@ -26,13 +30,13 @@ public unsafe readonly struct GitDiff(Git2.Diff* nativeHandle) : IDisposable
         {
             nOptions.FromManaged(in options, gchandles);
 
-            error = git_diff_find_similar(NativeHandle, &nOptions);
+            error = git_diff_find_similar(handle.NativeHandle, &nOptions);
         }
         finally
         {
-            foreach (var handle in gchandles)
+            foreach (var gchandle in gchandles)
             {
-                handle.Free();
+                gchandle.Free();
             }
 
             nOptions.Free();
@@ -43,22 +47,28 @@ public unsafe readonly struct GitDiff(Git2.Diff* nativeHandle) : IDisposable
 
     public void FindSimilar(in Native.GitDiffFindOptions options)
     {
+        var handle = this.ThrowIfNull();
+
         fixed (Native.GitDiffFindOptions* pOptions = &options)
-            Git2.ThrowIfError(git_diff_find_similar(NativeHandle, pOptions));
+            Git2.ThrowIfError(git_diff_find_similar(handle.NativeHandle, pOptions));
     }
 
     public void ForEach(IForEachCallbacks callbacks)
     {
+        var handle = this.ThrowIfNull();
+
         CallbackInfo callbackInfo = new() { Callbacks = callbacks };
-        GitError error = git_diff_foreach(NativeHandle, &OnFileCallback, &OnBinaryCallback, &OnHunkCallback, &OnLineCallback, (nint)(void*)&callbackInfo);
+        GitError error = git_diff_foreach(handle.NativeHandle, &OnFileCallback, &OnBinaryCallback, &OnHunkCallback, &OnLineCallback, (nint)(void*)&callbackInfo);
         callbackInfo.ExceptionInfo?.Throw();
         Git2.ThrowIfError(error);
     }
 
     public GitPatch GetPatch(nuint idx)
     {
-        Git2.Patch* result;
-        Git2.ThrowIfError(git_patch_from_diff(&result, this.NativeHandle, idx));
+        var handle = this.ThrowIfNull();
+
+        Git2.Patch* result = null;
+        Git2.ThrowIfError(git_patch_from_diff(&result, handle.NativeHandle, idx));
 
         return new(result);
     }

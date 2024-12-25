@@ -5,20 +5,17 @@ using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 
-using static SharpGit2.NativeApi;
+using static SharpGit2.GitNativeApi;
 
 #pragma warning disable IDE1006
 
 namespace SharpGit2;
 
-public unsafe readonly struct GitConfig : IDisposable
+public unsafe readonly struct GitConfig(Git2.Config* handle) : IDisposable, IGitHandle
 {
-    internal readonly Git2.Config* NativeHandle;
+    public Git2.Config* NativeHandle { get; } = handle;
 
-    internal GitConfig(Git2.Config* handle)
-    {
-        NativeHandle = handle;
-    }
+    public bool IsNull => this.NativeHandle == null;
 
     public void Dispose()
     {
@@ -27,27 +24,37 @@ public unsafe readonly struct GitConfig : IDisposable
 
     public void AddFile(string path, GitConfigLevel level, GitRepository repository, bool force)
     {
+        var handle = this.ThrowIfNull();
+
         Git2.ThrowIfError(git_config_add_file_ondisk(NativeHandle, path, level, repository.NativeHandle, force ? 1 : 0));
     }
 
     public void DeleteEntry(string name)
     {
+        var handle = this.ThrowIfNull();
+
         Git2.ThrowIfError(git_config_delete_entry(NativeHandle, name));
     }
 
     public void DeleteMultiVariable(string name, [StringSyntax("regex")] string regex)
     {
+        var handle = this.ThrowIfNull();
+
         Git2.ThrowIfError(git_config_delete_multivar(NativeHandle, name, regex));
     }
 
     public Enumerable EnumerateEntries([StringSyntax("regex")] string? regex = null)
     {
-        return new Enumerable(this, regex);
+        var handle = this.ThrowIfNull();
+
+        return new Enumerable(handle, regex);
     }
 
     public MultiVariableEnumerable EnumerateMultiVariableEntries(string name, [StringSyntax("regex")] string? regex = null)
     {
-        return new MultiVariableEnumerable(this, name, regex);
+        var handle = this.ThrowIfNull();
+
+        return new MultiVariableEnumerable(handle, name, regex);
     }
 
     public delegate void ForEachCallback(GitConfigEntry entry, ref bool breakLoop);
@@ -55,6 +62,8 @@ public unsafe readonly struct GitConfig : IDisposable
     [MethodImpl(MethodImplOptions.NoInlining)]
     public void ForEach(ForEachCallback callback)
     {
+        var handle = this.ThrowIfNull();
+
         var context = new Git2.CallbackContext<ForEachCallback>(callback);
 
         var error = git_config_foreach(NativeHandle, &_ForEachCallback, (nint)(void*)&context);
@@ -66,6 +75,8 @@ public unsafe readonly struct GitConfig : IDisposable
     [MethodImpl(MethodImplOptions.NoInlining)]
     public void ForEach([StringSyntax("regex")] string regex, ForEachCallback callback)
     {
+        var handle = this.ThrowIfNull();
+
         var context = new Git2.CallbackContext<ForEachCallback>(callback);
 
         var error = git_config_foreach_match(NativeHandle, regex, &_ForEachCallback, (nint)(void*)&context);
@@ -77,6 +88,8 @@ public unsafe readonly struct GitConfig : IDisposable
     [MethodImpl(MethodImplOptions.NoInlining)]
     public void ForEachMultiVariable(string name, [StringSyntax("regex")] string? regex, ForEachCallback callback)
     {
+        var handle = this.ThrowIfNull();
+
         var context = new Git2.CallbackContext<ForEachCallback>(callback);
 
         var error = git_config_get_multivar_foreach(NativeHandle, name, regex, &_ForEachCallback, (nint)(void*)&context);
@@ -107,6 +120,8 @@ public unsafe readonly struct GitConfig : IDisposable
 
     public bool GetBoolean(string name)
     {
+        var handle = this.ThrowIfNull();
+
         int value;
         Git2.ThrowIfError(git_config_get_bool(&value, NativeHandle, name));
 
@@ -115,6 +130,8 @@ public unsafe readonly struct GitConfig : IDisposable
 
     public GitConfigEntry GetEntry(string name)
     {
+        var handle = this.ThrowIfNull();
+
         Native.GitConfigEntry* entry = null;
         Git2.ThrowIfError(git_config_get_entry(&entry, NativeHandle, name));
 
@@ -132,6 +149,8 @@ public unsafe readonly struct GitConfig : IDisposable
 
     public int GetInt32(string name)
     {
+        var handle = this.ThrowIfNull();
+
         int value;
         Git2.ThrowIfError(git_config_get_int32(&value, NativeHandle, name));
 
@@ -140,6 +159,8 @@ public unsafe readonly struct GitConfig : IDisposable
 
     public long GetInt64(string name)
     {
+        var handle = this.ThrowIfNull();
+
         long value;
         Git2.ThrowIfError(git_config_get_int64(&value, NativeHandle, name));
 
@@ -148,6 +169,8 @@ public unsafe readonly struct GitConfig : IDisposable
 
     public string GetPath(string name)
     {
+        var handle = this.ThrowIfNull();
+
         Native.GitBuffer buffer = default;
         Git2.ThrowIfError(git_config_get_path(&buffer, NativeHandle, name));
 
@@ -163,7 +186,9 @@ public unsafe readonly struct GitConfig : IDisposable
 
     public GitConfig GetSnapshot()
     {
-        Git2.Config* config;
+        var handle = this.ThrowIfNull();
+
+        Git2.Config* config = null;
         Git2.ThrowIfError(git_config_snapshot(&config, NativeHandle));
 
         return new(config);
@@ -171,6 +196,8 @@ public unsafe readonly struct GitConfig : IDisposable
 
     public string GetString(string name)
     {
+        var handle = this.ThrowIfNull();
+
         Native.GitBuffer buffer = default;
         Git2.ThrowIfError(git_config_get_string_buf(&buffer, NativeHandle, name));
 
@@ -186,32 +213,44 @@ public unsafe readonly struct GitConfig : IDisposable
 
     public void Set(string name, bool value)
     {
+        var handle = this.ThrowIfNull();
+
         Git2.ThrowIfError(git_config_set_bool(NativeHandle, name, value ? 1 : 0));
     }
 
     public void Set(string name, int value)
     {
+        var handle = this.ThrowIfNull();
+
         Git2.ThrowIfError(git_config_set_int32(NativeHandle, name, value));
     }
 
     public void Set(string name, long value)
     {
+        var handle = this.ThrowIfNull();
+
         Git2.ThrowIfError(git_config_set_int64(NativeHandle, name, value));
     }
 
     public void Set(string name, [StringSyntax("regex")] string regex, string value)
     {
+        var handle = this.ThrowIfNull();
+
         Git2.ThrowIfError(git_config_set_multivar(NativeHandle, name, regex, value));
     }
 
     public void Set(string name, string value)
     {
+        var handle = this.ThrowIfNull();
+
         Git2.ThrowIfError(git_config_set_string(NativeHandle, name, value));
     }
 
     public GitConfig OpenLevel(GitConfigLevel level)
     {
-        Git2.Config* result;
+        var handle = this.ThrowIfNull();
+
+        Git2.Config* result = null;
 
         Git2.ThrowIfError(git_config_open_level(&result, NativeHandle, level));
 
@@ -220,7 +259,9 @@ public unsafe readonly struct GitConfig : IDisposable
 
     public GitConfig OpenGlobal()
     {
-        Git2.Config* result;
+        var handle = this.ThrowIfNull();
+
+        Git2.Config* result = null;
 
         Git2.ThrowIfError(git_config_open_global(&result, NativeHandle));
 
@@ -229,7 +270,7 @@ public unsafe readonly struct GitConfig : IDisposable
 
     public static GitConfig OpenDefault()
     {
-        Git2.Config* result;
+        Git2.Config* result = null;
         Git2.ThrowIfError(git_config_open_default(&result));
 
         return new(result);
@@ -237,7 +278,7 @@ public unsafe readonly struct GitConfig : IDisposable
 
     public static GitConfig OpenFile(string path)
     {
-        Git2.Config* result;
+        Git2.Config* result = null;
         Git2.ThrowIfError(git_config_open_ondisk(&result, path));
         return new(result);
     }
@@ -255,7 +296,7 @@ public unsafe readonly struct GitConfig : IDisposable
 
         public Enumerator GetEnumerator()
         {
-            Git2.ConfigIterator* iterator;
+            Git2.ConfigIterator* iterator = null;
             if (_regex is null)
                 Git2.ThrowIfError(git_config_iterator_new(&iterator, _handle.NativeHandle));
             else
@@ -284,7 +325,7 @@ public unsafe readonly struct GitConfig : IDisposable
 
         public Enumerator GetEnumerator()
         {
-            Git2.ConfigIterator* iterator;
+            Git2.ConfigIterator* iterator = null;
             Git2.ThrowIfError(git_config_multivar_iterator_new(&iterator, _handle.NativeHandle, _name, _regex));
 
             return new Enumerator(iterator);
@@ -310,7 +351,7 @@ public unsafe readonly struct GitConfig : IDisposable
         {
             ObjectDisposedException.ThrowIf(_nativeHandle is null, typeof(Enumerator));
 
-            Native.GitConfigEntry* entry;
+            Native.GitConfigEntry* entry = null;
             var error = git_config_next(&entry, _nativeHandle);
 
             switch (error)

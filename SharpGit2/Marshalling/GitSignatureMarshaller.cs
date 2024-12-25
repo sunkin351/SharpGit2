@@ -1,6 +1,6 @@
 ﻿using System.Runtime.InteropServices.Marshalling;
 
-using static SharpGit2.NativeApi;
+using static SharpGit2.GitNativeApi;
 
 namespace SharpGit2.Marshalling;
 

@@ -2,31 +2,61 @@
 using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 
-using static SharpGit2.NativeApi;
+using static SharpGit2.GitNativeApi;
 
 namespace SharpGit2;
 
-public unsafe readonly struct GitTreeBuilder(Git2.TreeBuilder* nativeHandle) : IDisposable
+/// <summary>
+/// Constructor for in-memory trees.
+/// </summary>
+/// <param name="nativeHandle">The native object pointer</param>
+/// <remarks>
+/// The tree builder can be used to create or modify trees in memory and write them as tree objects to the database.
+/// </remarks>
+public unsafe readonly struct GitTreeBuilder(Git2.TreeBuilder* nativeHandle) : IGitHandle
 {
-    public readonly Git2.TreeBuilder* NativeHandle = nativeHandle;
+    /// <summary>
+    /// The native object pointer
+    /// </summary>
+    public Git2.TreeBuilder* NativeHandle { get; } = nativeHandle;
 
-    public GitTreeBuilder(GitRepository repository) : this(CreateTreeBuilder(repository, default))
-    {
-    }
+    /// <inheritdoc/>
+    public bool IsNull => this.NativeHandle == null;
 
-    public GitTreeBuilder(GitRepository repository, GitTree source) : this(CreateTreeBuilder(repository, source))
+    /// <summary>
+    /// Create a new tree builder.
+    /// </summary>
+    /// <param name="repository">Repository in which to store the object</param>
+    /// <param name="source">Source tree to initialize the builder</param>
+    public GitTreeBuilder(GitRepository repository, GitTree source = default) : this(CreateTreeBuilder(repository, source))
     {
     }
 
     private static Git2.TreeBuilder* CreateTreeBuilder(GitRepository repository, GitTree source)
     {
+        if (repository.NativeHandle == null)
+        {
+            throw new ArgumentNullException(nameof(repository));
+        }
+
         Git2.TreeBuilder* result = null;
         Git2.ThrowIfError(git_treebuilder_new(&result, repository.NativeHandle, source.NativeHandle));
 
         return result;
     }
 
-    public nuint EntryCount => git_treebuilder_entrycount(this.NativeHandle);
+    /// <summary>
+    /// The number of entries in the tree
+    /// </summary>
+    public nuint EntryCount
+    {
+        get
+        {
+            var handle = this.ThrowIfNull();
+
+            return git_treebuilder_entrycount(handle.NativeHandle);
+        }
+    }
 
     public void Dispose()
     {
@@ -35,16 +65,20 @@ public unsafe readonly struct GitTreeBuilder(Git2.TreeBuilder* nativeHandle) : I
 
     public void Clear()
     {
-        Git2.ThrowIfError(git_treebuilder_clear(this.NativeHandle));
+        var handle = this.ThrowIfNull();
+
+        Git2.ThrowIfError(git_treebuilder_clear(handle.NativeHandle));
     }
 
     public delegate bool FilterCallback(GitTreeEntry entry);
 
     public void Filter(FilterCallback callback)
     {
+        var handle = this.ThrowIfNull();
+
         var context = new FilterContext(callback);
 
-        Git2.ThrowIfError(git_treebuilder_filter(this.NativeHandle, &_Callback, (nint)(void*)&context));
+        Git2.ThrowIfError(git_treebuilder_filter(handle.NativeHandle, &_Callback, (nint)(void*)&context));
 
         switch (context.Exceptions)
         {
@@ -68,14 +102,7 @@ public unsafe readonly struct GitTreeBuilder(Git2.TreeBuilder* nativeHandle) : I
             }
             catch (Exception e)
             {
-                if (context.Exceptions is { } list)
-                {
-                    list.Add(e);
-                }
-                else
-                {
-                    context.Exceptions = [e];
-                }
+                (context.Exceptions ??= []).Add(e);
 
                 return 0;
             }
@@ -86,7 +113,9 @@ public unsafe readonly struct GitTreeBuilder(Git2.TreeBuilder* nativeHandle) : I
     {
         get
         {
-            var ptr = git_treebuilder_get(this.NativeHandle, filename);
+            var handle = this.ThrowIfNull();
+
+            var ptr = git_treebuilder_get(handle.NativeHandle, filename);
 
             return ptr == null ? null : new(ptr);
         }
@@ -96,10 +125,11 @@ public unsafe readonly struct GitTreeBuilder(Git2.TreeBuilder* nativeHandle) : I
     {
         Git2.TreeEntry* result;
         GitError error;
+        var handle = this.ThrowIfNull();
 
         fixed (GitObjectID* _id = &id)
         {
-            error = git_treebuilder_insert(&result, this.NativeHandle, fileName, _id, mode);
+            error = git_treebuilder_insert(&result, handle.NativeHandle, fileName, _id, mode);
         }
 
         Git2.ThrowIfError(error);
@@ -108,13 +138,17 @@ public unsafe readonly struct GitTreeBuilder(Git2.TreeBuilder* nativeHandle) : I
 
     public void Remove(string fileName)
     {
-        Git2.ThrowIfError(git_treebuilder_remove(this.NativeHandle, fileName));
+        var handle = this.ThrowIfNull();
+
+        Git2.ThrowIfError(git_treebuilder_remove(handle.NativeHandle, fileName));
     }
 
     public GitObjectID Write()
     {
+        var handle = this.ThrowIfNull();
+
         GitObjectID result = default;
-        Git2.ThrowIfError(git_treebuilder_write(&result, this.NativeHandle));
+        Git2.ThrowIfError(git_treebuilder_write(&result, handle.NativeHandle));
 
         return result;
     }

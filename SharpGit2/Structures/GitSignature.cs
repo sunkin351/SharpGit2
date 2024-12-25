@@ -3,7 +3,7 @@ using System.Numerics;
 using System.Runtime.InteropServices.Marshalling;
 using System.Text;
 
-using static SharpGit2.NativeApi;
+using static SharpGit2.GitNativeApi;
 
 namespace SharpGit2
 {
@@ -21,7 +21,7 @@ namespace SharpGit2
         /// <param name="when"></param>
         /// <exception cref="ArgumentException"></exception>
         /// <remarks>
-        /// Matches behavior with <see cref="NativeApi.git_signature_new(Native.GitSignature**, string, string, ulong, int)"/>
+        /// Matches behavior with <see cref="GitNativeApi.git_signature_new(Native.GitSignature**, string, string, ulong, int)"/>
         /// </remarks>
         public GitSignature(string name, string email, DateTimeOffset when)
         {
@@ -53,8 +53,8 @@ namespace SharpGit2
                 throw new ArgumentException("Native string is empty!", "sig.Email");
             }
 
-            Name = Utf8StringMarshaller.ConvertToManaged(sig.Name)!;
-            Email = Utf8StringMarshaller.ConvertToManaged(sig.Email)!;
+            Name = Git2.GetPooledString(sig.Name)!;
+            Email = Git2.GetPooledString(sig.Email)!;
             When = (DateTimeOffset)sig.When;
         }
 

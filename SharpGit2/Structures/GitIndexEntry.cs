@@ -1,5 +1,7 @@
 ﻿using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.Marshalling;
+using System.Text;
 
 using SharpGit2.Marshalling;
 
@@ -63,7 +65,8 @@ namespace SharpGit2
             _flags = ptr->Flags;
             _flagsExtended = ptr->FlagsExtended;
 
-            this.Path = Utf8StringMarshaller.ConvertToManaged(ptr->Path);
+            byte* _path = ptr->Path;
+            this.Path = _path == null ? null : Git2.GetPooledString(_path);
         }
 
         public ushort FlagsExtended
@@ -191,7 +194,7 @@ namespace SharpGit2
                 Path = Utf8StringMarshaller.ConvertToUnmanaged(entry.Path);
             }
 
-            public void Free()
+            public readonly void Free()
             {
                 Utf8StringMarshaller.Free(Path);
             }

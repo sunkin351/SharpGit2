@@ -2,20 +2,12 @@
 
 namespace SharpGit2
 {
-    public unsafe struct GitPushUpdate
+    public unsafe struct GitPushUpdate(in Native.GitPushUpdate ptr)
     {
-        public string SourceRefname;
-        public string DestinationRefname;
-        public GitObjectID Source;
-        public GitObjectID Destination;
-
-        public GitPushUpdate(in Native.GitPushUpdate ptr)
-        {
-            SourceRefname = Utf8StringMarshaller.ConvertToManaged(ptr.SourceRefname)!;
-            DestinationRefname = Utf8StringMarshaller.ConvertToManaged(ptr.DestinationRefname)!;
-            Source = ptr.Source;
-            Destination = ptr.Destination;
-        }
+        public string SourceRefname = Git2.GetPooledString(ptr.SourceRefname);
+        public string DestinationRefname = Git2.GetPooledString(ptr.DestinationRefname);
+        public GitObjectID Source = ptr.Source;
+        public GitObjectID Destination = ptr.Destination;
     }
 }
 
@@ -36,7 +28,7 @@ namespace SharpGit2.Native
             Destination = update.Destination;
         }
 
-        public void Free()
+        public readonly void Free()
         {
             Utf8StringMarshaller.Free(SourceRefname);
             Utf8StringMarshaller.Free(DestinationRefname);

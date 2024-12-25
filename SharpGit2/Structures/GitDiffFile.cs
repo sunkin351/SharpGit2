@@ -2,24 +2,14 @@
 
 namespace SharpGit2
 {
-    public unsafe struct GitDiffFile
+    public unsafe struct GitDiffFile(in Native.GitDiffFile ptr)
     {
-        public GitObjectID Id;
-        public string Path;
-        public ulong Size;
-        public GitDiffFlags Flags;
-        public ushort Mode;
-        public ushort IdAbbrev;
-
-        public GitDiffFile(in Native.GitDiffFile ptr)
-        {
-            Id = ptr.Id;
-            Path = Utf8StringMarshaller.ConvertToManaged(ptr.Path)!;
-            Size = ptr.Size;
-            Flags = ptr.Flags;
-            Mode = ptr.Mode;
-            IdAbbrev = ptr.IdAbbrev;
-        }
+        public GitObjectID Id = ptr.Id;
+        public string Path = Git2.GetPooledString(ptr.Path);
+        public ulong Size = ptr.Size;
+        public GitDiffFlags Flags = ptr.Flags;
+        public ushort Mode = ptr.Mode;
+        public ushort IdAbbrev = ptr.IdAbbrev;
     }
 }
 

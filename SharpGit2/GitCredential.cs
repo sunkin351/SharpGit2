@@ -1,23 +1,35 @@
-﻿using System.Runtime.InteropServices.Marshalling;
-
-using static SharpGit2.NativeApi;
+﻿using static SharpGit2.GitNativeApi;
 
 namespace SharpGit2;
 
-public unsafe readonly struct GitCredential(Git2.Credential* NativeHandle) : IDisposable
+public unsafe readonly struct GitCredential(Git2.Credential* NativeHandle) : IDisposable, IGitHandle
 {
-    public readonly Git2.Credential* NativeHandle = NativeHandle;
+    public Git2.Credential* NativeHandle { get; } = NativeHandle;
+
+    public bool IsNull => this.NativeHandle == null;
 
     public void Dispose()
     {
         git_credential_free(this.NativeHandle);
     }
 
-    public bool HasUsername => git_credential_has_username(this.NativeHandle);
+    public bool HasUsername
+    {
+        get
+        {
+            var handle = this.ThrowIfNull();
+
+            return git_credential_has_username(handle.NativeHandle);
+        }
+    }
 
     public string? GetUsername()
     {
-        return Utf8StringMarshaller.ConvertToManaged(git_credential_get_username(this.NativeHandle));
+        var handle = this.ThrowIfNull();
+
+        var nativeName = git_credential_get_username(handle.NativeHandle);
+
+        return nativeName == null ? null : Git2.GetPooledString(nativeName);
     }
 
     public static GitCredential CreateDefault()

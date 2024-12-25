@@ -7,38 +7,61 @@ using System.Text.Unicode;
 
 using SharpGit2.Marshalling;
 
-using static SharpGit2.NativeApi;
+using static SharpGit2.GitNativeApi;
 
 namespace SharpGit2;
 
-public unsafe readonly struct GitCommit : IDisposable
+public unsafe readonly struct GitCommit(Git2.Commit* handle) : IDisposable, IGitObject<GitCommit>, IGitHandle
 {
-    internal readonly Git2.Commit* NativeHandle;
+    public Git2.Commit* NativeHandle { get; } = handle;
 
-    internal GitCommit(Git2.Commit* handle)
+    public bool IsNull => this.NativeHandle == null;
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <remarks>
+    /// WARNING: It is Undefined behavior to read this property from a <see langword="default"/> instance of GitCommit. Could return a null reference if you do!
+    /// </remarks>
+    public ref readonly GitObjectID Id
     {
-        NativeHandle = handle;
+        get
+        {
+            var handle = this.ThrowIfNull();
+
+            return ref *git_commit_id(handle.NativeHandle);
+        }
     }
 
-    /// <summary>
-    /// 
-    /// </summary>
-    /// <remarks>
-    /// WARNING: It is Undefined behavior to read this property from a <see langword="default"/> instance of GitCommit. Could return a null reference if you do!
-    /// </remarks>
-    public ref readonly GitObjectID Id => ref *git_commit_id(this.NativeHandle);
+    public GitRepository Owner
+    {
+        get
+        {
+            var handle = this.ThrowIfNull();
 
-    public GitRepository Owner => new(git_commit_owner(this.NativeHandle));
+            return new(git_commit_owner(handle.NativeHandle));
+        }
+    }
 
-    public int ParentCount => checked((int)git_commit_parentcount(this.NativeHandle));
+    public int ParentCount
+    {
+        get
+        {
+            var handle = this.ThrowIfNull();
 
-    /// <summary>
-    /// 
-    /// </summary>
-    /// <remarks>
-    /// WARNING: It is Undefined behavior to read this property from a <see langword="default"/> instance of GitCommit. Could return a null reference if you do!
-    /// </remarks>
-    public ref readonly GitObjectID TreeId => ref *git_commit_tree_id(this.NativeHandle);
+            return checked((int)git_commit_parentcount(handle.NativeHandle));
+        }
+    }
+
+    public ref readonly GitObjectID TreeId
+    {
+        get
+        {
+            var handle = this.ThrowIfNull();
+
+            return ref *git_commit_tree_id(handle.NativeHandle);
+        }
+    }
 
     public void Dispose()
     {
@@ -48,6 +71,8 @@ public unsafe readonly struct GitCommit : IDisposable
     [SkipLocalsInit]
     public GitObjectID Amend(string? update_ref, GitSignature? author, GitSignature? committer, string? message, GitTree? tree)
     {
+        var handle = this.ThrowIfNull();
+
         GitObjectID result = default;
         scoped Utf8StringMarshaller.ManagedToUnmanagedIn _message = default;
         Native.GitSignature* _author = null, _committer = null;
@@ -61,7 +86,7 @@ public unsafe readonly struct GitCommit : IDisposable
 
             error = git_commit_amend(
                 &result,
-                this.NativeHandle,
+                handle.NativeHandle,
                 update_ref,
                 _author,
                 _committer,
@@ -82,6 +107,8 @@ public unsafe readonly struct GitCommit : IDisposable
 
     public GitObjectID Amend(string? update_ref, GitSignature? author, GitSignature? committer, Encoding? messageEncoding, string? message, GitTree? tree)
     {
+        var handle = this.ThrowIfNull();
+
         GitObjectID result = default;
         Native.GitSignature* _author = null, _committer = null;
         GitError error;
@@ -93,7 +120,7 @@ public unsafe readonly struct GitCommit : IDisposable
 
             error = git_commit_amend(
                 &result,
-                this.NativeHandle,
+                handle.NativeHandle,
                 update_ref,
                 _author,
                 _committer,
@@ -113,13 +140,41 @@ public unsafe readonly struct GitCommit : IDisposable
 
     public GitSignature GetAuthor()
     {
-        return new GitSignature(in *git_commit_author(this.NativeHandle));
+        var handle = this.ThrowIfNull();
+
+        return new GitSignature(in *git_commit_author(handle.NativeHandle));
     }
 
     public GitSignature GetAuthor(GitMailmap mailMap)
     {
+        var handle = this.ThrowIfNull();
+
         Native.GitSignature* result = null;
-        Git2.ThrowIfError(git_commit_author_with_mailmap(&result, this.NativeHandle, mailMap.NativeHandle));
+        Git2.ThrowIfError(git_commit_author_with_mailmap(&result, handle.NativeHandle, mailMap.NativeHandle));
+
+        try
+        {
+            return new GitSignature(in *result);
+        }
+        finally
+        {
+            git_signature_free(result);
+        }
+    }
+
+    public GitSignature GetCommitter()
+    {
+        var handle = this.ThrowIfNull();
+
+        return new GitSignature(in *git_commit_committer(handle.NativeHandle));
+    }
+
+    public GitSignature GetCommitter(GitMailmap mailMap)
+    {
+        var handle = this.ThrowIfNull();
+
+        Native.GitSignature* result = null;
+        Git2.ThrowIfError(git_commit_committer_with_mailmap(&result, handle.NativeHandle, mailMap.NativeHandle));
 
         try
         {
@@ -133,52 +188,75 @@ public unsafe readonly struct GitCommit : IDisposable
 
     public GitCommit Duplicate()
     {
-        Git2.Commit* result;
-        Git2.ThrowIfError(git_commit_dup(&result, this.NativeHandle));
+        var handle = this.ThrowIfNull();
+
+        Git2.Commit* result = null;
+        Git2.ThrowIfError(git_commit_dup(&result, handle.NativeHandle));
 
         return new(result);
     }
 
     public GitTree GetTree()
     {
-        Git2.Tree* result;
+        var handle = this.ThrowIfNull();
 
-        Git2.ThrowIfError(git_commit_tree(&result, this.NativeHandle));
+        Git2.Tree* result = null;
+
+        Git2.ThrowIfError(git_commit_tree(&result, handle.NativeHandle));
 
         return new(result);
     }
 
     public ref readonly GitObjectID GetParentID(int index)
     {
-        ArgumentOutOfRangeException.ThrowIfNegative(index);
-        ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(index, this.ParentCount);
+        var handle = this.ThrowIfNull();
 
-        return ref *git_commit_parent_id(this.NativeHandle, (uint)index);
+        ArgumentOutOfRangeException.ThrowIfNegative(index);
+        ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(index, handle.ParentCount);
+
+        return ref *git_commit_parent_id(handle.NativeHandle, (uint)index);
     }
 
     public GitCommit GetParent(int index)
     {
-        ArgumentOutOfRangeException.ThrowIfNegative(index);
-        ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(index, this.ParentCount);
+        var handle = this.ThrowIfNull();
 
-        Git2.Commit* result;
-        Git2.ThrowIfError(git_commit_parent(&result, this.NativeHandle, (uint)index));
+        ArgumentOutOfRangeException.ThrowIfNegative(index);
+        ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(index, handle.ParentCount);
+
+        Git2.Commit* result = null;
+        Git2.ThrowIfError(git_commit_parent(&result, handle.NativeHandle, (uint)index));
 
         return new(result);
     }
 
     public GitObject GetObjectByPath(string path, GitObjectType type)
     {
-        Git2.Object* result;
-        Git2.ThrowIfError(git_object_lookup_bypath(&result, (Git2.Object*)this.NativeHandle, path, type));
+        var handle = this.ThrowIfNull();
+
+        Git2.Object* result = null;
+        Git2.ThrowIfError(git_object_lookup_bypath(&result, (Git2.Object*)handle.NativeHandle, path, type));
 
         return new(result);
     }
 
+    public TObject GetObjectByPath<TObject>(string path)
+        where TObject : struct, IGitHandle, IGitObject<TObject>
+    {
+        var handle = this.ThrowIfNull();
+
+        Git2.Object* result = null;
+        Git2.ThrowIfError(git_object_lookup_bypath(&result, (Git2.Object*)handle.NativeHandle, path, TObject.ObjectType));
+
+        return TObject.FromObjectPointer(result);
+    }
+
     public bool TryGetObjectByPath(string path, GitObjectType type, out GitObject obj)
     {
-        Git2.Object* result;
-        var error = git_object_lookup_bypath(&result, (Git2.Object*)this.NativeHandle, path, type);
+        var handle = this.ThrowIfNull();
+
+        Git2.Object* result = null;
+        var error = git_object_lookup_bypath(&result, (Git2.Object*)handle.NativeHandle, path, type);
 
         switch (error)
         {
@@ -193,11 +271,34 @@ public unsafe readonly struct GitCommit : IDisposable
         }
     }
 
+    public bool TryGetObjectByPath<TObject>(string path, out TObject obj)
+        where TObject : struct, IGitHandle, IGitObject<TObject>
+    {
+        var handle = this.ThrowIfNull();
+
+        Git2.Object* result = null;
+        var error = git_object_lookup_bypath(&result, (Git2.Object*)handle.NativeHandle, path, TObject.ObjectType);
+
+        switch (error)
+        {
+            case GitError.OK:
+                obj = TObject.FromObjectPointer(result);
+                return true;
+            case GitError.NotFound:
+                obj = default;
+                return false;
+            default:
+                throw Git2.ExceptionForError(error);
+        }
+    }
+
     public string GetMessage()
     {
-        var messageNative = MemoryMarshal.CreateReadOnlySpanFromNullTerminated(git_commit_message_raw(this.NativeHandle));
+        var handle = this.ThrowIfNull();
 
-        return messageNative.IsEmpty ? "" : this.GetMessageEncoding().GetString(messageNative).TrimStart('\n');
+        var messageNative = MemoryMarshal.CreateReadOnlySpanFromNullTerminated(git_commit_message_raw(handle.NativeHandle));
+
+        return messageNative.IsEmpty ? "" : handle.GetMessageEncoding().GetString(messageNative).TrimStart('\n');
     }
 
     public string GetBody()
@@ -287,9 +388,11 @@ public unsafe readonly struct GitCommit : IDisposable
 
     public string GetHeaderField(string field)
     {
+        var handle = this.ThrowIfNull();
+
         Native.GitBuffer headerBuffer = default;
 
-        Git2.ThrowIfError(git_commit_header_field(&headerBuffer, this.NativeHandle, field));
+        Git2.ThrowIfError(git_commit_header_field(&headerBuffer, handle.NativeHandle, field));
 
         try
         {
@@ -303,21 +406,27 @@ public unsafe readonly struct GitCommit : IDisposable
 
     public GitCommit GetNthGenerationAncestor(uint n)
     {
+        var handle = this.ThrowIfNull();
+
         Git2.Commit* result = null;
-        Git2.ThrowIfError(git_commit_nth_gen_ancestor(&result, this.NativeHandle, n));
+        Git2.ThrowIfError(git_commit_nth_gen_ancestor(&result, handle.NativeHandle, n));
 
         return new(result);
     }
 
     public string GetRawHeader()
     {
-        return Utf8StringMarshaller.ConvertToManaged(git_commit_raw_header(this.NativeHandle))!;
+        var handle = this.ThrowIfNull();
+
+        return Utf8StringMarshaller.ConvertToManaged(git_commit_raw_header(handle.NativeHandle))!;
     }
 
     public DateTimeOffset GetCommitTime()
     {
-        var time = git_commit_time(this.NativeHandle);
-        var offset = git_commit_time_offset(this.NativeHandle);
+        var handle = this.ThrowIfNull();
+
+        var time = git_commit_time(handle.NativeHandle);
+        var offset = git_commit_time_offset(handle.NativeHandle);
 
         return (DateTimeOffset)new GitTime(time, offset);
     }
@@ -345,7 +454,7 @@ public unsafe readonly struct GitCommit : IDisposable
 
     public static explicit operator GitCommit(GitObject obj)
     {
-        return obj.Type == GitObjectType.Commit
+        return obj.IsNull || obj.Type == GitObjectType.Commit
             ? new GitCommit((Git2.Commit*)obj.NativeHandle)
             : throw new InvalidCastException("Git Object is not of type Commit!");
     }
@@ -354,4 +463,13 @@ public unsafe readonly struct GitCommit : IDisposable
     {
         return new((Git2.Object*)commit.NativeHandle);
     }
+
+    Git2.Object* IGitObject<GitCommit>.NativeHandle => (Git2.Object*)this.NativeHandle;
+
+    static GitCommit IGitObject<GitCommit>.FromObjectPointer(Git2.Object* obj)
+    {
+        return new((Git2.Commit*)obj);
+    }
+
+    static GitObjectType IGitObject<GitCommit>.ObjectType => GitObjectType.Commit;
 }

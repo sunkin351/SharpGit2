@@ -1,15 +1,23 @@
 ﻿using System.Runtime.InteropServices;
-using System.Runtime.InteropServices.Marshalling;
 
 using SharpGit2.Marshalling;
 
-using static SharpGit2.NativeApi;
+using static SharpGit2.GitNativeApi;
 
 namespace SharpGit2;
 
-public unsafe readonly struct GitRemote(Git2.Remote* handle) : IDisposable
+/// <summary>
+/// 
+/// </summary>
+/// <param name="handle">The native object pointer</param>
+public unsafe readonly struct GitRemote(Git2.Remote* handle) : IGitHandle
 {
-    public readonly Git2.Remote* NativeHandle = handle;
+    /// <summary>
+    /// The native object pointer
+    /// </summary>
+    public Git2.Remote* NativeHandle { get; } = handle;
+
+    public bool IsNull => this.NativeHandle == null;
 
     public void Dispose()
     {
@@ -20,38 +28,78 @@ public unsafe readonly struct GitRemote(Git2.Remote* handle) : IDisposable
     {
         get
         {
-            var ptr = git_remote_owner(this.NativeHandle);
+            var handle = this.ThrowIfNull();
+
+            var ptr = git_remote_owner(handle.NativeHandle);
 
             return ptr is null ? null : new(ptr);
         }
     }
 
-    public bool IsConnected => git_remote_connected(this.NativeHandle);
+    public bool IsConnected
+    {
+        get
+        {
+            var handle = this.ThrowIfNull();
 
-    public GitRemoteAutoTagOption AutoTagOption => git_remote_autotag(this.NativeHandle);
+            return git_remote_connected(handle.NativeHandle);
+        }
+    }
 
-    public int PruneRefs => git_remote_prune_refs(this.NativeHandle);
+    public GitRemoteAutoTagOption AutoTagOption
+    {
+        get
+        {
+            var handle = this.ThrowIfNull();
 
-    public nuint RefspecCount => git_remote_refspec_count(this.NativeHandle);
+            return git_remote_autotag(handle.NativeHandle);
+        }
+    }
+
+    public int PruneRefs
+    {
+        get
+        {
+            var handle = this.ThrowIfNull();
+
+            return git_remote_prune_refs(handle.NativeHandle);
+        }
+    }
+
+    public nuint RefspecCount
+    {
+        get
+        {
+            var handle = this.ThrowIfNull();
+
+            return git_remote_refspec_count(handle.NativeHandle);
+        }
+    }
 
     public GitRemote Duplicate()
     {
+        var handle = this.ThrowIfNull();
+
         Git2.Remote* result = null;
 
-        Git2.ThrowIfError(git_remote_dup(&result, this.NativeHandle));
+        Git2.ThrowIfError(git_remote_dup(&result, handle.NativeHandle));
 
         return new(result);
     }
 
     public IDisposable Connect(GitDirection direction)
     {
-        Git2.ThrowIfError(git_remote_connect_ext(this.NativeHandle, direction, null));
+        var handle = this.ThrowIfNull();
 
-        return new ConnectionCleanup(this, default);
+        Git2.ThrowIfError(git_remote_connect_ext(handle.NativeHandle, direction, null));
+
+        return new ConnectionCleanup(handle, default);
     }
 
     public IDisposable Connect(GitDirection direction, in GitRemoteConnectOptions options)
     {
+        var handle = this.ThrowIfNull();
+
         GCHandle cbhandle = default;
 
         Native.GitRemoteConnectOptions _options = new();
@@ -70,9 +118,9 @@ public unsafe readonly struct GitRemote(Git2.Remote* handle) : IDisposable
             _options.FollowRedirects = options.FollowRedirects;
             _options.CustomHeaders = StringArrayMarshaller.ConvertToUnmanaged(options.CustomHeaders);
 
-            Git2.ThrowIfError(git_remote_connect_ext(this.NativeHandle, direction, &_options));
+            Git2.ThrowIfError(git_remote_connect_ext(handle.NativeHandle, direction, &_options));
 
-            return new ConnectionCleanup(this, cbhandle);
+            return new ConnectionCleanup(handle, cbhandle);
         }
         catch
         {
@@ -81,9 +129,9 @@ public unsafe readonly struct GitRemote(Git2.Remote* handle) : IDisposable
         }
         finally
         {
-            foreach (var handle in gchandles)
+            foreach (var gchandle in gchandles)
             {
-                handle.Free();
+                gchandle.Free();
             }
 
             _options.Free();
@@ -92,9 +140,11 @@ public unsafe readonly struct GitRemote(Git2.Remote* handle) : IDisposable
 
     public string? GetDefaultBranch()
     {
+        var handle = this.ThrowIfNull();
+
         Native.GitBuffer buffer = default;
 
-        var error = git_remote_default_branch(&buffer, this.NativeHandle);
+        var error = git_remote_default_branch(&buffer, handle.NativeHandle);
 
         switch (error)
         {
@@ -116,6 +166,13 @@ public unsafe readonly struct GitRemote(Git2.Remote* handle) : IDisposable
 
     public void Download(string[] refspecs, in GitFetchOptions options)
     {
+        Download(new ReadOnlySpan<string>(refspecs), in options);
+    }
+
+    public void Download(ReadOnlySpan<string> refspecs, in GitFetchOptions options)
+    {
+        var handle = this.ThrowIfNull();
+
         Native.GitFetchOptions _options = default;
         List<GCHandle> gchandles = [];
         GitError error;
@@ -123,13 +180,13 @@ public unsafe readonly struct GitRemote(Git2.Remote* handle) : IDisposable
         {
             _options.FromManaged(in options, gchandles);
 
-            error = git_remote_download(this.NativeHandle, refspecs, &_options);
+            error = git_remote_download(handle.NativeHandle, refspecs, &_options);
         }
         finally
         {
-            foreach (var handle in gchandles)
+            foreach (var gchandle in gchandles)
             {
-                handle.Free();
+                gchandle.Free();
             }
 
             _options.Free();
@@ -140,6 +197,13 @@ public unsafe readonly struct GitRemote(Git2.Remote* handle) : IDisposable
 
     public void Fetch(string[]? refspecs, in GitFetchOptions options, string? reflog_message)
     {
+        Fetch(new ReadOnlySpan<string>(refspecs), in options, reflog_message);
+    }
+
+    public void Fetch(ReadOnlySpan<string> refspecs, in GitFetchOptions options, string? reflog_message)
+    {
+        var handle = this.ThrowIfNull();
+
         Native.GitFetchOptions _options = default;
         List<GCHandle> gchandles = [];
         GitError error;
@@ -147,13 +211,13 @@ public unsafe readonly struct GitRemote(Git2.Remote* handle) : IDisposable
         {
             _options.FromManaged(in options, gchandles);
 
-            error = git_remote_fetch(this.NativeHandle, refspecs, &_options, reflog_message);
+            error = git_remote_fetch(handle.NativeHandle, refspecs, &_options, reflog_message);
         }
         finally
         {
-            foreach (var handle in gchandles)
+            foreach (var gchandle in gchandles)
             {
-                handle.Free();
+                gchandle.Free();
             }
 
             _options.Free();
@@ -164,6 +228,13 @@ public unsafe readonly struct GitRemote(Git2.Remote* handle) : IDisposable
 
     public void Upload(string[] refspecs, in GitPushOptions options)
     {
+        Upload(new ReadOnlySpan<string>(refspecs), in options);
+    }
+
+    public void Upload(ReadOnlySpan<string> refspecs, in GitPushOptions options)
+    {
+        var handle = this.ThrowIfNull();
+
         Native.GitPushOptions _options = default;
         List<GCHandle> gchandles = [];
         GitError error;
@@ -171,13 +242,13 @@ public unsafe readonly struct GitRemote(Git2.Remote* handle) : IDisposable
         {
             _options.FromManaged(in options, gchandles);
 
-            error = git_remote_upload(this.NativeHandle, refspecs, &_options);
+            error = git_remote_upload(handle.NativeHandle, refspecs, &_options);
         }
         finally
         {
-            foreach (var handle in gchandles)
+            foreach (var gchandle in gchandles)
             {
-                handle.Free();
+                gchandle.Free();
             }
 
             _options.Free();
@@ -188,13 +259,17 @@ public unsafe readonly struct GitRemote(Git2.Remote* handle) : IDisposable
 
     private void Disconnect()
     {
-        Git2.ThrowIfError(git_remote_disconnect(this.NativeHandle));
+        var handle = this.ThrowIfNull();
+
+        Git2.ThrowIfError(git_remote_disconnect(handle.NativeHandle));
     }
 
     public string[] GetFetchRefspecs()
     {
+        var handle = this.ThrowIfNull();
+
         Native.GitStringArray array = default;
-        Git2.ThrowIfError(git_remote_get_fetch_refspecs(&array, this.NativeHandle));
+        Git2.ThrowIfError(git_remote_get_fetch_refspecs(&array, handle.NativeHandle));
 
         try
         {
@@ -208,8 +283,10 @@ public unsafe readonly struct GitRemote(Git2.Remote* handle) : IDisposable
 
     public string[] GetPushRefspecs()
     {
+        var handle = this.ThrowIfNull();
+
         Native.GitStringArray array = default;
-        Git2.ThrowIfError(git_remote_get_push_refspecs(&array, this.NativeHandle));
+        Git2.ThrowIfError(git_remote_get_push_refspecs(&array, handle.NativeHandle));
 
         try
         {
@@ -223,15 +300,19 @@ public unsafe readonly struct GitRemote(Git2.Remote* handle) : IDisposable
 
     public GitRefSpec GetRefSpec(nuint idx)
     {
-        return new(git_remote_get_refspec(this.NativeHandle, idx));
+        var handle = this.ThrowIfNull();
+
+        return new(git_remote_get_refspec(handle.NativeHandle, idx));
     }
 
     public GitRemoteHead[] GetAdvertisedReferenceList()
     {
+        var handle = this.ThrowIfNull();
+
         Native.GitRemoteHead** list = null;
         nuint count = 0;
 
-        Git2.ThrowIfError(git_remote_ls(&list, &count, this.NativeHandle));
+        Git2.ThrowIfError(git_remote_ls(&list, &count, handle.NativeHandle));
 
         // underlying memory belongs to the remote object, do not dispose.
 
@@ -247,19 +328,27 @@ public unsafe readonly struct GitRemote(Git2.Remote* handle) : IDisposable
 
     public string? GetName()
     {
-        return Utf8StringMarshaller.ConvertToManaged(git_remote_name(this.NativeHandle));
+        var handle = this.ThrowIfNull();
+
+        var nativeName = git_remote_name(handle.NativeHandle);
+
+        return nativeName == null ? null : Git2.GetPooledString(nativeName);
     }
 
     public void Prune()
     {
-        Git2.ThrowIfError(git_remote_prune(this.NativeHandle, null));
+        var handle = this.ThrowIfNull();
+
+        Git2.ThrowIfError(git_remote_prune(handle.NativeHandle, null));
     }
     
     public void Prune(IGitRemoteCallbacks? callbacks)
     {
+        var handle = this.ThrowIfNull();
+
         if (callbacks is null)
         {
-            Prune();
+            Git2.ThrowIfError(git_remote_prune(handle.NativeHandle, null));
             return;
         }
 
@@ -272,7 +361,7 @@ public unsafe readonly struct GitRemote(Git2.Remote* handle) : IDisposable
             _callbacks.Payload = (nint)cbhandle;
             _callbacks.SetDefaultCallbacks(callbacks);
 
-            Git2.ThrowIfError(git_remote_prune(this.NativeHandle, &_callbacks));
+            Git2.ThrowIfError(git_remote_prune(handle.NativeHandle, &_callbacks));
         }
         finally
         {
@@ -282,6 +371,13 @@ public unsafe readonly struct GitRemote(Git2.Remote* handle) : IDisposable
 
     public void Push(string[] refspecs, in GitPushOptions options)
     {
+        Push(new ReadOnlySpan<string>(refspecs), in options);
+    }
+
+    public void Push(ReadOnlySpan<string> refspecs, in GitPushOptions options)
+    {
+        var handle = this.ThrowIfNull();
+
         Native.GitPushOptions _options = default;
         List<GCHandle> gchandles = [];
         GitError error;
@@ -289,13 +385,13 @@ public unsafe readonly struct GitRemote(Git2.Remote* handle) : IDisposable
         {
             _options.FromManaged(in options, gchandles);
 
-            error = git_remote_push(this.NativeHandle, refspecs, &_options);
+            error = git_remote_push(handle.NativeHandle, refspecs, &_options);
         }
         finally
         {
-            foreach (var handle in gchandles)
+            foreach (var gchandle in gchandles)
             {
-                handle.Free();
+                gchandle.Free();
             }
 
             _options.Free();
@@ -306,27 +402,32 @@ public unsafe readonly struct GitRemote(Git2.Remote* handle) : IDisposable
 
     public string? GetPushUrl()
     {
-        return Utf8StringMarshaller.ConvertToManaged(git_remote_pushurl(this.NativeHandle));
+        var handle = this.ThrowIfNull();
+
+        var nativeUrl = git_remote_pushurl(handle.NativeHandle);
+
+        return nativeUrl == null ? null : Git2.GetPooledString(nativeUrl);
     }
 
     public void SetPushUrl(string url)
     {
-        Git2.ThrowIfError(git_remote_set_instance_pushurl(this.NativeHandle, url));
+        var handle = this.ThrowIfNull();
+
+        Git2.ThrowIfError(git_remote_set_instance_pushurl(handle.NativeHandle, url));
     }
 
     public void SetUrl(string url)
     {
-        Git2.ThrowIfError(git_remote_set_instance_url(this.NativeHandle, url));
+        var handle = this.ThrowIfNull();
+
+        Git2.ThrowIfError(git_remote_set_instance_url(handle.NativeHandle, url));
     }
 
     public ref readonly GitIndexerProgress GetStats()
     {
-        if (this.NativeHandle == null)
-        {
-            throw new InvalidOperationException("Null Remote Handle!");
-        }
+        var handle = this.ThrowIfNull();
 
-        return ref *git_remote_stats(this.NativeHandle);
+        return ref *git_remote_stats(handle.NativeHandle);
     }
 
     /// <summary>
@@ -334,19 +435,25 @@ public unsafe readonly struct GitRemote(Git2.Remote* handle) : IDisposable
     /// </summary>
     public void Stop()
     {
-        Git2.ThrowIfError(git_remote_stop(this.NativeHandle));
+        var handle = this.ThrowIfNull();
+
+        Git2.ThrowIfError(git_remote_stop(handle.NativeHandle));
     }
 
     public void UpdateTips(bool update_fetchhead, GitRemoteAutoTagOption download_tags, string? reflog_message)
     {
-        Git2.ThrowIfError(git_remote_update_tips(this.NativeHandle, null, update_fetchhead ? 1 : 0, download_tags, reflog_message));
+        var handle = this.ThrowIfNull();
+
+        Git2.ThrowIfError(git_remote_update_tips(handle.NativeHandle, null, update_fetchhead ? 1 : 0, download_tags, reflog_message));
     }
 
     public void UpdateTips(IGitRemoteCallbacks? callbacks, bool update_fetchhead, GitRemoteAutoTagOption download_tags, string? reflog_message)
     {
+        var handle = this.ThrowIfNull();
+
         if (callbacks is null)
         {
-            Git2.ThrowIfError(git_remote_update_tips(this.NativeHandle, null, update_fetchhead ? 1 : 0, download_tags, reflog_message));
+            Git2.ThrowIfError(git_remote_update_tips(handle.NativeHandle, null, update_fetchhead ? 1 : 0, download_tags, reflog_message));
             return;
         }
 
@@ -359,7 +466,7 @@ public unsafe readonly struct GitRemote(Git2.Remote* handle) : IDisposable
             _callbacks.Payload = (nint)cbhandle;
             _callbacks.SetDefaultCallbacks(callbacks);
 
-            Git2.ThrowIfError(git_remote_update_tips(this.NativeHandle, &_callbacks, update_fetchhead ? 1 : 0, download_tags, reflog_message));
+            Git2.ThrowIfError(git_remote_update_tips(handle.NativeHandle, &_callbacks, update_fetchhead ? 1 : 0, download_tags, reflog_message));
         }
         finally
         {
@@ -369,12 +476,18 @@ public unsafe readonly struct GitRemote(Git2.Remote* handle) : IDisposable
 
     public void UpdateTips(Native.GitRemoteCallbacks* callbacks, bool update_fetchhead, GitRemoteAutoTagOption download_tags, string? reflog_message)
     {
-        Git2.ThrowIfError(git_remote_update_tips(this.NativeHandle, callbacks, update_fetchhead ? 1 : 0, download_tags, reflog_message));
+        var handle = this.ThrowIfNull();
+
+        Git2.ThrowIfError(git_remote_update_tips(handle.NativeHandle, callbacks, update_fetchhead ? 1 : 0, download_tags, reflog_message));
     }
 
     public string GetUrl()
     {
-        return Utf8StringMarshaller.ConvertToManaged(git_remote_url(this.NativeHandle))!;
+        var handle = this.ThrowIfNull();
+
+        var nativeUrl = git_remote_url(handle.NativeHandle);
+
+        return Git2.GetPooledString(nativeUrl);
     }
 
     public static GitRemote CreateDetached(string url)
@@ -413,16 +526,10 @@ public unsafe readonly struct GitRemote(Git2.Remote* handle) : IDisposable
         return git_remote_is_valid_name(remoteName);
     }
 
-    private sealed class ConnectionCleanup : IDisposable
+    private sealed class ConnectionCleanup(GitRemote remote, GCHandle handle) : IDisposable
     {
-        private GitRemote _remote;
-        private GCHandle _cbhandle;
-
-        public ConnectionCleanup(GitRemote remote, GCHandle handle)
-        {
-            _remote = remote;
-            _cbhandle = handle;
-        }
+        private readonly GitRemote _remote = remote;
+        private readonly GCHandle _cbhandle = handle;
 
         public void Dispose()
         {

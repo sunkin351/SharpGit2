@@ -1,12 +1,12 @@
-﻿using System.Runtime.InteropServices.Marshalling;
-
-using static SharpGit2.NativeApi;
+﻿using static SharpGit2.GitNativeApi;
 
 namespace SharpGit2;
 
-public unsafe readonly struct GitWorkTree(Git2.Worktree* handle) : IDisposable
+public unsafe readonly struct GitWorkTree(Git2.Worktree* handle) : IDisposable, IGitHandle
 {
-    internal readonly Git2.Worktree* NativeHandle = handle;
+    public Git2.Worktree* NativeHandle { get; } = handle;
+
+    public bool IsNull => NativeHandle == null;
 
     public void Dispose()
     {
@@ -15,7 +15,9 @@ public unsafe readonly struct GitWorkTree(Git2.Worktree* handle) : IDisposable
 
     public static GitWorkTree OpenFromRepository(GitRepository repository)
     {
-        Git2.Worktree* result;
+        Git2.ThrowIfNull(repository);
+
+        Git2.Worktree* result = null;
         Git2.ThrowIfError(git_worktree_open_from_repository(&result, repository.NativeHandle));
 
         return new(result);
@@ -23,7 +25,9 @@ public unsafe readonly struct GitWorkTree(Git2.Worktree* handle) : IDisposable
 
     public bool IsLocked()
     {
-        var result = git_worktree_is_locked(null, this.NativeHandle);
+        var handle = this.ThrowIfNull();
+
+        var result = git_worktree_is_locked(null, handle.NativeHandle);
 
         if (result < 0)
             Git2.ThrowError((GitError)result);
@@ -33,9 +37,11 @@ public unsafe readonly struct GitWorkTree(Git2.Worktree* handle) : IDisposable
 
     public bool IsLocked(out string? reason)
     {
+        var handle = this.ThrowIfNull();
+
         Native.GitBuffer _reason = default;
 
-        var result = git_worktree_is_locked(&_reason, this.NativeHandle);
+        var result = git_worktree_is_locked(&_reason, handle.NativeHandle);
 
         if (result < 0)
             Git2.ThrowError((GitError)result);
@@ -54,6 +60,8 @@ public unsafe readonly struct GitWorkTree(Git2.Worktree* handle) : IDisposable
 
     public bool IsPrunable(in GitWorktreePruneOptions options)
     {
+        var handle = this.ThrowIfNull();
+
         int result;
 
         Native.GitWorktreePruneOptions _options = default;
@@ -61,7 +69,7 @@ public unsafe readonly struct GitWorkTree(Git2.Worktree* handle) : IDisposable
         {
             _options.FromManaged(in options);
 
-            result = git_worktree_is_prunable(this.NativeHandle, &_options);
+            result = git_worktree_is_prunable(handle.NativeHandle, &_options);
         }
         finally
         {
@@ -76,7 +84,9 @@ public unsafe readonly struct GitWorkTree(Git2.Worktree* handle) : IDisposable
 
     public void Lock(string reason)
     {
-        Git2.ThrowIfError(git_worktree_lock(this.NativeHandle, reason));
+        var handle = this.ThrowIfNull();
+
+        Git2.ThrowIfError(git_worktree_lock(handle.NativeHandle, reason));
     }
 
     /// <summary>
@@ -87,7 +97,9 @@ public unsafe readonly struct GitWorkTree(Git2.Worktree* handle) : IDisposable
     /// </returns>
     public bool Unlock()
     {
-        int result = git_worktree_unlock(this.NativeHandle);
+        var handle = this.ThrowIfNull();
+
+        int result = git_worktree_unlock(handle.NativeHandle);
 
         if (result < 0)
             Git2.ThrowIfError((GitError)result);
@@ -97,16 +109,26 @@ public unsafe readonly struct GitWorkTree(Git2.Worktree* handle) : IDisposable
 
     public string GetName()
     {
-        return Utf8StringMarshaller.ConvertToManaged(git_worktree_name(this.NativeHandle))!;
+        var handle = this.ThrowIfNull();
+
+        var nativeName = git_worktree_name(handle.NativeHandle);
+
+        return Git2.GetPooledString(nativeName);
     }
 
     public string GetPath()
     {
-        return Utf8StringMarshaller.ConvertToManaged(git_worktree_path(this.NativeHandle))!;
+        var handle = this.ThrowIfNull();
+
+        var nativePath = git_worktree_path(handle.NativeHandle);
+
+        return Git2.GetPooledString(nativePath);
     }
 
     public void Prune(in GitWorktreePruneOptions options)
     {
+        var handle = this.ThrowIfNull();
+
         GitError error;
 
         Native.GitWorktreePruneOptions _options = default;
@@ -114,7 +136,7 @@ public unsafe readonly struct GitWorkTree(Git2.Worktree* handle) : IDisposable
         {
             _options.FromManaged(in options);
 
-            error = git_worktree_prune(this.NativeHandle, &_options);
+            error = git_worktree_prune(handle.NativeHandle, &_options);
         }
         finally
         {
@@ -126,14 +148,18 @@ public unsafe readonly struct GitWorkTree(Git2.Worktree* handle) : IDisposable
 
     public void Validate()
     {
-        Git2.ThrowIfError(git_worktree_validate(this.NativeHandle));
+        var handle = this.ThrowIfNull();
+
+        Git2.ThrowIfError(git_worktree_validate(handle.NativeHandle));
     }
 
     public GitRepository OpenAsRepository()
     {
+        var handle = this.ThrowIfNull();
+
         Git2.Repository* result = null;
 
-        Git2.ThrowIfError(git_repository_open_from_worktree(&result, this.NativeHandle));
+        Git2.ThrowIfError(git_repository_open_from_worktree(&result, handle.NativeHandle));
 
         return new(result);
     }

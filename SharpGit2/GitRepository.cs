@@ -10,141 +10,229 @@ using System.Text;
 
 using SharpGit2.Marshalling;
 
-using static SharpGit2.NativeApi;
+using static SharpGit2.GitNativeApi;
 
 namespace SharpGit2;
 
-public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : IDisposable
+/// <summary>
+/// Representation of an existing git repository, including all its object contents
+/// </summary>
+/// <param name="handle">The native object pointer</param>
+public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : IDisposable, IGitHandle
 {
-    public readonly Git2.Repository* NativeHandle = handle;
+    /// <summary>
+    /// The native object pointer
+    /// </summary>
+    public Git2.Repository* NativeHandle { get; } = handle;
 
+    /// <summary>
+    /// Is this instance null? e.g. <c>NativeHandle == null</c>
+    /// </summary>
+    public bool IsNull => this.NativeHandle == null;
+
+    /// <summary>
+    /// Is this a bare repository?
+    /// </summary>
     public bool IsBare
     {
         get
         {
-            var code = git_repository_is_bare(this.NativeHandle);
+            var code = git_repository_is_bare(this.ThrowIfNull().NativeHandle);
 
             return Git2.ErrorOrBoolean(code);
-        }
-    }
-
-    public bool IsEmpty
-    {
-        get
-        {
-            var code = git_repository_is_empty(this.NativeHandle);
-
-            return Git2.ErrorOrBoolean(code);
-        }
-    }
-
-    public bool IsHeadDetached
-    {
-        get
-        {
-            var code = git_repository_head_detached(this.NativeHandle);
-
-            return Git2.ErrorOrBoolean(code);
-        }
-    }
-
-    public bool IsHeadUnborn
-    {
-        get
-        {
-            var code = git_repository_head_unborn(this.NativeHandle);
-
-            return Git2.ErrorOrBoolean(code);
-        }
-    }
-
-    public bool IsShallow
-    {
-        get
-        {
-            var code = git_repository_is_shallow(this.NativeHandle);
-
-            return code != 0;
-        }
-    }
-
-    public bool IsWorktree
-    {
-        get
-        {
-            var code = git_repository_is_worktree(this.NativeHandle);
-
-            return code != 0;
         }
     }
 
     /// <summary>
-    /// Gets the currently active namespace for this repository, or <see langword="null"/> if there isn't one.
+    /// Is this repository empty?
     /// </summary>
-    internal byte* NativeNamespace => git_repository_get_namespace(this.NativeHandle);
+    /// <remarks>
+    /// An empty repository has just been initialized and contains no references
+    /// apart from HEAD, which must be pointing to the unborn master branch,
+    /// or the branch specified for the repository in the <see cref="RepositoryInitOptions.InitialHead"/> configuration variable.
+    /// </remarks>
+    public bool IsEmpty
+    {
+        get
+        {
+            return Git2.ErrorOrBoolean(git_repository_is_empty(this.ThrowIfNull().NativeHandle));
+        }
+    }
 
-    internal byte* NativeWorkDirectory => git_repository_workdir(this.NativeHandle);
+    /// <summary>
+    /// Is this repository's HEAD detached?
+    /// </summary>
+    /// <remarks>
+    /// A repository's HEAD is detached when it points directly to a commit instead of a branch.
+    /// </remarks>
+    public bool IsHeadDetached
+    {
+        get
+        {
+            return Git2.ErrorOrBoolean(git_repository_head_detached(this.ThrowIfNull().NativeHandle));
+        }
+    }
 
-    public GitRepositoryState State => git_repository_state(this.NativeHandle);
+    /// <summary>
+    /// Is the current branch unborn?
+    /// </summary>
+    /// <remarks>
+    /// An unborn branch is one named from HEAD but which doesn't exist
+    /// in the refs namespace, because it doesn't have any commit to point to.
+    /// </remarks>
+    public bool IsHeadUnborn
+    {
+        get
+        {
+            return Git2.ErrorOrBoolean(git_repository_head_unborn(this.ThrowIfNull().NativeHandle));
+        }
+    }
 
+    /// <summary>
+    /// Is this repository a shallow clone?
+    /// </summary>
+    public bool IsShallow
+    {
+        get
+        {
+            return git_repository_is_shallow(this.ThrowIfNull().NativeHandle) != 0;
+        }
+    }
+
+    /// <summary>
+    /// Is this repository a linked work tree?
+    /// </summary>
+    public bool IsWorktree
+    {
+        get
+        {
+            return git_repository_is_worktree(this.ThrowIfNull().NativeHandle) != 0;
+        }
+    }
+
+    /// <summary>
+    /// The current state of this repository.
+    /// </summary>
+    public GitRepositoryState State
+    {
+        get
+        {
+            return git_repository_state(this.ThrowIfNull().NativeHandle);
+        }
+    }
+
+    /// <summary>
+    /// Free's this Git Repository
+    /// </summary>
+    /// <remarks>
+    /// Do not call this twice!
+    /// </remarks>
     public void Dispose()
     {
         git_repository_free(this.NativeHandle);
     }
 
     #region Annotated Commits
+    /// <summary>
+    /// Create an annotated commit from the given fetch head data.
+    /// </summary>
+    /// <param name="branchName">name of the (remote) branch</param>
+    /// <param name="remoteUrl">url of the remote</param>
+    /// <param name="id">the commit object id of the remote branch</param>
+    /// <returns>The resulting Annotated Commit</returns>
+    /// <exception cref="Git2Exception"/>
     public GitAnnotatedCommit GetAnnotatedCommitFromFetchHead(string branchName, string remoteUrl, GitObjectID id)
     {
-        Git2.AnnotatedCommit* result;
-        Git2.ThrowIfError(git_annotated_commit_from_fetchhead(&result, this.NativeHandle, branchName, remoteUrl, &id));
+        var handle = this.ThrowIfNull();
+
+        Git2.AnnotatedCommit* result = null;
+        Git2.ThrowIfError(git_annotated_commit_from_fetchhead(&result, handle.NativeHandle, branchName, remoteUrl, &id));
 
         return new(result);
     }
 
+    /// <inheritdoc cref="GetAnnotatedCommitFromFetchHead(string, string, GitObjectID)"/>
     public GitAnnotatedCommit GetAnnotatedCommitFromFetchHead(string branchName, string remoteUrl, in GitObjectID id)
     {
-        Git2.AnnotatedCommit* result;
-        Git2.ThrowIfError(git_annotated_commit_from_fetchhead(&result, this.NativeHandle, branchName, remoteUrl, in id));
+        var handle = this.ThrowIfNull();
+
+        Git2.AnnotatedCommit* result = null;
+        Git2.ThrowIfError(git_annotated_commit_from_fetchhead(&result, handle.NativeHandle, branchName, remoteUrl, in id));
 
         return new(result);
     }
 
+    /// <summary>
+    /// Creates an annotated commit from the given reference.
+    /// </summary>
+    /// <param name="reference">Reference to lookup the annotated commit</param>
+    /// <returns>The resulting Annotated Commit</returns>
+    /// <exception cref="Git2Exception"/>
     public GitAnnotatedCommit GetAnnotatedCommitFromReference(GitReference reference)
     {
-        Git2.AnnotatedCommit* result;
-        Git2.ThrowIfError(git_annotated_commit_from_ref(&result, this.NativeHandle, reference.NativeHandle));
+        var handle = this.ThrowIfNull();
+
+        Git2.AnnotatedCommit* result = null;
+        Git2.ThrowIfError(git_annotated_commit_from_ref(&result, handle.NativeHandle, reference.NativeHandle));
 
         return new(result);
     }
 
+    /// <summary>
+    /// Creates an annotated commit from a revision string.
+    /// </summary>
+    /// <param name="revspec">The extended SHA syntax string to use to lookup the commit</param>
+    /// <returns>The resulting Annotated Commit</returns>
+    /// <exception cref="Git2Exception"/>
     public GitAnnotatedCommit GetAnnotatedCommitFromRevspec(string revspec)
     {
-        Git2.AnnotatedCommit* result;
-        Git2.ThrowIfError(git_annotated_commit_from_revspec(&result, this.NativeHandle, revspec));
+        var handle = this.ThrowIfNull();
+
+        Git2.AnnotatedCommit* result = null;
+        Git2.ThrowIfError(git_annotated_commit_from_revspec(&result, handle.NativeHandle, revspec: revspec));
 
         return new(result);
     }
 
+    /// <summary>
+    /// Creates an annotated commit from the given id.
+    /// </summary>
+    /// <param name="id">The commit object id to lookup</param>
+    /// <returns>The resulting Annotated Commit</returns>
+    /// <exception cref="Git2Exception"/>
     public GitAnnotatedCommit GetAnnotatedCommit(GitObjectID id)
     {
-        Git2.AnnotatedCommit* result;
-        Git2.ThrowIfError(git_annotated_commit_lookup(&result, this.NativeHandle, &id));
+        var handle = this.ThrowIfNull();
+
+        Git2.AnnotatedCommit* result = null;
+        Git2.ThrowIfError(git_annotated_commit_lookup(&result, handle.NativeHandle, &id));
 
         return new(result);
     }
 
+    /// <inheritdoc cref="GetAnnotatedCommit(GitObjectID)"/>
     public GitAnnotatedCommit GetAnnotatedCommit(in GitObjectID id)
     {
-        Git2.AnnotatedCommit* result;
-        Git2.ThrowIfError(git_annotated_commit_lookup(&result, this.NativeHandle, in id));
+        var handle = this.ThrowIfNull();
+
+        Git2.AnnotatedCommit* result = null;
+        Git2.ThrowIfError(git_annotated_commit_lookup(&result, handle.NativeHandle, in id));
 
         return new(result);
     }
 
+    /// <summary>
+    /// Attempts to create an annotated commit from the given id. 
+    /// </summary>
+    /// <param name="id">The commit object id to lookup</param>
+    /// <param name="commit">The resulting commit, or <see langword="default"/> if false is returned.</param>
+    /// <returns><see langword="true"/> if successful, <see langword="false"/> otherwise.</returns>
     public bool TryGetAnnotatedCommit(GitObjectID id, out GitAnnotatedCommit commit)
     {
-        Git2.AnnotatedCommit* result;
-        var error = git_annotated_commit_lookup(&result, this.NativeHandle, &id);
+        var handle = this.ThrowIfNull();
+
+        Git2.AnnotatedCommit* result = null;
+        var error = git_annotated_commit_lookup(&result, handle.NativeHandle, &id);
 
         switch (error)
         {
@@ -159,10 +247,13 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
         }
     }
 
+    /// <inheritdoc cref="TryGetAnnotatedCommit(GitObjectID, out GitAnnotatedCommit)"/>
     public bool TryGetAnnotatedCommit(in GitObjectID id, out GitAnnotatedCommit commit)
     {
-        Git2.AnnotatedCommit* result;
-        var error = git_annotated_commit_lookup(&result, this.NativeHandle, in id);
+        var handle = this.ThrowIfNull();
+
+        Git2.AnnotatedCommit* result = null;
+        var error = git_annotated_commit_lookup(&result, handle.NativeHandle, in id);
 
         switch (error)
         {
@@ -179,51 +270,138 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
     #endregion
 
     #region Apply
-
-    public void Apply(GitDiff diff, GitApplyLocationType location, in GitApplyOptions options)
+    /// <summary>
+    /// Apply a <see cref="GitDiff"/> to the given repository, making changes directly in the working directory, the index, or both.
+    /// </summary>
+    /// <param name="diff">The diff to apply</param>
+    /// <param name="location">The location to apply (workdir, index or both)</param>
+    public void Apply(GitDiff diff, GitApplyLocationType location)
     {
-        Git2.ThrowIfError(git_apply(this.NativeHandle, diff.NativeHandle, location, in options));
+        var handle = this.ThrowIfNull();
+
+        Git2.ThrowIfError(git_apply(handle.NativeHandle, diff.NativeHandle, location, null));
     }
 
-    public GitIndex ApplyToTree(GitTree preimage, GitDiff diff, in GitApplyOptions options)
+    /// <summary>
+    /// Apply a <see cref="GitDiff"/> to the given repository, making changes directly in the working directory, the index, or both.
+    /// </summary>
+    /// <param name="diff">The diff to apply</param>
+    /// <param name="location">The location to apply (workdir, index or both)</param>
+    /// <param name="options">The options for the apply</param>
+    public void Apply(GitDiff diff, GitApplyLocationType location, in GitApplyOptions options)
     {
-        Git2.Index* result;
+        var handle = this.ThrowIfNull();
 
-        Git2.ThrowIfError(git_apply_to_tree(&result, this.NativeHandle, preimage.NativeHandle, diff.NativeHandle, in options));
+        Git2.ThrowIfError(git_apply(handle.NativeHandle, diff.NativeHandle, location, in options));
+    }
+
+    /// <summary>
+    /// Apply a <see cref="GitDiff"/> to a <see cref="GitTree"/>, and return the resulting image as an Index.
+    /// </summary>
+    /// <param name="preimage">The tree to apply the diff to</param>
+    /// <param name="diff">The diff to apply</param>
+    /// <returns>The postimage of the application</returns>
+    public GitIndex ApplyToTree(GitTree preimage, GitDiff diff)
+    {
+        var handle = this.ThrowIfNull();
+
+        Git2.Index* result = null;
+
+        Git2.ThrowIfError(git_apply_to_tree(&result, handle.NativeHandle, preimage.NativeHandle, diff.NativeHandle, null));
 
         return new(result);
     }
 
+    /// <summary>
+    /// Apply a <see cref="GitDiff"/> to a <see cref="GitTree"/>, and return the resulting image as an Index.
+    /// </summary>
+    /// <param name="preimage">The tree to apply the diff to</param>
+    /// <param name="diff">The diff to apply</param>
+    /// <param name="options">The options for the apply</param>
+    /// <returns>The postimage of the application</returns>
+    public GitIndex ApplyToTree(GitTree preimage, GitDiff diff, in GitApplyOptions options)
+    {
+        var handle = this.ThrowIfNull();
+
+        Git2.Index* result = null;
+
+        Git2.ThrowIfError(git_apply_to_tree(&result, handle.NativeHandle, preimage.NativeHandle, diff.NativeHandle, in options));
+
+        return new(result);
+    }
     #endregion
 
     #region Attributes
-
+    /// <summary>
+    /// Add a macro definition.
+    /// </summary>
+    /// <param name="name">The name of the macro.</param>
+    /// <param name="values">The value for the macro.</param>
+    /// <remarks>
+    /// Macros will automatically be loaded from the top level .gitattributes file of the repository (plus the built-in "binary" macro).
+    /// This function allows you to add others. For example, to add the default macro, you would call:
+    /// <code>
+    /// repository.AttributeAddMacro("binary", "-diff crlf");
+    /// </code>
+    /// </remarks>
     public void AttributeAddMacro(string name, string values)
     {
-        Git2.ThrowIfError(git_attr_add_macro(this.NativeHandle, name, values));
+        var handle = this.ThrowIfNull();
+
+        Git2.ThrowIfError(git_attr_add_macro(handle.NativeHandle, name, values));
     }
 
+    /// <summary>
+    /// Flush the gitattributes cache.
+    /// </summary>
+    /// <remarks>
+    /// Call this if you have reason to believe that the attributes files on disk no longer match the cached contents of memory.
+    /// This will cause the attributes files to be reloaded the next time that an attribute access function is called.
+    /// </remarks>
     public void AttributeCacheFlush()
     {
-        Git2.ThrowIfError(git_attr_cache_flush(this.NativeHandle));
+        var handle = this.ThrowIfNull();
+
+        Git2.ThrowIfError(git_attr_cache_flush(handle.NativeHandle));
     }
 
-#pragma warning disable CS8500 // This takes the address of, gets the size of, or declares a pointer to a managed type
+    /// <summary>
+    /// Loop over all the git attributes for a path.
+    /// </summary>
+    /// <param name="flags"></param>
+    /// <param name="path">
+    /// Path inside the repo to check attributes. This does not have to exist, but if it does not,
+    /// then it will be treated as a plain file (i.e. not a directory).
+    /// </param>
+    /// <param name="callbacks">Function to invoke on each attribute name and value</param>
     [MethodImpl(MethodImplOptions.NoInlining)]
     public void AttributeForEach(GitAttributeCheckFlags flags, string path, ForeachAttributeCallback callbacks)
     {
+        var handle = this.ThrowIfNull();
+
         Git2.CallbackContext<ForeachAttributeCallback> context = new(callbacks);
 
-        var error = git_attr_foreach(this.NativeHandle, flags, path, &AttributeForeachCallback, (nint)(void*)&context);
+        var error = git_attr_foreach(handle.NativeHandle, flags, path, &AttributeForeachCallback, (nint)(void*)&context);
 
         context.ExceptionInfo?.Throw();
         if (error < 0)
             Git2.ThrowError((GitError)error);
     }
 
+    /// <summary>
+    /// Loop over all the git attributes for a path with extended options.
+    /// </summary>
+    /// <param name="options">The options to use when querying these attributes.</param>
+    /// <param name="path">
+    /// Path inside the repo to check attributes. This does not have to exist, but if it does not,
+    /// then it will be treated as a plain file (i.e. not a directory).
+    /// </param>
+    /// <param name="callbacks">Function to invoke on each attribute name and value</param>
     [MethodImpl(MethodImplOptions.NoInlining)]
     public void AttributeForEach(in GitAttributeOptions options, string path, ForeachAttributeCallback callbacks)
     {
+        var handle = this.ThrowIfNull();
+
         Git2.CallbackContext<ForeachAttributeCallback> context = new(callbacks);
         Native.GitAttributeOptions nOptions = default;
         GitError error;
@@ -232,7 +410,7 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
         {
             nOptions.FromManaged(in options);
 
-            error = (GitError)git_attr_foreach_ext(this.NativeHandle, &nOptions, path, &AttributeForeachCallback, (nint)(void*)&context);
+            error = (GitError)git_attr_foreach_ext(handle.NativeHandle, &nOptions, path, &AttributeForeachCallback, (nint)(void*)&context);
         }
         finally
         {
@@ -250,7 +428,7 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
 
         try
         {
-            string mName = Utf8StringMarshaller.ConvertToManaged(name)!;
+            string mName = Git2.GetPooledString(name);
 
             var type = git_attr_value(value);
 
@@ -267,23 +445,38 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
             return -1;
         }
     }
-#pragma warning restore CS8500 // This takes the address of, gets the size of, or declares a pointer to a managed type
 
+    /// <summary>
+    /// Lookup the value for one git attribute for <paramref name="path"/>.
+    /// </summary>
+    /// <param name="flags"></param>
+    /// <param name="path">
+    /// The path to check for attributes. Relative paths are
+    /// interpreted relative to the repo root. The file does
+    /// not have to exist, but if it does not, then it will
+    /// be treated as a plain file (not a directory).
+    /// </param>
+    /// <param name="name">The name of the attribute to look up</param>
+    /// <returns></returns>
     public GitAttributeValue GetAttribute(GitAttributeCheckFlags flags, string path, string name)
     {
-        Git2.ThrowIfError(git_attr_get(out GitAttributeValue value, this.NativeHandle, flags, path, name));
+        var handle = this.ThrowIfNull();
+
+        Git2.ThrowIfError(git_attr_get(out GitAttributeValue value, handle.NativeHandle, flags, path, name));
 
         return value;
     }
 
     public GitAttributeValue GetAttribute(in GitAttributeOptions options, string path, string name)
     {
+        var handle = this.ThrowIfNull();
+
         Native.GitAttributeOptions nOptions = default;
         try
         {
             nOptions.FromManaged(in options);
 
-            Git2.ThrowIfError(git_attr_get_ext(out GitAttributeValue value, this.NativeHandle, &nOptions, path, name));
+            Git2.ThrowIfError(git_attr_get_ext(out GitAttributeValue value, handle.NativeHandle, &nOptions, path, name));
 
             return value;
         }
@@ -295,19 +488,23 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
 
     public GitAttributeValue[] GetAttributes(GitAttributeCheckFlags flags, string path, IEnumerable<string> names)
     {
-        Git2.ThrowIfError(git_attr_get_many(out var values, this.NativeHandle, flags, path, names));
+        var handle = this.ThrowIfNull();
+
+        Git2.ThrowIfError(git_attr_get_many(out var values, handle.NativeHandle, flags, path, names));
 
         return values;
     }
 
     public GitAttributeValue[] GetAttributes(in GitAttributeOptions options, string path, IEnumerable<string> names)
     {
+        var handle = this.ThrowIfNull();
+
         Native.GitAttributeOptions nOptions = default;
         try
         {
             nOptions.FromManaged(in options);
 
-            Git2.ThrowIfError(git_attr_get_many_ext(out var values, this.NativeHandle, &nOptions, path, names));
+            Git2.ThrowIfError(git_attr_get_many_ext(out var values, handle.NativeHandle, &nOptions, path, names));
 
             return values;
         }
@@ -323,14 +520,18 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
     #region Blame
     public GitBlame GetBlame(string filePath)
     {
-        Git2.Blame* result;
-        Git2.ThrowIfError(git_blame_file(&result, this.NativeHandle, filePath, null));
+        var handle = this.ThrowIfNull();
+
+        Git2.Blame* result = null;
+        Git2.ThrowIfError(git_blame_file(&result, handle.NativeHandle, filePath, null));
         return new(result);
     }
 
     public GitBlame GetBlame(string filePath, in GitBlameOptions options)
     {
-        Git2.Blame* result;
+        var handle = this.ThrowIfNull();
+
+        Git2.Blame* result = null;
         GitError error;
 
         Native.GitBlameOptions nOptions = default;
@@ -339,13 +540,13 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
         {
             nOptions.FromManaged(in options, gchandles);
 
-            error = git_blame_file(&result, this.NativeHandle, filePath, &nOptions);
+            error = git_blame_file(&result, handle.NativeHandle, filePath, &nOptions);
         }
         finally
         {
-            foreach (var handle in gchandles)
+            foreach (var gchandle in gchandles)
             {
-                handle.Free();
+                gchandle.Free();
             }
 
             nOptions.Free();
@@ -359,12 +560,14 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
     #region Blob
     public GitObjectID CreateBlobFromBuffer(ReadOnlySpan<byte> buffer)
     {
+        var handle = this.ThrowIfNull();
+
         GitObjectID result = default;
         GitError error;
 
         fixed (byte* _buffer = buffer)
         {
-            error = git_blob_create_from_buffer(&result, this.NativeHandle, _buffer, (nuint)buffer.Length);
+            error = git_blob_create_from_buffer(&result, handle.NativeHandle, _buffer, (nuint)buffer.Length);
         }
 
         Git2.ThrowIfError(error);
@@ -373,39 +576,47 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
 
     public GitObjectID CreateBlobFromDisk(string path)
     {
+        var handle = this.ThrowIfNull();
+
         GitObjectID result = default;
 
-        Git2.ThrowIfError(git_blob_create_from_disk(&result, this.NativeHandle, path));
+        Git2.ThrowIfError(git_blob_create_from_disk(&result, handle.NativeHandle, path));
 
         return result;
     }
 
     public GitObjectID CreateBlobFromWorkingDirectory(string relativePath)
     {
+        var handle = this.ThrowIfNull();
+
         GitObjectID result = default;
 
-        Git2.ThrowIfError(git_blob_create_from_workdir(&result, this.NativeHandle, relativePath));
+        Git2.ThrowIfError(git_blob_create_from_workdir(&result, handle.NativeHandle, relativePath));
 
         return result;
     }
 
     public GitBlobWriteStream CreateBlobFromStream(string? hintpath = null)
     {
+        var handle = this.ThrowIfNull();
+
         Native.GitWriteStream* resultStream = null;
 
-        Git2.ThrowIfError(git_blob_create_from_stream(&resultStream, this.NativeHandle, hintpath));
+        Git2.ThrowIfError(git_blob_create_from_stream(&resultStream, handle.NativeHandle, hintpath));
 
         return new GitBlobWriteStream(resultStream);
     }
 
     public GitBlob GetBlob(in GitObjectID id)
     {
-        Git2.Blob* result;
+        var handle = this.ThrowIfNull();
+
+        Git2.Blob* result = null;
         GitError error;
 
         fixed (GitObjectID* pId = &id)
         {
-            error = git_blob_lookup(&result, this.NativeHandle, pId);
+            error = git_blob_lookup(&result, handle.NativeHandle, pId);
         }
 
         Git2.ThrowIfError(error);
@@ -414,12 +625,14 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
 
     public GitBlob GetBlob(in GitObjectID id, uint length)
     {
-        Git2.Blob* result;
+        var handle = this.ThrowIfNull();
+
+        Git2.Blob* result = null;
         GitError error;
 
         fixed (GitObjectID* pId = &id)
         {
-            error = git_blob_lookup_prefix(&result, this.NativeHandle, pId, length);
+            error = git_blob_lookup_prefix(&result, handle.NativeHandle, pId, length);
         }
 
         Git2.ThrowIfError(error);
@@ -428,12 +641,14 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
 
     public bool TryGetBlob(in GitObjectID id, out GitBlob blob)
     {
-        Git2.Blob* result;
+        var handle = this.ThrowIfNull();
+
+        Git2.Blob* result = null;
         GitError error;
 
         fixed (GitObjectID* pId = &id)
         {
-            error = git_blob_lookup(&result, this.NativeHandle, pId);
+            error = git_blob_lookup(&result, handle.NativeHandle, pId);
         }
 
         switch (error)
@@ -451,12 +666,14 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
 
     public bool TryGetBlob(in GitObjectID id, uint length, out GitBlob blob)
     {
-        Git2.Blob* result;
+        var handle = this.ThrowIfNull();
+
+        Git2.Blob* result = null;
         GitError error;
 
         fixed (GitObjectID* pId = &id)
         {
-            error = git_blob_lookup_prefix(&result, this.NativeHandle, pId, length);
+            error = git_blob_lookup_prefix(&result, handle.NativeHandle, pId, length);
         }
 
         switch (error)
@@ -477,16 +694,20 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
     #region Branch
     public GitBranch CreateBranch(string branchName, GitCommit target, bool force)
     {
+        var handle = this.ThrowIfNull();
+
         Git2.Reference* result = null;
-        Git2.ThrowIfError(git_branch_create(&result, this.NativeHandle, branchName, target.NativeHandle, force ? 1 : 0));
+        Git2.ThrowIfError(git_branch_create(&result, handle.NativeHandle, branchName, target.NativeHandle, force ? 1 : 0));
 
         return new(result);
     }
 
     public GitBranch CreateBranch(string branchName, GitAnnotatedCommit target, bool force)
     {
+        var handle = this.ThrowIfNull();
+
         Git2.Reference* result = null;
-        Git2.ThrowIfError(git_branch_create_from_annotated(&result, this.NativeHandle, branchName, target.NativeHandle, force ? 1 : 0));
+        Git2.ThrowIfError(git_branch_create_from_annotated(&result, handle.NativeHandle, branchName, target.NativeHandle, force ? 1 : 0));
 
         return new(result);
     }
@@ -498,21 +719,27 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
     /// <returns></returns>
     public BranchEnumerable EnumerateBranches(GitBranchType filter)
     {
-        return new BranchEnumerable(this, filter);
+        var handle = this.ThrowIfNull();
+
+        return new BranchEnumerable(handle, filter);
     }
 
     public GitBranch GetBranch(string branchName, GitBranchType type)
     {
-        Git2.Reference* result;
-        Git2.ThrowIfError(git_branch_lookup(&result, this.NativeHandle, branchName, type));
+        var handle = this.ThrowIfNull();
+
+        Git2.Reference* result = null;
+        Git2.ThrowIfError(git_branch_lookup(&result, handle.NativeHandle, branchName, type));
 
         return new(result);
     }
 
     public bool TryGetBranch(string branchName, GitBranchType type, out GitBranch branch)
     {
-        Git2.Reference* result;
-        var error = git_branch_lookup(&result, this.NativeHandle, branchName, type);
+        var handle = this.ThrowIfNull();
+
+        Git2.Reference* result = null;
+        var error = git_branch_lookup(&result, handle.NativeHandle, branchName, type);
 
         switch (error)
         {
@@ -527,27 +754,51 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
         }
     }
 
+    /// <summary>
+    /// Find the remote name of a remote-tracking branch
+    /// </summary>
+    /// <param name="refName"></param>
+    /// <returns></returns>
+    /// <remarks>
+    /// This will return the name of the remote whose fetch refspec is matching the given branch.
+    /// E.g. given a branch "refs/remotes/test/master", it will extract the "test" part.
+    /// If refspecs from multiple remotes match, the method will throw an exception.
+    /// </remarks>
+    /// <exception cref="Git2Exception"/>
     public string? GetBranchRemoteName(string refName)
     {
+        var handle = this.ThrowIfNull();
+
+        GitReference.ThrowIfInvalidReferenceName(refName, GitReferenceFormat.Normal);
+
         Native.GitBuffer buffer = default;
+        var error = git_branch_remote_name(&buffer, handle.NativeHandle, refName);
 
-        Git2.ThrowIfError(git_branch_remote_name(&buffer, this.NativeHandle, refName));
-
-        try
+        switch (error)
         {
-            return buffer.AsString();
-        }
-        finally
-        {
-            git_buf_dispose(&buffer);
+            case GitError.OK:
+                try
+                {
+                    return Git2.GetPooledString(buffer.Span);
+                }
+                finally
+                {
+                    git_buf_dispose(&buffer);
+                }
+            case GitError.NotFound:
+                return null;
+            default:
+                throw Git2.ExceptionForError(error);
         }
     }
 
     public string? GetBranchUpstreamMerge(string refName)
     {
+        var handle = this.ThrowIfNull();
+
         Native.GitBuffer buffer = default;
 
-        Git2.ThrowIfError(git_branch_upstream_merge(&buffer, this.NativeHandle, refName));
+        Git2.ThrowIfError(git_branch_upstream_merge(&buffer, handle.NativeHandle, refName));
 
         try
         {
@@ -559,36 +810,77 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
         }
     }
 
+    /// <summary>
+    /// Get the upstream name of a branch.
+    /// </summary>
+    /// <param name="refName">The full name of the branch reference</param>
+    /// <returns>The upstream name, or null if no remote tracking reference exists.</returns>
     public string? GetBranchUpstreamName(string refName)
     {
-        Native.GitBuffer buffer = default;
+        var handle = this.ThrowIfNull();
 
-        Git2.ThrowIfError(git_branch_upstream_name(&buffer, this.NativeHandle, refName));
-
-        try
+        if (!refName.StartsWith("refs/heads/"))
         {
-            return buffer.AsString();
+            throw new ArgumentException("Reference name must be a local branch!", nameof(refName));
         }
-        finally
+
+        Native.GitBuffer buffer = default;
+        var error = git_branch_upstream_name(&buffer, handle.NativeHandle, refName);
+
+        switch (error)
         {
-            git_buf_dispose(&buffer);
+            case GitError.OK:
+                try
+                {
+                    return Git2.GetPooledString(buffer.Span);
+                }
+                finally
+                {
+                    git_buf_dispose(&buffer);
+                }
+            case GitError.NotFound:
+                return null;
+            default:
+                throw Git2.ExceptionForError(error);
         }
     }
 
+    /// <summary>
+    /// Retreive the upstream remote of a local branch
+    /// </summary>
+    /// <param name="refName">The full name of the branch reference</param>
+    /// <returns></returns>
+    /// <exception cref="ArgumentException"></exception>
+    /// <exception cref="Git2Exception"></exception>
     public string? GetBranchUpstreamRemote(string refName)
     {
+        var handle = this.ThrowIfNull();
+
+        if (!refName.StartsWith("refs/heads/"))
+        {
+            throw new ArgumentException("Reference name must be a local branch!", nameof(refName));
+        }
+
         Native.GitBuffer buffer = default;
+        var error = git_branch_upstream_remote(&buffer, handle.NativeHandle, refName);
 
-        Git2.ThrowIfError(git_branch_upstream_remote(&buffer, this.NativeHandle, refName));
+        switch (error)
+        {
+            case GitError.OK:
+                try
+                {
+                    return Git2.GetPooledString(buffer.Span);
+                }
+                finally
+                {
+                    git_buf_dispose(&buffer);
+                }
+            case GitError.NotFound:
+                return null;
+            default:
+                throw Git2.ExceptionForError(error);
+        }
 
-        try
-        {
-            return buffer.AsString();
-        }
-        finally
-        {
-            git_buf_dispose(&buffer);
-        }
     }
 
     public readonly struct BranchEnumerable(GitRepository repo, GitBranchType type) : IEnumerable<(GitBranch, GitBranchType)>
@@ -598,7 +890,7 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
 
         public BranchEnumerator GetEnumerator()
         {
-            Git2.BranchIterator* iterator;
+            Git2.BranchIterator* iterator = null;
             Git2.ThrowIfError(git_branch_iterator_new(&iterator, _repository.NativeHandle, _filter));
 
             return new(iterator);
@@ -653,58 +945,80 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
     #region Checkout
     public void Checkout(GitCommit commit)
     {
-        Git2.ThrowIfError(git_checkout_tree(this.NativeHandle, (Git2.Object*)commit.NativeHandle, null));
+        var handle = this.ThrowIfNull();
+
+        Git2.ThrowIfError(git_checkout_tree(handle.NativeHandle, (Git2.Object*)commit.NativeHandle, null));
     }
 
     public void Checkout(GitCommit commit, in GitCheckoutOptions options)
     {
-        Git2.ThrowIfError(git_checkout_tree(this.NativeHandle, (Git2.Object*)commit.NativeHandle, in options));
+        var handle = this.ThrowIfNull();
+
+        Git2.ThrowIfError(git_checkout_tree(handle.NativeHandle, (Git2.Object*)commit.NativeHandle, in options));
     }
 
     public void Checkout(GitTag tag)
     {
-        Git2.ThrowIfError(git_checkout_tree(this.NativeHandle, (Git2.Object*)tag.NativeHandle, null));
+        var handle = this.ThrowIfNull();
+
+        Git2.ThrowIfError(git_checkout_tree(handle.NativeHandle, (Git2.Object*)tag.NativeHandle, null));
     }
 
     public void Checkout(GitTag tag, in GitCheckoutOptions options)
     {
-        Git2.ThrowIfError(git_checkout_tree(this.NativeHandle, (Git2.Object*)tag.NativeHandle, in options));
+        var handle = this.ThrowIfNull();
+
+        Git2.ThrowIfError(git_checkout_tree(handle.NativeHandle, (Git2.Object*)tag.NativeHandle, in options));
     }
 
     public void Checkout(GitTree tree)
     {
-        Git2.ThrowIfError(git_checkout_tree(this.NativeHandle, (Git2.Object*)tree.NativeHandle, null));
+        var handle = this.ThrowIfNull();
+
+        Git2.ThrowIfError(git_checkout_tree(handle.NativeHandle, (Git2.Object*)tree.NativeHandle, null));
     }
 
     public void Checkout(GitTree tree, in GitCheckoutOptions options)
     {
-        Git2.ThrowIfError(git_checkout_tree(this.NativeHandle, (Git2.Object*)tree.NativeHandle, in options));
+        var handle = this.ThrowIfNull();
+
+        Git2.ThrowIfError(git_checkout_tree(handle.NativeHandle, (Git2.Object*)tree.NativeHandle, in options));
     }
 
     public void Checkout(GitObject treeish, in GitCheckoutOptions options)
     {
-        Git2.ThrowIfError(git_checkout_tree(this.NativeHandle, treeish.NativeHandle, in options));
+        var handle = this.ThrowIfNull();
+
+        Git2.ThrowIfError(git_checkout_tree(handle.NativeHandle, treeish.NativeHandle, in options));
     }
 
     public void Checkout(GitIndex index, in GitCheckoutOptions options)
     {
-        Git2.ThrowIfError(git_checkout_index(this.NativeHandle, index.NativeHandle, in options));
+        var handle = this.ThrowIfNull();
+
+        Git2.ThrowIfError(git_checkout_index(handle.NativeHandle, index.NativeHandle, in options));
     }
 
     public void CheckoutHead()
     {
-        Git2.ThrowIfError(git_checkout_head(this.NativeHandle, null));
+        var handle = this.ThrowIfNull();
+
+        Git2.ThrowIfError(git_checkout_head(handle.NativeHandle, null));
     }
 
     public void CheckoutHead(in GitCheckoutOptions options)
     {
-        Git2.ThrowIfError(git_checkout_head(this.NativeHandle, in options));
+        var handle = this.ThrowIfNull();
+
+        Git2.ThrowIfError(git_checkout_head(handle.NativeHandle, in options));
     }
     #endregion
 
     #region Cherrypick
     public void Cherrypick(GitCommit commit, in GitCherrypickOptions options)
     {
+        var handle = this.ThrowIfNull();
+
         Native.GitCherrypickOptions _options = default;
         List<GCHandle> gchandles = [];
         GitError error;
@@ -713,13 +1027,13 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
         {
             _options.FromManaged(in options, gchandles);
 
-            error = git_cherrypick(this.NativeHandle, commit.NativeHandle, &_options);
+            error = git_cherrypick(handle.NativeHandle, commit.NativeHandle, &_options);
         }
         finally
         {
-            foreach (var handle in gchandles)
+            foreach (var gchandle in gchandles)
             {
-                handle.Free();
+                gchandle.Free();
             }
 
             _options.Free();
@@ -730,22 +1044,24 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
 
     public GitIndex Cherrypick(GitCommit cherrypick_commit, GitCommit our_commit, uint mainline, in GitMergeOptions options)
     {
+        var handle = this.ThrowIfNull();
+
         Native.GitMergeOptions _options = default;
         List<GCHandle> gchandles = [];
-        Git2.Index* result;
+        Git2.Index* result = null;
         GitError error;
 
         try
         {
             _options.FromManaged(in options, gchandles);
 
-            error = git_cherrypick_commit(&result, this.NativeHandle, cherrypick_commit.NativeHandle, our_commit.NativeHandle, mainline, &_options);
+            error = git_cherrypick_commit(&result, handle.NativeHandle, cherrypick_commit.NativeHandle, our_commit.NativeHandle, mainline, &_options);
         }
         finally
         {
-            foreach (var handle in gchandles)
+            foreach (var gchandle in gchandles)
             {
-                handle.Free();
+                gchandle.Free();
             }
 
             _options.Free();
@@ -804,15 +1120,16 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
     #endregion
 
     #region Commit
-
     public GitCommit GetCommit(in GitObjectID id)
     {
-        Git2.Commit* result;
+        var handle = this.ThrowIfNull();
+
+        Git2.Commit* result = null;
 
         // Relatively heavy struct, pin the reference instead of copying for performance
         fixed (GitObjectID* ptr = &id)
         {
-            Git2.ThrowIfError(git_commit_lookup(&result, this.NativeHandle, ptr));
+            Git2.ThrowIfError(git_commit_lookup(&result, handle.NativeHandle, ptr));
         }
 
         return new(result);
@@ -820,11 +1137,13 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
 
     public GitCommit GetCommit(in GitObjectID id, ushort prefixLength)
     {
-        Git2.Commit* result;
+        var handle = this.ThrowIfNull();
+
+        Git2.Commit* result = null;
 
         fixed (GitObjectID* ptr = &id)
         {
-            Git2.ThrowIfError(git_commit_lookup_prefix(&result, this.NativeHandle, ptr, prefixLength));
+            Git2.ThrowIfError(git_commit_lookup_prefix(&result, handle.NativeHandle, ptr, prefixLength));
         }
 
         return new(result);
@@ -832,12 +1151,14 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
 
     public bool TryGetCommit(in GitObjectID id, out GitCommit commit)
     {
+        var handle = this.ThrowIfNull();
+
         GitError error;
-        Git2.Commit* result;
+        Git2.Commit* result = null;
 
         fixed (GitObjectID* ptr = &id)
         {
-            error = git_commit_lookup(&result, this.NativeHandle, ptr);
+            error = git_commit_lookup(&result, handle.NativeHandle, ptr);
         }
 
         switch (error)
@@ -855,12 +1176,14 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
 
     public bool TryGetCommit(in GitObjectID id, ushort prefixLength, out GitCommit commit)
     {
+        var handle = this.ThrowIfNull();
+
         GitError error;
-        Git2.Commit* result;
+        Git2.Commit* result = null;
 
         fixed (GitObjectID* ptr = &id)
         {
-            error = git_commit_lookup_prefix(&result, this.NativeHandle, ptr, prefixLength);
+            error = git_commit_lookup_prefix(&result, handle.NativeHandle, ptr, prefixLength);
         }
 
         switch (error)
@@ -881,10 +1204,12 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
         string? updateRef,
         GitSignature author,
         GitSignature committer,
-        string message,
+        ReadOnlySpan<char> message,
         GitTree tree,
         ReadOnlySpan<GitCommit> parents)
     {
+        var handle = this.ThrowIfNull();
+
         Debug.Assert(sizeof(GitCommit) == sizeof(Git2.Commit*));
 
         GitObjectID result = default;
@@ -899,7 +1224,7 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
             {
                 error = git_commit_create(
                     &result,
-                    this.NativeHandle,
+                    handle.NativeHandle,
                     updateRef,
                     _author,
                     _committer,
@@ -928,6 +1253,8 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
         GitTree tree,
         ReadOnlySpan<GitCommit> parents)
     {
+        var handle = this.ThrowIfNull();
+
         Debug.Assert(sizeof(GitCommit) == sizeof(Git2.Commit*));
 
         Native.GitBuffer result = default;
@@ -942,7 +1269,7 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
             {
                 error = git_commit_create_buffer(
                     &result,
-                    this.NativeHandle,
+                    handle.NativeHandle,
                     _author,
                     _committer,
                     null,
@@ -972,19 +1299,23 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
 
     public GitObjectID CreateCommitWithSignature(byte* commitContent, byte* signature, string? signature_field)
     {
+        var handle = this.ThrowIfNull();
+
         GitObjectID result = default;
-        Git2.ThrowIfError(git_commit_create_with_signature(&result, this.NativeHandle, commitContent, signature, signature_field));
+        Git2.ThrowIfError(git_commit_create_with_signature(&result, handle.NativeHandle, commitContent, signature, signature_field));
 
         return result;
     }
 
     public (byte[] signature, byte[] signed_data) ExtractCommitSignature(in GitObjectID commitId, string? field)
     {
+        var handle = this.ThrowIfNull();
+
         Native.GitBuffer signature = default, signed_data = default;
 
         fixed (GitObjectID* _id = &commitId)
         {
-            Git2.ThrowIfError(git_commit_extract_signature(&signature, &signed_data, this.NativeHandle, _id, field));
+            Git2.ThrowIfError(git_commit_extract_signature(&signature, &signed_data, handle.NativeHandle, _id, field));
         }
 
         try
@@ -1003,6 +1334,8 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
     #region Describe
     public GitDescribeResult DescribeWorkingDirectory(in GitDescribeOptions options)
     {
+        var handle = this.ThrowIfNull();
+
         Git2.DescribeResult* result = null;
         GitError error;
 
@@ -1012,13 +1345,13 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
         {
             _options.FromManaged(in options, gchandles);
 
-            error = git_describe_workdir(&result, this.NativeHandle, &_options);
+            error = git_describe_workdir(&result, handle.NativeHandle, &_options);
         }
         finally
         {
-            foreach (var handle in gchandles)
+            foreach (var gchandle in gchandles)
             {
-                handle.Free();
+                gchandle.Free();
             }
 
             _options.Free();
@@ -1033,7 +1366,9 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
     #region Diff
     public GitDiff GetDiff(GitTree oldTree, GitTree newTree, in GitDiffOptions options)
     {
-        Git2.Diff* result;
+        var handle = this.ThrowIfNull();
+
+        Git2.Diff* result = null;
         GitError error;
         Native.GitDiffOptions nOptions = default;
         List<GCHandle> gchandles = [];
@@ -1042,13 +1377,13 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
         {
             nOptions.FromManaged(in options, gchandles);
 
-            error = git_diff_tree_to_tree(&result, this.NativeHandle, oldTree.NativeHandle, newTree.NativeHandle, &nOptions);
+            error = git_diff_tree_to_tree(&result, handle.NativeHandle, oldTree.NativeHandle, newTree.NativeHandle, &nOptions);
         }
         finally
         {
-            foreach (var handle in gchandles)
+            foreach (var gchandle in gchandles)
             {
-                handle.Free();
+                gchandle.Free();
             }
 
             nOptions.Free();
@@ -1061,17 +1396,21 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
 
     public GitDiff GetDiff(GitTree oldTree, GitTree newTree, in Native.GitDiffOptions options)
     {
-        Git2.Diff* result;
+        var handle = this.ThrowIfNull();
+
+        Git2.Diff* result = null;
 
         fixed (Native.GitDiffOptions* pOptions = &options)
-            Git2.ThrowIfError(git_diff_tree_to_tree(&result, this.NativeHandle, oldTree.NativeHandle, newTree.NativeHandle, pOptions));
+            Git2.ThrowIfError(git_diff_tree_to_tree(&result, handle.NativeHandle, oldTree.NativeHandle, newTree.NativeHandle, pOptions));
 
         return new(result);
     }
 
     public GitDiff GetDiffToWorkDir(GitTree oldTree, in GitDiffOptions options)
     {
-        Git2.Diff* result;
+        var handle = this.ThrowIfNull();
+
+        Git2.Diff* result = null;
         GitError error;
         Native.GitDiffOptions nOptions = default;
         List<GCHandle> gchandles = [];
@@ -1080,13 +1419,13 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
         {
             nOptions.FromManaged(in options, gchandles);
 
-            error = git_diff_tree_to_workdir(&result, this.NativeHandle, oldTree.NativeHandle, &nOptions);
+            error = git_diff_tree_to_workdir(&result, handle.NativeHandle, oldTree.NativeHandle, &nOptions);
         }
         finally
         {
-            foreach (var handle in gchandles)
+            foreach (var gchandle in gchandles)
             {
-                handle.Free();
+                gchandle.Free();
             }
 
             nOptions.Free();
@@ -1099,7 +1438,9 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
 
     public GitDiff GetDiffToWorkDirWithIndex(GitTree oldTree, in GitDiffOptions options)
     {
-        Git2.Diff* result;
+        var handle = this.ThrowIfNull();
+
+        Git2.Diff* result = null;
         GitError error;
         Native.GitDiffOptions nOptions = default;
         List<GCHandle> gchandles = [];
@@ -1108,13 +1449,13 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
         {
             nOptions.FromManaged(in options, gchandles);
 
-            error = git_diff_tree_to_workdir_with_index(&result, this.NativeHandle, oldTree.NativeHandle, &nOptions);
+            error = git_diff_tree_to_workdir_with_index(&result, handle.NativeHandle, oldTree.NativeHandle, &nOptions);
         }
         finally
         {
-            foreach (var handle in gchandles)
+            foreach (var gchandle in gchandles)
             {
-                handle.Free();
+                gchandle.Free();
             }
 
             nOptions.Free();
@@ -1130,11 +1471,13 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
     #region Graph
     public (nuint ahead, nuint behind) GetGraphAheadBehind(in GitObjectID local, in GitObjectID upstream)
     {
+        var handle = this.ThrowIfNull();
+
         nuint _ahead = 0, _behind = 0;
         GitError error;
 
         fixed (GitObjectID* pLocal = &local, pUpstream = &upstream)
-            error = git_graph_ahead_behind(&_ahead, &_behind, this.NativeHandle, pLocal, pUpstream);
+            error = git_graph_ahead_behind(&_ahead, &_behind, handle.NativeHandle, pLocal, pUpstream);
 
         Git2.ThrowIfError(error);
         return (_ahead, _behind);
@@ -1147,6 +1490,8 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
         in GitMergeOptions mergeOptions,
         in GitCheckoutOptions checkoutOptions)
     {
+        var handle = this.ThrowIfNull();
+
         Debug.Assert(sizeof(GitAnnotatedCommit) == sizeof(Git2.AnnotatedCommit*));
         Native.GitMergeOptions _merge = default;
         Native.GitCheckoutOptions _checkout = default;
@@ -1160,14 +1505,14 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
 
             fixed (GitAnnotatedCommit* pCommits = commits)
             {
-                error = git_merge(this.NativeHandle, (Git2.AnnotatedCommit**)pCommits, (nuint)commits.Length, &_merge, &_checkout);
+                error = git_merge(handle.NativeHandle, (Git2.AnnotatedCommit**)pCommits, (nuint)commits.Length, &_merge, &_checkout);
             }
         }
         finally
         {
-            foreach (var handle in gchandles)
+            foreach (var gchandle in gchandles)
             {
-                handle.Free();
+                gchandle.Free();
             }
 
             _merge.Free();
@@ -1179,6 +1524,8 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
 
     public (GitMergeAnalysisResult analysis, GitMergePreference preference) GetMergeAnalysis(ReadOnlySpan<GitAnnotatedCommit> commits)
     {
+        var handle = this.ThrowIfNull();
+
         GitMergeAnalysisResult analysis = default;
         GitMergePreference preference = default;
 
@@ -1187,7 +1534,7 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
             Git2.ThrowIfError(git_merge_analysis(
                 &analysis,
                 &preference,
-                this.NativeHandle,
+                handle.NativeHandle,
                 (Git2.AnnotatedCommit**)pCommits,
                 (nuint)commits.Length));
         }
@@ -1197,6 +1544,8 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
 
     public (GitMergeAnalysisResult analysis, GitMergePreference preference) GetMergeAnalysisForReference(GitReference our_ref, ReadOnlySpan<GitAnnotatedCommit> commits)
     {
+        var handle = this.ThrowIfNull();
+
         GitMergeAnalysisResult analysis = default;
         GitMergePreference preference = default;
 
@@ -1205,7 +1554,7 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
             Git2.ThrowIfError(git_merge_analysis_for_ref(
                 &analysis,
                 &preference,
-                this.NativeHandle,
+                handle.NativeHandle,
                 our_ref.NativeHandle,
                 (Git2.AnnotatedCommit**)pCommits,
                 (nuint)commits.Length));
@@ -1216,27 +1565,33 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
 
     public GitObjectID GetMergeBase(in GitObjectID one, in GitObjectID two)
     {
+        var handle = this.ThrowIfNull();
+
         GitObjectID result;
         fixed (GitObjectID* pOne = &one, pTwo = &two)
-            Git2.ThrowIfError(git_merge_base(&result, this.NativeHandle, pOne, pTwo));
+            Git2.ThrowIfError(git_merge_base(&result, handle.NativeHandle, pOne, pTwo));
 
         return result;
     }
 
     public GitObjectID GetMergeBase(ReadOnlySpan<GitObjectID> ids)
     {
+        var handle = this.ThrowIfNull();
+
         GitObjectID result;
         fixed (GitObjectID* pIds = ids)
-            Git2.ThrowIfError(git_merge_base_many(&result, this.NativeHandle, (nuint)ids.Length, pIds));
+            Git2.ThrowIfError(git_merge_base_many(&result, handle.NativeHandle, (nuint)ids.Length, pIds));
 
         return result;
     }
 
     public GitObjectID GetMergeBaseOctopus(ReadOnlySpan<GitObjectID> ids)
     {
+        var handle = this.ThrowIfNull();
+
         GitObjectID result;
         fixed (GitObjectID* pIds = ids)
-            Git2.ThrowIfError(git_merge_base_octopus(&result, this.NativeHandle, (nuint)ids.Length, pIds));
+            Git2.ThrowIfError(git_merge_base_octopus(&result, handle.NativeHandle, (nuint)ids.Length, pIds));
 
         return result;
     }
@@ -1244,10 +1599,12 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
 
     public GitObjectID[] GetMergeBases(in GitObjectID one, in GitObjectID two)
     {
+        var handle = this.ThrowIfNull();
+
         Native.GitObjectIDArray array = default;
 
         fixed (GitObjectID* pOne = &one, pTwo = &two)
-            Git2.ThrowIfError(git_merge_bases(&array, this.NativeHandle, pOne, pTwo));
+            Git2.ThrowIfError(git_merge_bases(&array, handle.NativeHandle, pOne, pTwo));
 
         try
         {
@@ -1261,10 +1618,12 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
 
     public GitObjectID[] GetMergeBases(ReadOnlySpan<GitObjectID> ids)
     {
+        var handle = this.ThrowIfNull();
+
         Native.GitObjectIDArray array = default;
 
         fixed (GitObjectID* pIds = ids)
-            Git2.ThrowIfError(git_merge_bases_many(&array, this.NativeHandle, (nuint)ids.Length, pIds));
+            Git2.ThrowIfError(git_merge_bases_many(&array, handle.NativeHandle, (nuint)ids.Length, pIds));
 
         try
         {
@@ -1278,7 +1637,9 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
 
     public GitIndex MergeCommits(GitCommit ours, GitCommit theirs, in GitMergeOptions options)
     {
-        Git2.Index* result;
+        var handle = this.ThrowIfNull();
+
+        Git2.Index* result = null;
         GitError error;
 
         Native.GitMergeOptions _options = default;
@@ -1287,13 +1648,13 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
         {
             _options.FromManaged(in options, gchandles);
 
-            error = git_merge_commits(&result, this.NativeHandle, ours.NativeHandle, theirs.NativeHandle, &_options);
+            error = git_merge_commits(&result, handle.NativeHandle, ours.NativeHandle, theirs.NativeHandle, &_options);
         }
         finally
         {
-            foreach (var handle in gchandles)
+            foreach (var gchandle in gchandles)
             {
-                handle.Free();
+                gchandle.Free();
             }
 
             _options.Free();
@@ -1305,6 +1666,8 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
 
     public GitMergeFileResult GetMergeFileFromIndex(GitIndexEntry ancestor, GitIndexEntry ours, GitIndexEntry theirs, in GitMergeFileOptions options)
     {
+        var handle = this.ThrowIfNull();
+
         Native.GitIndexEntry _ancestor = default, _ours = default, _theirs = default;
         Native.GitMergeFileResult _result = default;
         Native.GitMergeFileOptions _options = default;
@@ -1319,13 +1682,13 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
 
             _options.FromManaged(in options, gchandles);
 
-            error = git_merge_file_from_index(&_result, this.NativeHandle, &_ancestor, &_ours, &_theirs, &_options);
+            error = git_merge_file_from_index(&_result, handle.NativeHandle, &_ancestor, &_ours, &_theirs, &_options);
         }
         finally
         {
-            foreach (var handle in gchandles)
+            foreach (var gchandle in gchandles)
             {
-                handle.Free();
+                gchandle.Free();
             }
 
             _ancestor.Free();
@@ -1342,7 +1705,7 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
             GitMergeFileResult result = default;
 
             result.AutoMergeable = _result.AutoMergeable != 0;
-            result.Path = Utf8StringMarshaller.ConvertToManaged(_result.Path)!;
+            result.Path = Git2.GetPooledString(_result.Path);
             result.Mode = _result.Mode;
 
             var source = new ReadOnlySpan<byte>(_result.FileContent, checked((int)_result.ContentLength));
@@ -1365,36 +1728,56 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
 
     public GitObject GetObject(in GitObjectID id)
     {
-        return GetObject(in id, GitObjectType.Any);
+        return GetObject<GitObject>(in id);
     }
 
     public GitObject GetObject(in GitObjectID id, GitObjectType type)
     {
-        Git2.Object* result;
+        var handle = this.ThrowIfNull();
+
+        Git2.Object* result = null;
 
         // Relatively heavy struct, pin the reference instead of copying for performance
         fixed (GitObjectID* ptr = &id)
         {
-            Git2.ThrowIfError(git_object_lookup(&result, this.NativeHandle, ptr, type));
+            Git2.ThrowIfError(git_object_lookup(&result, handle.NativeHandle, ptr, type));
         }
 
         return new(result);
     }
 
-    public bool TryGetObject(in GitObjectID id, out GitObject obj)
+    public TObject GetObject<TObject>(in GitObjectID id)
+        where TObject: struct, IGitHandle, IGitObject<TObject>
     {
-        return TryGetObject(in id, GitObjectType.Any, out obj);
-    }
+        var handle = this.ThrowIfNull();
 
-    public bool TryGetObject(in GitObjectID id, GitObjectType type, out GitObject obj)
-    {
-        GitError error;
-        Git2.Object* result;
+        Git2.Object* result = null;
 
         // Relatively heavy struct, pin the reference instead of copying for performance
         fixed (GitObjectID* ptr = &id)
         {
-            error = git_object_lookup(&result, this.NativeHandle, ptr, type);
+            Git2.ThrowIfError(git_object_lookup(&result, handle.NativeHandle, ptr, TObject.ObjectType));
+        }
+
+        return TObject.FromObjectPointer(result);
+    }
+
+    public bool TryGetObject(in GitObjectID id, out GitObject obj)
+    {
+        return TryGetObject<GitObject>(in id, out obj);
+    }
+
+    public bool TryGetObject(in GitObjectID id, GitObjectType type, out GitObject obj)
+    {
+        var handle = this.ThrowIfNull();
+
+        GitError error;
+        Git2.Object* result = null;
+
+        // Relatively heavy struct, pin the reference instead of copying for performance
+        fixed (GitObjectID* ptr = &id)
+        {
+            error = git_object_lookup(&result, handle.NativeHandle, ptr, type);
         }
 
         switch (error)
@@ -1410,28 +1793,75 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
         }
     }
 
-    public GitObject GetObjectWithPrefix(in GitObjectID id, ushort prefix_length, GitObjectType type)
+    public bool TryGetObject<TObject>(in GitObjectID id, out TObject obj)
+        where TObject: struct, IGitHandle, IGitObject<TObject>
     {
-        Git2.Object* result;
+        var handle = this.ThrowIfNull();
+
+        GitError error;
+        Git2.Object* result = null;
 
         // Relatively heavy struct, pin the reference instead of copying for performance
         fixed (GitObjectID* ptr = &id)
         {
-            Git2.ThrowIfError(git_object_lookup_prefix(&result, this.NativeHandle, ptr, prefix_length, type));
+            error = git_object_lookup(&result, handle.NativeHandle, ptr, TObject.ObjectType);
+        }
+
+        switch (error)
+        {
+            case GitError.OK:
+                obj = TObject.FromObjectPointer(result);
+                return true;
+            case GitError.NotFound:
+                obj = default;
+                return false;
+            default:
+                throw Git2.ExceptionForError(error);
+        }
+    }
+
+    public GitObject GetObjectWithPrefix(in GitObjectID id, ushort prefix_length, GitObjectType type)
+    {
+        var handle = this.ThrowIfNull();
+
+        Git2.Object* result = null;
+
+        // Relatively heavy struct, pin the reference instead of copying for performance
+        fixed (GitObjectID* ptr = &id)
+        {
+            Git2.ThrowIfError(git_object_lookup_prefix(&result, handle.NativeHandle, ptr, prefix_length, type));
         }
 
         return new(result);
     }
 
-    public bool TryGetObjectWithPrefix(in GitObjectID id, ushort prefix_length, GitObjectType type, out GitObject obj)
+    public TObject GetObjectWithPrefix<TObject>(in GitObjectID id, ushort prefix_length)
+        where TObject: struct, IGitHandle, IGitObject<TObject>
     {
-        GitError error;
-        Git2.Object* result;
+        var handle = this.ThrowIfNull();
+
+        Git2.Object* result = null;
 
         // Relatively heavy struct, pin the reference instead of copying for performance
         fixed (GitObjectID* ptr = &id)
         {
-            error = git_object_lookup_prefix(&result, this.NativeHandle, ptr, prefix_length, type);
+            Git2.ThrowIfError(git_object_lookup_prefix(&result, handle.NativeHandle, ptr, prefix_length, TObject.ObjectType));
+        }
+
+        return TObject.FromObjectPointer(result);
+    }
+
+    public bool TryGetObjectWithPrefix(in GitObjectID id, ushort prefix_length, GitObjectType type, out GitObject obj)
+    {
+        var handle = this.ThrowIfNull();
+
+        GitError error;
+        Git2.Object* result = null;
+
+        // Relatively heavy struct, pin the reference instead of copying for performance
+        fixed (GitObjectID* ptr = &id)
+        {
+            error = git_object_lookup_prefix(&result, handle.NativeHandle, ptr, prefix_length, type);
         }
 
         switch (error)
@@ -1448,26 +1878,58 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
         }
     }
 
+    public bool TryGetObjectWithPrefix<TObject>(in GitObjectID id, ushort prefix_length, out TObject obj)
+        where TObject: struct, IGitHandle, IGitObject<TObject>
+    {
+        var handle = this.ThrowIfNull();
+
+        GitError error;
+        Git2.Object* result = null;
+
+        // Relatively heavy struct, pin the reference instead of copying for performance
+        fixed (GitObjectID* ptr = &id)
+        {
+            error = git_object_lookup_prefix(&result, handle.NativeHandle, ptr, prefix_length, TObject.ObjectType);
+        }
+
+        switch (error)
+        {
+            case GitError.OK:
+                obj = TObject.FromObjectPointer(result);
+                return true;
+            case GitError.NotFound:
+            case GitError.Ambiguous:
+                obj = default;
+                return false;
+            default:
+                throw Git2.ExceptionForError(error);
+        }
+    }
+
     #endregion
 
     #region Reference
 
     public GitReference CreateReference(string name, GitObjectID id, bool force, string? logMessage)
     {
-        Git2.Reference* result;
-        Git2.ThrowIfError(git_reference_create(&result, this.NativeHandle, name, &id, force ? 1 : 0, logMessage));
+        var handle = this.ThrowIfNull();
+
+        Git2.Reference* result = null;
+        Git2.ThrowIfError(git_reference_create(&result, handle.NativeHandle, name, &id, force ? 1 : 0, logMessage));
 
         return new(result);
     }
 
     public GitReference CreateReference(string name, in GitObjectID id, bool force, string? logMessage)
     {
-        Git2.Reference* result;
+        var handle = this.ThrowIfNull();
+
+        Git2.Reference* result = null;
         GitError error;
 
         fixed (GitObjectID* ptr = &id)
         {
-            error = git_reference_create(&result, this.NativeHandle, name, ptr, force ? 1 : 0, logMessage);
+            error = git_reference_create(&result, handle.NativeHandle, name, ptr, force ? 1 : 0, logMessage);
         }
 
         Git2.ThrowIfError(error);
@@ -1477,18 +1939,22 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
 
     public GitReference CreateMatchingReference(string name, GitObjectID id, bool force, GitObjectID currentId, string? logMessage)
     {
-        Git2.Reference* result;
-        Git2.ThrowIfError(git_reference_create_matching(&result, this.NativeHandle, name, &id, force ? 1 : 0, &currentId, logMessage));
+        var handle = this.ThrowIfNull();
+
+        Git2.Reference* result = null;
+        Git2.ThrowIfError(git_reference_create_matching(&result, handle.NativeHandle, name, &id, force ? 1 : 0, &currentId, logMessage));
 
         return new(result);
     }
 
     public GitReference CreateMatchingReference(string name, in GitObjectID id, bool force, in GitObjectID currentId, string? logMessage)
     {
-        Git2.Reference* result;
+        var handle = this.ThrowIfNull();
+
+        Git2.Reference* result = null;
         fixed (GitObjectID* idPtr = &id, currentIdPtr = &currentId)
         {
-            Git2.ThrowIfError(git_reference_create_matching(&result, this.NativeHandle, name, idPtr, force ? 1 : 0, currentIdPtr, logMessage));
+            Git2.ThrowIfError(git_reference_create_matching(&result, handle.NativeHandle, name, idPtr, force ? 1 : 0, currentIdPtr, logMessage));
         }
 
         return new(result);
@@ -1496,24 +1962,30 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
 
     public GitReference CreateSymbolicReference(string name, string target, bool force, string? logMessage)
     {
-        Git2.Reference* result;
-        Git2.ThrowIfError(git_reference_symbolic_create(&result, this.NativeHandle, name, target, force ? 1 : 0, logMessage));
+        var handle = this.ThrowIfNull();
+
+        Git2.Reference* result = null;
+        Git2.ThrowIfError(git_reference_symbolic_create(&result, handle.NativeHandle, name, target, force ? 1 : 0, logMessage));
 
         return new(result);
     }
 
     public GitReference CreateSymbolicReferenceMatching(string name, string target, bool force, string? currentValue, string? logMessage)
     {
-        Git2.Reference* result;
-        Git2.ThrowIfError(git_reference_symbolic_create_matching(&result, this.NativeHandle, name, target, force ? 1 : 0, currentValue, logMessage));
+        var handle = this.ThrowIfNull();
+
+        Git2.Reference* result = null;
+        Git2.ThrowIfError(git_reference_symbolic_create_matching(&result, handle.NativeHandle, name, target, force ? 1 : 0, currentValue, logMessage));
 
         return new(result);
     }
 
     public GitReference GetReference(string name)
     {
-        Git2.Reference* result;
-        Git2.ThrowIfError(git_reference_lookup(&result, this.NativeHandle, name));
+        var handle = this.ThrowIfNull();
+
+        Git2.Reference* result = null;
+        Git2.ThrowIfError(git_reference_lookup(&result, handle.NativeHandle, name));
 
         return new(result);
     }
@@ -1527,14 +1999,16 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
     /// <exception cref="Git2Exception"/>
     public bool TryGetReference(string name, out GitReference reference)
     {
+        var handle = this.ThrowIfNull();
+
         if (string.IsNullOrEmpty(name))
         {
             reference = default;
             return false;
         }
 
-        Git2.Reference* result;
-        var error = git_reference_lookup(&result, this.NativeHandle, name);
+        Git2.Reference* result = null;
+        var error = git_reference_lookup(&result, handle.NativeHandle, name);
 
         switch (error)
         {
@@ -1551,13 +2025,15 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
 
     public string[] GetReferenceNameList()
     {
+        var handle = this.ThrowIfNull();
+
         Native.GitStringArray nativeArray = default;
 
-        Git2.ThrowIfError(git_reference_list(&nativeArray, this.NativeHandle));
+        Git2.ThrowIfError(git_reference_list(&nativeArray, handle.NativeHandle));
 
         try
         {
-            return nativeArray.ToManaged();
+            return nativeArray.ToManaged(true);
         }
         finally
         {
@@ -1567,28 +2043,29 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
 
     public void ReferenceEnsureLog(string referenceName)
     {
+        var handle = this.ThrowIfNull();
+
         ArgumentException.ThrowIfNullOrEmpty(referenceName);
 
-        Git2.ThrowIfError(git_reference_ensure_log(this.NativeHandle, referenceName));
+        Git2.ThrowIfError(git_reference_ensure_log(handle.NativeHandle, referenceName));
     }
 
     public bool ReferenceHasLog(string referenceName)
     {
-        var code = git_reference_has_log(this.NativeHandle, referenceName);
+        var handle = this.ThrowIfNull();
+
+        var code = git_reference_has_log(handle.NativeHandle, referenceName);
 
         return Git2.ErrorOrBoolean(code);
-    }
-
-    internal GitError ForEachReference(delegate* unmanaged[Cdecl]<Git2.Reference*, nint, int> callback, nint payload)
-    {
-        return git_reference_foreach(this.NativeHandle, callback, payload);
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     public void ForEachReference(ForEachReferenceCallback callback, bool autoDispose = true)
     {
+        var handle = this.ThrowIfNull();
+
         var context = new ForEachReferenceContext(callback) { AutoDispose = autoDispose };
-        var error = git_reference_foreach(this.NativeHandle, &_Callback, (nint)(void*)&context);
+        var error = git_reference_foreach(handle.NativeHandle, &_Callback, (nint)(void*)&context);
 
         context.ExceptionInfo?.Throw();
         Git2.ThrowIfError(error);
@@ -1624,21 +2101,16 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
 
     public delegate void ForEachReferenceUTF8NameCallback(ReadOnlySpan<byte> utf8Name, ref bool breakLoop);
 
-    internal GitError ForEachReferenceName(string? glob, delegate* unmanaged[Cdecl]<byte*, nint, int> callback, nint payload)
-    {
-        return glob is null || glob == "*"
-            ? git_reference_foreach_name(this.NativeHandle, callback, payload)
-            : git_reference_foreach_glob(this.NativeHandle, glob, callback, payload);
-    }
-
     [MethodImpl(MethodImplOptions.NoInlining)]
     public void ForEachReferenceName(ForEachReferenceUTF8NameCallback callback, string? glob = null)
     {
+        var handle = this.ThrowIfNull();
+
         var context = new Git2.CallbackContext<ForEachReferenceUTF8NameCallback>(callback);
 
         GitError error = glob is null || glob == "*"
-            ? git_reference_foreach_name(this.NativeHandle, &_Callback, (nint)(void*)&context)
-            : git_reference_foreach_glob(this.NativeHandle, glob, &_Callback, (nint)(void*)&context);
+            ? git_reference_foreach_name(handle.NativeHandle, &_Callback, (nint)(void*)&context)
+            : git_reference_foreach_glob(handle.NativeHandle, glob, &_Callback, (nint)(void*)&context);
 
         context.ExceptionInfo?.Throw();
         Git2.ThrowIfError(error);
@@ -1672,11 +2144,13 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
     [MethodImpl(MethodImplOptions.NoInlining)]
     public void ForEachReferenceName(ForEachReferenceNameCallback callback, string? glob = null)
     {
+        var handle = this.ThrowIfNull();
+
         var context = new Git2.CallbackContext<ForEachReferenceNameCallback>(callback);
 
         GitError error = glob is null || glob == "*"
-            ? git_reference_foreach_name(this.NativeHandle, &_Callback, (nint)(void*)&context)
-            : git_reference_foreach_glob(this.NativeHandle, glob, &_Callback, (nint)(void*)&context);
+            ? git_reference_foreach_name(handle.NativeHandle, &_Callback, (nint)(void*)&context)
+            : git_reference_foreach_glob(handle.NativeHandle, glob, &_Callback, (nint)(void*)&context);
 
         context.ExceptionInfo?.Throw();
         Git2.ThrowIfError(error);
@@ -1688,10 +2162,10 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
 
             try
             {
-                string str = Utf8StringMarshaller.ConvertToManaged(name)!;
+                string _name = Git2.GetPooledString(name);
 
                 bool breakLoop = false;
-                context.Callback(str, ref breakLoop);
+                context.Callback(_name, ref breakLoop);
 
                 return !breakLoop ? 0 : 1;
             }
@@ -1707,12 +2181,16 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
 
     public ReferenceEnumerable EnumerateReferences(string? glob = null)
     {
-        return new ReferenceEnumerable(this, glob);
+        var handle = this.ThrowIfNull();
+
+        return new ReferenceEnumerable(handle, glob);
     }
 
     public ReferenceNameEnumerable EnumerateReferenceNames(string? glob = null)
     {
-        return new ReferenceNameEnumerable(this, glob);
+        var handle = this.ThrowIfNull();
+
+        return new ReferenceNameEnumerable(handle, glob);
     }
 
     /// <summary>
@@ -1724,13 +2202,17 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
     /// </remarks>
     public void RemoveReference(string name)
     {
-        Git2.ThrowIfError(git_reference_remove(this.NativeHandle, name));
+        var handle = this.ThrowIfNull();
+
+        Git2.ThrowIfError(git_reference_remove(handle.NativeHandle, name));
     }
 
     public bool TryGetReferenceByShorthand(string shorthand, out GitReference reference)
     {
+        var handle = this.ThrowIfNull();
+
         GitReference result;
-        var error = git_reference_dwim((Git2.Reference**)&result, this.NativeHandle, shorthand);
+        var error = git_reference_dwim((Git2.Reference**)&result, handle.NativeHandle, shorthand);
 
         switch (error)
         {
@@ -1748,12 +2230,14 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
 
     public bool TryGetId(string referenceName, out GitObjectID id)
     {
+        var handle = this.ThrowIfNull();
+
         GitError error;
 
         // Relatively heavy struct, pin the reference instead of copying for performance
         fixed (GitObjectID* ptr = &id)
         {
-            error = git_reference_name_to_id(ptr, this.NativeHandle, referenceName);
+            error = git_reference_name_to_id(ptr, handle.NativeHandle, referenceName);
         }
 
         switch (error)
@@ -1771,17 +2255,12 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
 
     public delegate void ForEachReferenceCallback(GitReference reference, ref bool breakLoop);
 
-    private ref struct ForEachReferenceContext
+    [method: SetsRequiredMembers]
+    private ref struct ForEachReferenceContext(ForEachReferenceCallback callback)
     {
-        public required ForEachReferenceCallback Callback { get; init; }
+        public required ForEachReferenceCallback Callback { get; init; } = callback;
 
         internal ExceptionDispatchInfo? ExceptionInfo { get; set; }
-
-        [SetsRequiredMembers]
-        public ForEachReferenceContext(ForEachReferenceCallback callback)
-        {
-            Callback = callback;
-        }
 
         public bool AutoDispose { get; init; }
     }
@@ -1793,7 +2272,7 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
 
         public ReferenceEnumerator GetEnumerator()
         {
-            Git2.ReferenceIterator* handle;
+            Git2.ReferenceIterator* handle = null;
 
             if (_glob is null)
             {
@@ -1822,7 +2301,7 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
 
         public bool MoveNext()
         {
-            Git2.Reference* reference;
+            Git2.Reference* reference = null;
             var code = git_reference_next(&reference, _iteratorHandle);
 
             switch (code)
@@ -1843,7 +2322,7 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
             throw new NotSupportedException();
         }
 
-        object IEnumerator.Current => throw new NotImplementedException();
+        readonly object IEnumerator.Current => throw new NotImplementedException();
 
         public void Dispose()
         {
@@ -1862,7 +2341,7 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
 
         public ReferenceNameEnumerator GetEnumerator()
         {
-            Git2.ReferenceIterator* handle;
+            Git2.ReferenceIterator* handle = null;
 
             if (_glob is null)
             {
@@ -1891,13 +2370,13 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
 
         public bool MoveNext()
         {
-            byte* name;
+            byte* name = null;
             var code = git_reference_next_name(&name, _iteratorHandle);
 
             switch (code)
             {
                 case GitError.OK:
-                    Current = Utf8StringMarshaller.ConvertToManaged(name)!;
+                    Current = Git2.GetPooledString(name);
                     return true;
                 case GitError.IterationOver:
                     Current = default!;
@@ -1912,7 +2391,7 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
             throw new NotSupportedException();
         }
 
-        object IEnumerator.Current => this.Current;
+        readonly object IEnumerator.Current => this.Current;
 
         public void Dispose()
         {
@@ -1926,41 +2405,51 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
     #region Remote
     public GitRemote CreateRemote(string name, string url)
     {
+        var handle = this.ThrowIfNull();
+
         Git2.Remote* result = null;
 
-        Git2.ThrowIfError(git_remote_create(&result, this.NativeHandle, name, url));
+        Git2.ThrowIfError(git_remote_create(&result, handle.NativeHandle, name, url));
 
         return new(result);
     }
 
     public GitRemote CreateAnonymousRemote(string url)
     {
+        var handle = this.ThrowIfNull();
+
         Git2.Remote* result = null;
 
-        Git2.ThrowIfError(git_remote_create_anonymous(&result, this.NativeHandle, url));
+        Git2.ThrowIfError(git_remote_create_anonymous(&result, handle.NativeHandle, url));
 
         return new(result);
     }
 
     public GitRemote CreateRemote(string name, string url, string fetchspec)
     {
+        var handle = this.ThrowIfNull();
+
         Git2.Remote* result = null;
 
-        Git2.ThrowIfError(git_remote_create_with_fetchspec(&result, this.NativeHandle, name, url, fetchspec));
+        Git2.ThrowIfError(git_remote_create_with_fetchspec(&result, handle.NativeHandle, name, url, fetchspec));
 
         return new(result);
     }
 
     public void DeleteRemote(string name)
     {
-        Git2.ThrowIfError(git_remote_delete(this.NativeHandle, name));
+        var handle = this.ThrowIfNull();
+
+        Git2.ThrowIfError(git_remote_delete(handle.NativeHandle, name));
     }
 
     public string[] GetRemoteList()
     {
+        var handle = this.ThrowIfNull();
+
         Native.GitStringArray array = default;
 
-        Git2.ThrowIfError(git_remote_list(&array, this.NativeHandle));
+        Git2.ThrowIfError(git_remote_list(&array, handle.NativeHandle));
 
         try
         {
@@ -1974,18 +2463,22 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
 
     public GitRemote GetRemote(string name)
     {
+        var handle = this.ThrowIfNull();
+
         Git2.Remote* result = null;
 
-        Git2.ThrowIfError(git_remote_lookup(&result, this.NativeHandle, name));
+        Git2.ThrowIfError(git_remote_lookup(&result, handle.NativeHandle, name));
 
         return new(result);
     }
 
     public bool TryGetRemote(string name, out GitRemote remote)
     {
+        var handle = this.ThrowIfNull();
+
         Git2.Remote* result = null;
 
-        var error = git_remote_lookup(&result, this.NativeHandle, name);
+        var error = git_remote_lookup(&result, handle.NativeHandle, name);
 
         switch (error)
         {
@@ -2002,9 +2495,11 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
 
     public void RenameRemote(string current_name, string new_name, out string[] problemRefspecs)
     {
+        var handle = this.ThrowIfNull();
+
         Native.GitStringArray problems = default;
 
-        Git2.ThrowIfError(git_remote_rename(&problems, this.NativeHandle, current_name, new_name));
+        Git2.ThrowIfError(git_remote_rename(&problems, handle.NativeHandle, current_name, new_name));
 
         try
         {
@@ -2018,25 +2513,134 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
 
     public void SetRemoteAutotag(string remote_name, GitRemoteAutoTagOption value)
     {
-        Git2.ThrowIfError(git_remote_set_autotag(this.NativeHandle, remote_name, value));
+        var handle = this.ThrowIfNull();
+
+        Git2.ThrowIfError(git_remote_set_autotag(handle.NativeHandle, remote_name, value));
     }
 
     public void SetRemotePushUrl(string remote_name, string remote_pushurl)
     {
-        Git2.ThrowIfError(git_remote_set_pushurl(this.NativeHandle, remote_name, remote_pushurl));
+        var handle = this.ThrowIfNull();
+
+        Git2.ThrowIfError(git_remote_set_pushurl(handle.NativeHandle, remote_name, remote_pushurl));
     }
 
     public void SetRemoteUrl(string remote_name, string remote_url)
     {
-        Git2.ThrowIfError(git_remote_set_pushurl(this.NativeHandle, remote_name, remote_url));
+        var handle = this.ThrowIfNull();
+
+        Git2.ThrowIfError(git_remote_set_pushurl(handle.NativeHandle, remote_name, remote_url));
+    }
+    #endregion
+
+    #region Reset
+    public void Reset(GitTag tag, GitResetType type)
+    {
+        var handle = this.ThrowIfNull();
+
+        Git2.ThrowIfError(git_reset(handle.NativeHandle, (Git2.Object*)tag.NativeHandle, type, null));
+    }
+
+    public void Reset(GitTag tag, GitResetType type, in GitCheckoutOptions checkoutOptions)
+    {
+        ResetInternal(tag, type, in checkoutOptions);
+    }
+
+    public void Reset(GitCommit commit, GitResetType type)
+    {
+        var handle = this.ThrowIfNull();
+
+        Git2.ThrowIfError(git_reset(handle.NativeHandle, (Git2.Object*)commit.NativeHandle, type, null));
+    }
+
+    public void Reset(GitCommit commit, GitResetType type, in GitCheckoutOptions checkoutOptions)
+    {
+        ResetInternal(commit, type, in checkoutOptions);
+    }
+
+    private void ResetInternal(GitObject committish, GitResetType type, in GitCheckoutOptions checkoutOptions)
+    {
+        var handle = this.ThrowIfNull();
+
+        Native.GitCheckoutOptions _options = default;
+        List<GCHandle> gchandles = [];
+
+        try
+        {
+            _options.FromManaged(in checkoutOptions, gchandles);
+
+            Git2.ThrowIfError(git_reset(handle.NativeHandle, committish.NativeHandle, type, &_options), "Reset");
+        }
+        finally
+        {
+            foreach (var gchandle in gchandles)
+            {
+                gchandle.Free();
+            }
+
+            _options.Free();
+        }
+    }
+
+    public void Reset(GitAnnotatedCommit commit, GitResetType type)
+    {
+        var handle = this.ThrowIfNull();
+
+        Git2.ThrowIfError(git_reset_from_annotated(handle.NativeHandle, commit.NativeHandle, type, null));
+    }
+
+    public void Reset(GitAnnotatedCommit commit, GitResetType type, in GitCheckoutOptions checkoutOptions)
+    {
+        var handle = this.ThrowIfNull();
+
+        Native.GitCheckoutOptions _options = default;
+        List<GCHandle> gchandles = [];
+
+        try
+        {
+            _options.FromManaged(in checkoutOptions, gchandles);
+
+            Git2.ThrowIfError(git_reset_from_annotated(handle.NativeHandle, commit.NativeHandle, type, &_options));
+        }
+        finally
+        {
+            foreach (var gchandle in gchandles)
+            {
+                gchandle.Free();
+            }
+
+            _options.Free();
+        }
+    }
+
+    public void ResetDefault(params ReadOnlySpan<string> pathspecs)
+    {
+        ResetDefaultInternal(default, pathspecs);
+    }
+
+    public void ResetDefault(GitTag tag, params ReadOnlySpan<string> pathspecs)
+    {
+        ResetDefaultInternal(tag, pathspecs);
+    }
+
+    public void ResetDefault(GitCommit commit, params ReadOnlySpan<string> pathspecs)
+    {
+        ResetDefaultInternal(commit, pathspecs);
+    }
+
+    private void ResetDefaultInternal(GitObject committish, ReadOnlySpan<string> pathspecs)
+    {
+        Git2.ThrowIfError(git_reset_default(this.NativeHandle, committish.NativeHandle, pathspecs), "ResetDefault");
     }
     #endregion
 
     #region Signature
     public GitSignature DefaultSignature()
     {
+        var handle = this.ThrowIfNull();
+
         Native.GitSignature* result = null;
-        Git2.ThrowIfError(git_signature_default(&result, this.NativeHandle));
+        Git2.ThrowIfError(git_signature_default(&result, handle.NativeHandle));
 
         try
         {
@@ -2050,9 +2654,11 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
 
     public bool TryGetDefaultSignature(out GitSignature signature)
     {
+        var handle = this.ThrowIfNull();
+
         Native.GitSignature* result = null;
         
-        var error = git_signature_default(&result, this.NativeHandle);
+        var error = git_signature_default(&result, handle.NativeHandle);
 
         switch (error)
         {
@@ -2075,50 +2681,185 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
     }
     #endregion
 
+    #region Stash
+
+    #endregion
+
+    #region Status
+    public GitStatusFlags GetFileStatus(string path)
+    {
+        var handle = this.ThrowIfNull();
+
+        GitStatusFlags status = default;
+        Git2.ThrowIfError(git_status_file(&status, handle.NativeHandle, path));
+        return status;
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public void ForEachStatus(Func<string, GitStatusFlags, int> callback)
+    {
+        var handle = this.ThrowIfNull();
+
+        Git2.CallbackContext<Func<string, GitStatusFlags, int>> context = new(callback);
+        var error = git_status_foreach(handle.NativeHandle, &_Callback, (nint)(void*)&context);
+
+        context.ExceptionInfo?.Throw();
+        Git2.ThrowIfError(error);
+
+        [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+        static int _Callback(byte* path, GitStatusFlags status, nint payload)
+        {
+            ref var context = ref *(Git2.CallbackContext<Func<string, GitStatusFlags, int>>*)payload;
+
+            try
+            {
+                return context.Callback(Git2.GetPooledString(path), status);
+            }
+            catch (Exception e)
+            {
+                context.ExceptionInfo = ExceptionDispatchInfo.Capture(e);
+                return -1;
+            }
+        }
+    }
+
+    public void ForEachStatus(in GitStatusOptions options, Func<string, GitStatusFlags, int> callback)
+    {
+        var handle = this.ThrowIfNull();
+
+        Git2.CallbackContext<Func<string, GitStatusFlags, int>> context = new(callback);
+
+        Native.GitStatusOptions _options = default;
+        GitError error;
+        try
+        {
+            _options.FromManaged(in options);
+
+            error = git_status_foreach_ext(handle.NativeHandle, &_options, &_Callback, (nint)(void*)&context);
+        }
+        finally
+        {
+            _options.Free();
+        }
+
+        context.ExceptionInfo?.Throw();
+        Git2.ThrowIfError(error);
+
+        [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+        static int _Callback(byte* path, GitStatusFlags status, nint payload)
+        {
+            ref var context = ref *(Git2.CallbackContext<Func<string, GitStatusFlags, int>>*)payload;
+
+            try
+            {
+                return context.Callback(Git2.GetPooledString(path), status);
+            }
+            catch (Exception e)
+            {
+                context.ExceptionInfo = ExceptionDispatchInfo.Capture(e);
+                return -1;
+            }
+        }
+    }
+
+    public bool IsDirty
+    {
+        get
+        {
+            var handle = this.ThrowIfNull();
+
+            return Git2.ErrorOrBoolean((int)git_status_foreach(handle.NativeHandle, &_Callback, 0));
+
+            [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+            static int _Callback(byte* path, GitStatusFlags status, nint payload)
+            {
+                if ((status & GitStatusFlags.Ignored) != 0)
+                    return 0;
+
+                return status != GitStatusFlags.Current ? 1 : 0;
+            }
+        }
+    }
+
+    public bool IsIndexDirty
+    {
+        get
+        {
+            var handle = this.ThrowIfNull();
+
+            return Git2.ErrorOrBoolean((int)git_status_foreach(handle.NativeHandle, &_Callback, 0));
+
+            [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+            static int _Callback(byte* path, GitStatusFlags status, nint payload)
+            {
+                if ((status & GitStatusFlags.Ignored) != 0)
+                    return 0;
+
+                const GitStatusFlags flags = GitStatusFlags.IndexNew
+                    | GitStatusFlags.IndexDeleted
+                    | GitStatusFlags.IndexModified
+                    | GitStatusFlags.IndexTypeChange;
+
+                return (status & flags) != 0 ? 1 : 0;
+            }
+        }
+    }
+
+    public bool IsWorkingTreeDirty
+    {
+        get
+        {
+            var handle = this.ThrowIfNull();
+
+            return Git2.ErrorOrBoolean((int)git_status_foreach(handle.NativeHandle, &_Callback, 0));
+
+            [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+            static int _Callback(byte* path, GitStatusFlags status, nint payload)
+            {
+                if ((status & GitStatusFlags.Ignored) != 0)
+                    return 0;
+
+                const GitStatusFlags flags = GitStatusFlags.WorkingTreeNew
+                    | GitStatusFlags.WorkingTreeDeleted
+                    | GitStatusFlags.WorkingTreeModified
+                    | GitStatusFlags.WorkingTreeTypeChange;
+
+                return (status & flags) != 0 ? 1 : 0;
+            }
+        }
+    }
+
+    public bool StatusShouldIgnore(string path)
+    {
+        var handle = this.ThrowIfNull();
+
+        int ignored = 0;
+        Git2.ThrowIfError(git_status_should_ignore(&ignored, handle.NativeHandle, path));
+
+        return ignored != 0;
+    }
+
+    #endregion
+
     #region Tree
     public GitObjectID CreateUpdatedTree(GitTree baseline, ReadOnlySpan<GitTreeUpdate> updates)
     {
+        var handle = this.ThrowIfNull();
+
         GitObjectID id;
-        Git2.ThrowIfError(git_tree_create_updated(&id, this.NativeHandle, baseline.NativeHandle, (nuint)updates.Length, updates));
+        Git2.ThrowIfError(git_tree_create_updated(&id, handle.NativeHandle, baseline.NativeHandle, (nuint)updates.Length, updates));
 
         return id;
     }
 
     public GitTree GetTree(in GitObjectID id)
     {
-        Git2.Object* result;
-        GitError error;
-
-        fixed (GitObjectID* pId = &id)
-            error = git_object_lookup(&result, this.NativeHandle, pId, GitObjectType.Tree);
-
-        Git2.ThrowIfError(error);
-
-        Debug.Assert(git_object_type(result) == GitObjectType.Tree);
-
-        return new((Git2.Tree*)result);
+        return GetObject<GitTree>(in id);
     }
 
     public bool TryGetTree(in GitObjectID id, out GitTree tree)
     {
-        Git2.Object* result;
-        GitError error;
-
-        fixed (GitObjectID* pId = &id)
-            error = git_object_lookup(&result, this.NativeHandle, pId, GitObjectType.Tree);
-
-        switch (error)
-        {
-            case GitError.OK:
-                Debug.Assert(git_object_type(result) == GitObjectType.Tree, "Returned object is not of type Tree");
-                tree = new((Git2.Tree*)result);
-                return true;
-            case GitError.NotFound:
-                tree = default;
-                return false;
-            default:
-                throw Git2.ExceptionForError(error);
-        }
+        return TryGetObject(in id, out tree);
     }
 
     #endregion
@@ -2126,6 +2867,8 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
     #region Worktree
     public GitWorkTree AddWorktree(string name, string path, in GitWorktreeAddOptions options)
     {
+        var handle = this.ThrowIfNull();
+
         Git2.Worktree* result = null;
         GitError error;
 
@@ -2135,13 +2878,13 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
         {
             _options.FromManaged(in options, gchandles);
 
-            error = git_worktree_add(&result, this.NativeHandle, name, path, &_options);
+            error = git_worktree_add(&result, handle.NativeHandle, name, path, &_options);
         }
         finally
         {
-            foreach (var handle in gchandles)
+            foreach (var gchandle in gchandles)
             {
-                handle.Free();
+                gchandle.Free();
             }
 
             _options.Free();
@@ -2154,9 +2897,11 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
 
     public string[] GetWorktreeList()
     {
+        var handle = this.ThrowIfNull();
+
         Native.GitStringArray _strings = default;
 
-        Git2.ThrowIfError(git_worktree_list(&_strings, this.NativeHandle));
+        Git2.ThrowIfError(git_worktree_list(&_strings, handle.NativeHandle));
 
         try
         {
@@ -2170,18 +2915,26 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
 
     public GitWorkTree GetWorktree(string name)
     {
+        var handle = this.ThrowIfNull();
+
+        ArgumentException.ThrowIfNullOrEmpty(name, nameof(name));
+
         Git2.Worktree* result = null;
 
-        Git2.ThrowIfError(git_worktree_lookup(&result, this.NativeHandle, name));
+        Git2.ThrowIfError(git_worktree_lookup(&result, handle.NativeHandle, name));
 
         return new(result);
     }
 
     public bool TryGetWorktree(string name, out GitWorkTree worktree)
     {
+        var handle = this.ThrowIfNull();
+
+        ArgumentException.ThrowIfNullOrEmpty(name, nameof(name));
+
         Git2.Worktree* result = null;
 
-        var error = git_worktree_lookup(&result, this.NativeHandle, name);
+        var error = git_worktree_lookup(&result, handle.NativeHandle, name);
 
         switch (error)
         {
@@ -2198,9 +2951,11 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
 
     public GitReference GetHeadForWorktree(string worktreeName)
     {
+        var handle = this.ThrowIfNull();
+
         Git2.Reference* result = null;
 
-        Git2.ThrowIfError(git_repository_head_for_worktree(&result, this.NativeHandle, worktreeName));
+        Git2.ThrowIfError(git_repository_head_for_worktree(&result, handle.NativeHandle, worktreeName));
 
         return new(result);
     }
@@ -2216,7 +2971,9 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
 
     public void DetachHead(out bool unbornBranch)
     {
-        var error = git_repository_detach_head(this.NativeHandle);
+        var handle = this.ThrowIfNull();
+
+        var error = git_repository_detach_head(handle.NativeHandle);
 
         if (error is not GitError.OK and not GitError.UnbornBranch)
         {
@@ -2228,18 +2985,21 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
 
     internal GitError ForEachFetchHead(delegate* unmanaged[Cdecl]<byte*, byte*, GitObjectID*, uint, nint, int> callback, nint payload)
     {
-        return git_repository_fetchhead_foreach(this.NativeHandle, callback, payload);
+        var handle = this.ThrowIfNull();
+
+        return git_repository_fetchhead_foreach(handle.NativeHandle, callback, payload);
     }
 
     public delegate void ForEachFetchHeadCallback(string referenceName, string remoteUrl, in GitObjectID objectId, bool isMerge, ref bool breakLoop);
 
-#pragma warning disable CS8500 // This takes the address of, gets the size of, or declares a pointer to a managed type
     [MethodImpl(MethodImplOptions.NoInlining)] // preserve callstack for exceptions
     public void ForEachFetchHead(ForEachFetchHeadCallback callback)
     {
+        var handle = this.ThrowIfNull();
+
         var context = new Git2.CallbackContext<ForEachFetchHeadCallback>(callback);
 
-        var error = git_repository_fetchhead_foreach(this.NativeHandle, &_Callback, (nint)(void*)&context);
+        var error = git_repository_fetchhead_foreach(handle.NativeHandle, &_Callback, (nint)(void*)&context);
 
         context.ExceptionInfo?.Throw();
         Git2.ThrowIfError(error);
@@ -2251,8 +3011,8 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
 
             try
             {
-                string referenceName = Utf8StringMarshaller.ConvertToManaged(ref_name)!;
-                string remoteUrl = Utf8StringMarshaller.ConvertToManaged(remote_url)!;
+                string referenceName = Git2.GetPooledString(ref_name);
+                string remoteUrl = Git2.GetPooledString(remote_url);
 
                 bool breakLoop = false;
                 context.Callback(referenceName, remoteUrl, in *oid, is_merge != 0, ref breakLoop);
@@ -2267,11 +3027,12 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
             }
         }
     }
-#pragma warning restore CS8500 // This takes the address of, gets the size of, or declares a pointer to a managed type
 
     internal GitError ForEachMergeHead(delegate* unmanaged[Cdecl]<GitObjectID*, nint, int> callback, nint payload)
     {
-        return git_repository_mergehead_foreach(this.NativeHandle, callback, payload);
+        var handle = this.ThrowIfNull();
+
+        return git_repository_mergehead_foreach(handle.NativeHandle, callback, payload);
     }
 
     /// <summary>
@@ -2287,9 +3048,11 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
     /// <param name="callback"></param>
     public void ForEachMergeHead(ForEachMergeHeadCallback callback)
     {
-        var context = new Git2.CallbackContext<ForEachMergeHeadCallback>() { Callback = callback };
+        var handle = this.ThrowIfNull();
 
-        var error = git_repository_mergehead_foreach(this.NativeHandle, &_Callback, (nint)(void*)&context);
+        var context = new Git2.CallbackContext<ForEachMergeHeadCallback>(callback);
+
+        var error = git_repository_mergehead_foreach(handle.NativeHandle, &_Callback, (nint)(void*)&context);
 
         context.ExceptionInfo?.Throw();
         if (error < 0 && error != GitError.NotFound)
@@ -2333,16 +3096,29 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
     /// </remarks>
     public Git2.CommitArray GetCommitParents()
     {
+        var handle = this.ThrowIfNull();
+
+        if (Git2.NativeLibraryVersion < new Git2.Version(1, 8, 0))
+            throw new NotSupportedException($"This function isn't part of libgit2 version {Git2.NativeLibraryVersion}!");
+
         Git2.CommitArray array = default;
 
-        Git2.ThrowIfError(git_repository_commit_parents(&array, this.NativeHandle));
+        Git2.ThrowIfError(git_repository_commit_parents(&array, handle.NativeHandle));
 
         return array;
     }
 
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <returns></returns>
     public string? GetCommonDirectory()
     {
-        return Utf8StringMarshaller.ConvertToManaged(git_repository_commondir(this.NativeHandle));
+        var handle = this.ThrowIfNull();
+
+        var nativeString = git_repository_commondir(handle.NativeHandle);
+
+        return nativeString == null ? null : Git2.GetPooledString(nativeString);
     }
 
     /// <summary>
@@ -2352,24 +3128,30 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
     /// <returns>The git config file object.</returns>
     public GitConfig GetConfig()
     {
-        Git2.Config* config;
-        Git2.ThrowIfError(git_repository_config(&config, this.NativeHandle));
+        var handle = this.ThrowIfNull();
+
+        Git2.Config* config = null;
+        Git2.ThrowIfError(git_repository_config(&config, handle.NativeHandle));
 
         return new(config);
     }
 
     public GitConfig GetConfigSnapshot()
     {
-        Git2.Config* config;
-        Git2.ThrowIfError(git_repository_config_snapshot(&config, this.NativeHandle));
+        var handle = this.ThrowIfNull();
+
+        Git2.Config* config = null;
+        Git2.ThrowIfError(git_repository_config_snapshot(&config, handle.NativeHandle));
 
         return new(config);
     }
 
     public GitReference GetHead(out bool unborn)
     {
-        Git2.Reference* result;
-        var error = git_repository_head(&result, this.NativeHandle);
+        var handle = this.ThrowIfNull();
+
+        Git2.Reference* result = null;
+        var error = git_repository_head(&result, handle.NativeHandle);
 
         switch (error)
         {
@@ -2391,30 +3173,36 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
     /// <param name="email">Identity email</param>
     public void GetIdentity(out string name, out string email)
     {
-        byte* __name, __email;
+        var handle = this.ThrowIfNull();
 
-        Git2.ThrowIfError(git_repository_ident(&__name, &__email, this.NativeHandle));
+        byte* __name = null, __email = null;
 
-        name = Utf8StringMarshaller.ConvertToManaged(__name)!;
-        email = Utf8StringMarshaller.ConvertToManaged(__email)!;
+        Git2.ThrowIfError(git_repository_ident(&__name, &__email, handle.NativeHandle));
+
+        name = Git2.GetPooledString(__name);
+        email = Git2.GetPooledString(__email);
     }
 
     public GitIndex GetIndex()
     {
-        Git2.Index* index;
-        Git2.ThrowIfError(git_repository_index(&index, this.NativeHandle));
+        var handle = this.ThrowIfNull();
+
+        Git2.Index* index = null;
+        Git2.ThrowIfError(git_repository_index(&index, handle.NativeHandle));
 
         return new(index);
     }
 
     public string GetItemPath(GitRepositoryItemType itemType)
     {
+        var handle = this.ThrowIfNull();
+
         Native.GitBuffer buffer = default;
-        Git2.ThrowIfError(git_repository_item_path(&buffer, this.NativeHandle, itemType));
+        Git2.ThrowIfError(git_repository_item_path(&buffer, handle.NativeHandle, itemType));
 
         try
         {
-            return Encoding.UTF8.GetString(buffer.Pointer, checked((int)buffer.Size));
+            return Git2.GetPooledString(new ReadOnlySpan<byte>(buffer.Pointer, checked((int)buffer.Size)));
         }
         finally
         {
@@ -2424,9 +3212,11 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
 
     public string? GetMessage()
     {
+        var handle = this.ThrowIfNull();
+
         Native.GitBuffer buffer = default;
 
-        var error = git_repository_message(&buffer, this.NativeHandle);
+        var error = git_repository_message(&buffer, handle.NativeHandle);
 
         if (error == GitError.OK)
         {
@@ -2460,40 +3250,52 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
     /// </returns>
     public string? GetNamespace()
     {
-        // returned pointer does not need to be freed by the user
-        return Utf8StringMarshaller.ConvertToManaged(this.NativeNamespace);
+        var handle = this.ThrowIfNull();
+
+        var nativeString = git_repository_get_namespace(handle.NativeHandle);
+
+        return nativeString is null ? null : Git2.GetPooledString(nativeString);
     }
 
     public GitObjectDatabase GetObjectDatabase()
     {
-        Git2.ObjectDatabase* result;
-        Git2.ThrowIfError(git_repository_odb(&result, this.NativeHandle));
+        var handle = this.ThrowIfNull();
+
+        Git2.ObjectDatabase* result = null;
+        Git2.ThrowIfError(git_repository_odb(&result, handle.NativeHandle));
 
         return new(result);
     }
 
     public string GetPath()
     {
-        // returned pointer does not need to be freed by the user
-        return Utf8StringMarshaller.ConvertToManaged(git_repository_path(this.NativeHandle))!;
+        var handle = this.ThrowIfNull();
+
+        var nativePath = git_repository_path(handle.NativeHandle);
+
+        return Git2.GetPooledString(nativePath);
     }
 
     public GitReferenceDatabase GetRefDB()
     {
-        Git2.ReferenceDatabase* refDB;
-        Git2.ThrowIfError(git_repository_refdb(&refDB, this.NativeHandle));
+        var handle = this.ThrowIfNull();
+
+        Git2.ReferenceDatabase* refDB = null;
+        Git2.ThrowIfError(git_repository_refdb(&refDB, handle.NativeHandle));
 
         return new(refDB);
     }
 
     public string[] GetTagList()
     {
+        var handle = this.ThrowIfNull();
+
         Native.GitStringArray array = default;
-        Git2.ThrowIfError(git_tag_list(&array, this.NativeHandle));
+        Git2.ThrowIfError(git_tag_list(&array, handle.NativeHandle));
 
         try
         {
-            return array.ToManaged();
+            return array.ToManaged(true);
         }
         finally
         {
@@ -2503,18 +3305,24 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
 
     public string? GetWorkDirectory()
     {
-        return Utf8StringMarshaller.ConvertToManaged(this.NativeWorkDirectory);
+        var handle = this.ThrowIfNull();
+
+        var nativePath = git_repository_workdir(handle.NativeHandle);
+
+        return nativePath == null ? null : Git2.GetPooledString(nativePath);
     }
 
     public void HashFile(string path, GitObjectType type, string asPath, out GitObjectID @out)
     {
+        var handle = this.ThrowIfNull();
+
         GitError error;
 
         @out = default;
 
         fixed (GitObjectID* outPtr = &@out)
         {
-            error = git_repository_hashfile(outPtr, this.NativeHandle, path, type, asPath);
+            error = git_repository_hashfile(outPtr, handle.NativeHandle, path, type, asPath);
         }
 
         Git2.ThrowIfError(error);
@@ -2522,46 +3330,64 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
 
     public bool IsHeadDetachedForWorktree(string worktreeName)
     {
-        var code = git_repository_head_detached_for_worktree(this.NativeHandle, worktreeName);
+        var handle = this.ThrowIfNull();
+
+        var code = git_repository_head_detached_for_worktree(handle.NativeHandle, worktreeName);
 
         return Git2.ErrorOrBoolean(code);
     }
 
     public void RemoveMessage()
     {
-        Git2.ThrowIfError(git_repository_message_remove(this.NativeHandle));
+        var handle = this.ThrowIfNull();
+
+        Git2.ThrowIfError(git_repository_message_remove(handle.NativeHandle));
     }
 
     public void SetHead(string refName)
     {
-        Git2.ThrowIfError(git_repository_set_head(this.NativeHandle, refName));
+        var handle = this.ThrowIfNull();
+
+        ArgumentException.ThrowIfNullOrEmpty(refName);
+
+        Git2.ThrowIfError(git_repository_set_head(handle.NativeHandle, refName));
     }
 
     public void SetHead(GitReference reference)
     {
+        var handle = this.ThrowIfNull();
+
         ArgumentNullException.ThrowIfNull(reference.NativeHandle);
 
-        Git2.ThrowIfError(git_repository_set_head(this.NativeHandle, reference.NativeName));
+        Git2.ThrowIfError(git_repository_set_head(handle.NativeHandle, reference.NativeName));
     }
 
     public void SetHeadDetached(GitObjectID objectId)
     {
-        Git2.ThrowIfError(git_repository_set_head_detached(this.NativeHandle, &objectId));
+        var handle = this.ThrowIfNull();
+
+        Git2.ThrowIfError(git_repository_set_head_detached(handle.NativeHandle, &objectId));
     }
 
     public void SetIdentity(string? name, string? email)
     {
-        Git2.ThrowIfError(git_repository_set_ident(this.NativeHandle, name, email));
+        var handle = this.ThrowIfNull();
+
+        Git2.ThrowIfError(git_repository_set_ident(handle.NativeHandle, name, email));
     }
 
     public void SetNamespace(string @namespace)
     {
-        Git2.ThrowIfError(git_repository_set_namespace(this.NativeHandle, @namespace));
+        var handle = this.ThrowIfNull();
+
+        Git2.ThrowIfError(git_repository_set_namespace(handle.NativeHandle, @namespace));
     }
 
     public void SetWorkDirectory(string directory, bool updateGitlink)
     {
-        Git2.ThrowIfError(git_repository_set_workdir(this.NativeHandle, directory, updateGitlink ? 1 : 0));
+        var handle = this.ThrowIfNull();
+
+        Git2.ThrowIfError(git_repository_set_workdir(handle.NativeHandle, directory, updateGitlink ? 1 : 0));
     }
 
     public static GitRepository Init(string path)
@@ -2571,7 +3397,7 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
 
     public static GitRepository Init(string path, bool bare)
     {
-        Git2.Repository* result;
+        Git2.Repository* result = null;
         Git2.ThrowIfError(git_repository_init(&result, path, bare ? 1u : 0u));
 
         return new(result);
@@ -2580,7 +3406,7 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
     public static GitRepository Init(string path, in GitRepositoryInitOptions options)
     {
         Native.GitRepositoryInitOptions nOptions = default;
-        Git2.Repository* result;
+        Git2.Repository* result = null;
         GitError error;
 
         try
@@ -2600,7 +3426,7 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
 
     public static GitRepository Init(string path, in Native.GitRepositoryInitOptions options)
     {
-        Git2.Repository* result;
+        Git2.Repository* result = null;
         Git2.ThrowIfError(git_repository_init_ext(&result, path, in options));
 
         return new(result);
@@ -2608,7 +3434,7 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
 
     public static GitRepository Open(string path)
     {
-        Git2.Repository* result;
+        Git2.Repository* result = null;
         Git2.ThrowIfError(git_repository_open(&result, path));
 
         return new(result);
@@ -2616,7 +3442,7 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
 
     public static GitRepository OpenBare(string path)
     {
-        Git2.Repository* result;
+        Git2.Repository* result = null;
         Git2.ThrowIfError(git_repository_open_bare(&result, path));
 
         return new(result);
@@ -2624,22 +3450,10 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
 
     public static GitRepository Open(string path, GitRepositoryOpenFlags flags, string? ceiling_dirs = null)
     {
-        Git2.Repository* result;
+        Git2.Repository* result = null;
         Git2.ThrowIfError(git_repository_open_ext(&result, path, flags, ceiling_dirs));
 
         return new(result);
-    }
-
-    ///<inheritdoc cref="Discover(string, bool, string?)"/>
-    public static string? Discover(string startPath)
-    {
-        return Discover(startPath, true, null);
-    }
-
-    ///<inheritdoc cref="Discover(string, bool, string?)"/>
-    public static string? Discover(string startPath, bool acrossFileSystems)
-    {
-        return Discover(startPath, acrossFileSystems, null);
     }
 
     /// <summary>
@@ -2662,7 +3476,7 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
     /// <returns>
     /// Returns the found git repository path, or <see langword="null"/> is one isn't found.
     /// </returns>
-    public static string? Discover(string startPath, bool acrossFileSystems, string? ceilingDirs)
+    public static string? Discover(string startPath, bool acrossFileSystems = true, string? ceilingDirs = null)
     {
         ArgumentException.ThrowIfNullOrEmpty(startPath);
 

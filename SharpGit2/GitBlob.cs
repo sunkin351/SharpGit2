@@ -1,39 +1,85 @@
 ﻿using System.Buffers;
 using System.Runtime.InteropServices;
 
-using static SharpGit2.NativeApi;
+using static SharpGit2.GitNativeApi;
 
 namespace SharpGit2;
 
-public unsafe readonly struct GitBlob(Git2.Blob* nativeHandle) : IDisposable
+public unsafe readonly struct GitBlob(Git2.Blob* nativeHandle) : IDisposable, IGitObject<GitBlob>, IGitHandle
 {
     public readonly Git2.Blob* NativeHandle = nativeHandle;
 
-    public ref readonly GitObjectID Id => ref *git_blob_id(this.NativeHandle);
+    public bool IsNull => this.NativeHandle == null;
 
-    public byte* RawContent => git_blob_rawcontent(this.NativeHandle);
+    public ref readonly GitObjectID Id
+    {
+        get
+        {
+            var handle = this.ThrowIfNull();
 
-    public ulong RawSize => git_blob_rawsize(this.NativeHandle);
+            return ref *git_blob_id(handle.NativeHandle);
+        }
+    }
 
-    public bool IsBinary => git_blob_is_binary(this.NativeHandle) != 0;
+    public byte* RawContent
+    {
+        get
+        {
+            var handle = this.ThrowIfNull();
 
-    public GitRepository Owner => new(git_blob_owner(this.NativeHandle));
+            return git_blob_rawcontent(handle.NativeHandle);
+        }
+    }
+
+    public ulong RawSize
+    {
+        get
+        {
+            var handle = this.ThrowIfNull();
+
+            return git_blob_rawsize(handle.NativeHandle);
+        }
+    }
+
+    public bool IsBinary
+    {
+        get
+        {
+            var handle = this.ThrowIfNull();
+
+            return git_blob_is_binary(handle.NativeHandle) != 0;
+        }
+    }
+
+    public GitRepository Owner
+    {
+        get
+        {
+            var handle = this.ThrowIfNull();
+
+            return new(git_blob_owner(handle.NativeHandle));
+        }
+    }
 
     public void Dispose()
     {
-        git_blob_free(NativeHandle);
+        git_blob_free(this.NativeHandle);
     }
 
     public GitBlob Duplicate()
     {
-        Git2.Blob* result;
-        Git2.ThrowIfError(git_blob_dup(&result, this.NativeHandle));
+        var handle = this.ThrowIfNull();
+
+        Git2.Blob* result = null;
+        Git2.ThrowIfError(git_blob_dup(&result, handle.NativeHandle));
 
         return new(result);
     }
 
     public void Filter(IBufferWriter<byte> buffer, string as_path, in GitBlobFilterOptions options)
     {
+        var handle = this.ThrowIfNull();
+
         Native.GitBuffer _buffer = default;
         Native.GitBlobFilterOptions _options = default;
         GitError error;
@@ -42,7 +88,7 @@ public unsafe readonly struct GitBlob(Git2.Blob* nativeHandle) : IDisposable
         {
             _options.FromManaged(in options);
 
-            error = git_blob_filter(&_buffer, this.NativeHandle, as_path, &_options);
+            error = git_blob_filter(&_buffer, handle.NativeHandle, as_path, &_options);
         }
         finally
         {
@@ -57,14 +103,16 @@ public unsafe readonly struct GitBlob(Git2.Blob* nativeHandle) : IDisposable
         }
         finally
         {
-            if (_buffer.Pointer != this.RawContent)
+            if (_buffer.Pointer != git_blob_rawcontent(handle.NativeHandle))
                 git_buf_dispose(&_buffer);
         }
     }
 
     public SafeBuffer GetSafeBuffer(bool ownsBlob = false)
     {
-        return new Buffer(this, ownsBlob);
+        var handle = this.ThrowIfNull();
+
+        return new Buffer(handle, ownsBlob);
     }
 
     /// <summary>
@@ -74,15 +122,19 @@ public unsafe readonly struct GitBlob(Git2.Blob* nativeHandle) : IDisposable
     /// <returns></returns>
     public Stream GetStream(bool ownsBlob = false)
     {
+        var handle = this.ThrowIfNull();
+
         if (!ownsBlob)
         {
-            return new UnmanagedMemoryStream((byte*)this.RawContent, checked((long)this.RawSize));
+            return new UnmanagedMemoryStream(
+                git_blob_rawcontent(handle.NativeHandle),
+                checked((long)git_blob_rawsize(handle.NativeHandle)));
         }
 
         SafeBuffer? buffer = null;
         try
         {
-            buffer = this.GetSafeBuffer(true);
+            buffer = handle.GetSafeBuffer(true);
             return new UnmanagedMemoryStream(buffer, 0, checked((long)buffer.ByteLength));
         }
         catch
@@ -94,10 +146,12 @@ public unsafe readonly struct GitBlob(Git2.Blob* nativeHandle) : IDisposable
 
     public bool TryGetContentSpan(out ReadOnlySpan<byte> span)
     {
-        var length = RawSize;
+        var handle = this.ThrowIfNull();
+
+        var length = git_blob_rawsize(handle.NativeHandle);
         if (length <= int.MaxValue)
         {
-            span = new ReadOnlySpan<byte>(RawContent, (int)length);
+            span = new ReadOnlySpan<byte>(git_blob_rawcontent(handle.NativeHandle), (int)length);
             return true;
         }
 
@@ -115,7 +169,7 @@ public unsafe readonly struct GitBlob(Git2.Blob* nativeHandle) : IDisposable
 
     public static explicit operator GitBlob(GitObject obj)
     {
-        return obj.Type == GitObjectType.Blob
+        return obj.IsNull || obj.Type == GitObjectType.Blob
             ? new((Git2.Blob*)obj.NativeHandle)
             : throw new InvalidCastException("Git Object is not of type Blob!");
     }
@@ -143,4 +197,13 @@ public unsafe readonly struct GitBlob(Git2.Blob* nativeHandle) : IDisposable
             return true;
         }
     }
+
+    Git2.Object* IGitObject<GitBlob>.NativeHandle => (Git2.Object*)this.NativeHandle;
+
+    static GitBlob IGitObject<GitBlob>.FromObjectPointer(Git2.Object* obj)
+    {
+        return new((Git2.Blob*)obj);
+    }
+
+    static GitObjectType IGitObject<GitBlob>.ObjectType => GitObjectType.Blob;
 }

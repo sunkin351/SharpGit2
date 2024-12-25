@@ -1,6 +1,6 @@
 ﻿using SharpGit2.Native;
 
-using static SharpGit2.NativeApi;
+using static SharpGit2.GitNativeApi;
 
 namespace SharpGit2;
 
@@ -40,40 +40,99 @@ public enum GitObjectType
     REF_Delta = 7
 }
 
-public unsafe readonly struct GitObject : IDisposable
+/// <summary>
+/// Representation of a generic object in a repository
+/// </summary>
+/// <param name="nativeHandle">The native object pointer</param>
+public unsafe readonly struct GitObject(Git2.Object* nativeHandle) : IDisposable, IGitObject<GitObject>, IGitHandle
 {
-    internal readonly Git2.Object* NativeHandle;
+    /// <summary>
+    /// The native object pointer
+    /// </summary>
+    public Git2.Object* NativeHandle { get; } = nativeHandle;
 
-    internal GitObject(Git2.Object* nativeHandle)
-    {
-        NativeHandle = nativeHandle;
-    }
+    /// <inheritdoc/>
+    public bool IsNull => NativeHandle == null;
 
+    /// <summary>
+    /// Frees the native object
+    /// </summary>
+    /// <remarks>
+    /// Do not call more than once!!!
+    /// </remarks>
     public void Dispose()
     {
         git_object_free(this.NativeHandle);
     }
 
-    public GitObjectType Type => git_object_type(this.NativeHandle);
+    /// <summary>
+    /// The type of this object
+    /// </summary>
+    public GitObjectType Type
+    {
+        get
+        {
+            var handle = this.ThrowIfNull();
 
-    public ref readonly GitObjectID Id => ref *git_object_id(this.NativeHandle);
+            return git_object_type(handle.NativeHandle);
+        }
+    }
 
-    public GitRepository Owner => new(git_object_owner(this.NativeHandle));
+    public ref readonly GitObjectID Id
+    {
+        get
+        {
+            var handle = this.ThrowIfNull();
+
+            return ref *git_object_id(handle.NativeHandle);
+        }
+    }
+
+    public GitRepository Owner
+    {
+        get
+        {
+            var handle = this.ThrowIfNull();
+
+            return new(git_object_owner(handle.NativeHandle));
+        }
+    }
 
     public GitObject Duplicate()
     {
-        Git2.Object* result;
-        Git2.ThrowIfError(git_object_dup(&result, this.NativeHandle));
+        var handle = this.ThrowIfNull();
+
+        Git2.Object* result = null;
+        Git2.ThrowIfError(git_object_dup(&result, handle.NativeHandle));
 
         return new(result);
     }
 
     public GitObject Peel(GitObjectType type)
     {
-        Git2.Object* result;
-        Git2.ThrowIfError(git_object_peel(&result, this.NativeHandle, type));
+        var handle = this.ThrowIfNull();
+
+        Git2.Object* result = null;
+        Git2.ThrowIfError(git_object_peel(&result, handle.NativeHandle, type));
 
         return new(result);
+    }
+
+    public string GetShortID()
+    {
+        var handle = this.ThrowIfNull();
+
+        GitBuffer result;
+        Git2.ThrowIfError(git_object_short_id(&result, handle.NativeHandle));
+
+        try
+        {
+            return result.AsString();
+        }
+        finally
+        {
+            git_buf_dispose(&result);
+        }
     }
 
     public static bool IsRawContentValid(ReadOnlySpan<byte> buffer, GitObjectType type)
@@ -88,20 +147,14 @@ public unsafe readonly struct GitObject : IDisposable
         return result != 0;
     }
 
-    public string GetShortID()
-    {
-        GitBuffer result;
-        Git2.ThrowIfError(git_object_short_id(&result, this.NativeHandle));
+    Git2.Object* IGitObject<GitObject>.NativeHandle => this.NativeHandle;
 
-        try
-        {
-            return result.AsString();
-        }
-        finally
-        {
-            git_buf_dispose(&result);
-        }
+    static GitObject IGitObject<GitObject>.FromObjectPointer(Git2.Object* obj)
+    {
+        return new(obj);
     }
+
+    static GitObjectType IGitObject<GitObject>.ObjectType => GitObjectType.Any;
 }
 
 public static class GitObjectTypeExtensions

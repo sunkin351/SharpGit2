@@ -1,4 +1,4 @@
-﻿using static SharpGit2.NativeApi;
+﻿using static SharpGit2.GitNativeApi;
 
 namespace SharpGit2
 {

@@ -1,75 +1,128 @@
-﻿using System.Runtime.InteropServices.Marshalling;
+﻿using System.Runtime.InteropServices;
+using System.Runtime.InteropServices.Marshalling;
+using System.Text;
 
-using static SharpGit2.NativeApi;
+using static SharpGit2.GitNativeApi;
 
 namespace SharpGit2;
 
-public unsafe readonly struct GitPathSpec(Git2.PathSpec* handle) : IDisposable
+/// <summary>
+/// A compiled pathspec
+/// </summary>
+/// <remarks>
+/// Specifiers for path matching
+/// </remarks>
+/// <param name="nativeHandle">The native object pointer</param>
+public unsafe readonly struct GitPathSpec(Git2.PathSpec* nativeHandle) : IGitHandle
 {
-    public readonly Git2.PathSpec* NativeHandle = handle;
+    /// <summary>
+    /// The native object pointer
+    /// </summary>
+    public Git2.PathSpec* NativeHandle { get; } = nativeHandle;
+
+    /// <inheritdoc/>
+    public bool IsNull => this.NativeHandle == null;
 
     public void Dispose()
     {
-        git_pathspec_free(NativeHandle);
+        git_pathspec_free(this.NativeHandle);
     }
 
     public bool IsMatch(string path, GitPathSpecFlags flags = GitPathSpecFlags.Default)
     {
-        return git_pathspec_matchs_path(NativeHandle, flags, path) != 0;
+        var handle = this.ThrowIfNull();
+
+        return git_pathspec_matchs_path(handle.NativeHandle, flags, path) != 0;
     }
 
     public GitPathSpecMatchList Match(GitRepository repository, GitPathSpecFlags flags = GitPathSpecFlags.Default)
     {
-        Git2.PathSpecMatchList* result;
-        Git2.ThrowIfError(git_pathspec_match_workdir(&result, repository.NativeHandle, flags, NativeHandle));
+        var handle = this.ThrowIfNull();
+
+        Git2.PathSpecMatchList* result = null;
+        Git2.ThrowIfError(git_pathspec_match_workdir(&result, repository.NativeHandle, flags, handle.NativeHandle));
 
         return new(result);
     }
 
     public GitPathSpecMatchList Match(GitIndex index, GitPathSpecFlags flags = GitPathSpecFlags.Default)
     {
-        Git2.PathSpecMatchList* result;
-        Git2.ThrowIfError(git_pathspec_match_index(&result, index.NativeHandle, flags, NativeHandle));
+        var handle = this.ThrowIfNull();
+
+        Git2.PathSpecMatchList* result = null;
+        Git2.ThrowIfError(git_pathspec_match_index(&result, index.NativeHandle, flags, handle.NativeHandle));
 
         return new(result);
     }
 
     public GitPathSpecMatchList Match(GitTree tree, GitPathSpecFlags flags = GitPathSpecFlags.Default)
     {
-        Git2.PathSpecMatchList* result;
-        Git2.ThrowIfError(git_pathspec_match_tree(&result, tree.NativeHandle, flags, NativeHandle));
+        var handle = this.ThrowIfNull();
+
+        Git2.PathSpecMatchList* result = null;
+        Git2.ThrowIfError(git_pathspec_match_tree(&result, tree.NativeHandle, flags, handle.NativeHandle));
 
         return new(result);
     }
 
     public GitPathSpecMatchList Match(GitDiff diff, GitPathSpecFlags flags = GitPathSpecFlags.Default)
     {
-        Git2.PathSpecMatchList* result;
-        Git2.ThrowIfError(git_pathspec_match_diff(&result, diff.NativeHandle, flags, NativeHandle));
+        var handle = this.ThrowIfNull();
+
+        Git2.PathSpecMatchList* result = null;
+        Git2.ThrowIfError(git_pathspec_match_diff(&result, diff.NativeHandle, flags, handle.NativeHandle));
 
         return new(result);
     }
 
 }
 
-public unsafe readonly struct GitPathSpecMatchList(Git2.PathSpecMatchList* handle) : IDisposable
+/// <summary>
+/// List of filenames matching a pathspec
+/// </summary>
+/// <param name="nativeHandle">The native object pointer</param>
+public unsafe readonly struct GitPathSpecMatchList(Git2.PathSpecMatchList* nativeHandle) : IGitHandle
 {
-    public readonly Git2.PathSpecMatchList* NativeHandle = handle;
+    /// <summary>
+    /// The native object pointer
+    /// </summary>
+    public Git2.PathSpecMatchList* NativeHandle { get; } = nativeHandle;
 
-    public nuint Count => git_pathspec_match_list_entrycount(NativeHandle);
+    /// <inheritdoc/>
+    public bool IsNull => this.NativeHandle == null;
 
-    public nuint FailedCount => git_pathspec_match_list_failed_entrycount(NativeHandle);
+    public nuint Count
+    {
+        get
+        {
+            var handle = this.ThrowIfNull();
+
+            return git_pathspec_match_list_entrycount(handle.NativeHandle);
+        }
+    }
+
+    public nuint FailedCount
+    {
+        get
+        {
+            var handle = this.ThrowIfNull();
+
+            return git_pathspec_match_list_failed_entrycount(handle.NativeHandle);
+        }
+    }
 
     public void Dispose()
     {
-        git_pathspec_match_list_free(NativeHandle);
+        git_pathspec_match_list_free(this.NativeHandle);
     }
 
     public ref readonly Native.GitDiffDelta GetNativeDiffEntry(nuint position)
     {
-        ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(position, this.Count);
+        var handle = this.ThrowIfNull();
 
-        var ptr = git_pathspec_match_list_diff_entry(NativeHandle, position);
+        ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(position, git_pathspec_match_list_entrycount(handle.NativeHandle));
+
+        var ptr = git_pathspec_match_list_diff_entry(handle.NativeHandle, position);
 
         if (ptr is null)
         {
@@ -81,33 +134,39 @@ public unsafe readonly struct GitPathSpecMatchList(Git2.PathSpecMatchList* handl
 
     public GitDiffDelta GetDiffEntry(nuint position)
     {
-        return new GitDiffDelta(in GetNativeDiffEntry(position));
+        return new GitDiffDelta(in this.GetNativeDiffEntry(position));
     }
 
     public string GetEntry(nuint position)
     {
-        ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(position, this.Count);
+        var handle = this.ThrowIfNull();
 
-        var ptr = git_pathspec_match_list_entry(NativeHandle, position);
+        ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(position, git_pathspec_match_list_entrycount(handle.NativeHandle));
+
+        var ptr = git_pathspec_match_list_entry(handle.NativeHandle, position);
 
         if (ptr is null)
         {
             throw new InvalidOperationException("Pathspec match list WAS created against a Git Diff!");
         }
 
-        return Utf8StringMarshaller.ConvertToManaged(ptr)!;
+        return Git2.GetPooledString(ptr);
     }
 
     public string GetFailedEntry(nuint position)
     {
-        ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(position, this.FailedCount);
+        var handle = this.ThrowIfNull();
 
-        return Utf8StringMarshaller.ConvertToManaged(git_pathspec_match_list_failed_entry(NativeHandle, position))!;
+        ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(position, git_pathspec_match_list_failed_entrycount(handle.NativeHandle));
+
+        var nativeEntry = git_pathspec_match_list_failed_entry(handle.NativeHandle, position);
+
+        return Git2.GetPooledString(nativeEntry);
     }
 
     public static GitPathSpec Create(string[] pathspec)
     {
-        Git2.PathSpec* result;
+        Git2.PathSpec* result = null;
 
         Git2.ThrowIfError(git_pathspec_new(&result, pathspec));
 

@@ -1,17 +1,25 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-using static SharpGit2.NativeApi;
+﻿using static SharpGit2.GitNativeApi;
 
 namespace SharpGit2;
 
-public unsafe readonly struct GitMailmap(Git2.MailMap* nativeHandle) : IDisposable
+/// <summary>
+/// A mailmap can be used to specify alternate email addresses for repository committers or authors.
+/// This allows systems to map commits made using different email addresses to the same logical person.
+/// </summary>
+/// <param name="nativeHandle">The native object pointer</param>
+public unsafe readonly struct GitMailmap(Git2.MailMap* nativeHandle) : IDisposable, IGitHandle
 {
-    public readonly Git2.MailMap* NativeHandle = nativeHandle;
+    /// <summary>
+    /// The native object pointer
+    /// </summary>
+    public Git2.MailMap* NativeHandle { get; } = nativeHandle;
 
+    /// <inheritdoc/>
+    public bool IsNull => this.NativeHandle == null;
+
+    /// <summary>
+    /// Frees the GitMailmap object
+    /// </summary>
     public void Dispose()
     {
         git_mailmap_free(this.NativeHandle);

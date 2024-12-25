@@ -4,12 +4,12 @@ using System.Text.RegularExpressions;
 
 namespace SharpGit2;
 
-public static unsafe partial class NativeApi
+public static unsafe partial class GitNativeApi
 {
     private static readonly nint _libraryHandle;
     private static readonly NativeLibraryLifetimeObject _lifetime;
 
-    static NativeApi()
+    static GitNativeApi()
     {
         string runtimesDirectory = Path.Join(AppContext.BaseDirectory, "runtimes");
 
@@ -90,7 +90,7 @@ public static unsafe partial class NativeApi
             }
         }
 
-        NativeLibrary.SetDllImportResolver(typeof(NativeApi).Assembly, (libraryName, assembly, searchPath) =>
+        NativeLibrary.SetDllImportResolver(typeof(GitNativeApi).Assembly, (libraryName, assembly, searchPath) =>
         {
             if (libraryName == Git2.LibraryName && _libraryHandle != 0)
             {

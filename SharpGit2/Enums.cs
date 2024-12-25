@@ -3,13 +3,28 @@
 [Flags]
 public enum GitApplyFlags : uint
 {
+    /// <summary>
+    /// Don't actually make changes, just test that the patch applies. This is the equivalent of <c>git apply --check</c>.
+    /// </summary>
     Check = 1 << 0,
 }
 
+/// <summary>
+/// Possible application locations for git_apply()
+/// </summary>
 public enum GitApplyLocationType
 {
+    /// <summary>
+    /// Apply the patch to the workdir, leaving the index untouched. This is the equivalent of <c>git apply</c> with no location argument.
+    /// </summary>
     WorkDir = 0,
+    /// <summary>
+    /// Apply the patch to the index, leaving the working directory untouched. This is the equivalent of <c>git apply --cached</c>.
+    /// </summary>
     Index = 1,
+    /// <summary>
+    /// Apply the patch to both the working directory and the index. This is the equivalent of <c>git apply --index</c>.
+    /// </summary>
     Both = 2
 }
 
@@ -103,11 +118,23 @@ public enum GitBlobFilterFlags : uint
     AttributesFromCommit = 1 << 3,
 }
 
+/// <summary>
+/// Basic type of any Git branch.
+/// </summary>
 [Flags]
 public enum GitBranchType
 {
+    /// <summary>
+    /// Local branch type
+    /// </summary>
     Local = 1,
+    /// <summary>
+    /// Remote branch type
+    /// </summary>
     Remote = 2,
+    /// <summary>
+    /// Any branch type
+    /// </summary>
     All = Local | Remote
 }
 
@@ -1151,7 +1178,7 @@ public enum GitPathSpecFlags : uint
     /// <summary>
     /// This means the match functions return error code <see cref="GitError.NotFound"/>
     /// if no matches are found; otherwise no matches is still success (return 0) but
-    /// <see cref="NativeApi.git_pathspec_match_list_entrycount(Git2.PathSpecMatchList*)"/>
+    /// <see cref="GitNativeApi.git_pathspec_match_list_entrycount(Git2.PathSpecMatchList*)"/>
     /// will indicate 0 matches.
     /// </summary>
     NoMatchError = 1 << 3,
@@ -1523,38 +1550,114 @@ public enum GitStatusFlags
 }
 
 /// <summary>
-/// Flags to control status callbacks
+/// Flags to control what files are included in a status enumeration.
 /// </summary>
 [Flags]
 public enum GitStatusOptionFlags
 {
+    /// <summary>
+    /// Says that callbacks should be called on untracked files. These will only
+    /// be called if the workdir files are included in the status "show" option.
+    /// </summary>
     IncludeUntracked = 1,
+    /// <summary>
+    /// Says that ignored files get callbacks. Again, these callbacks will only
+    /// be made if the workdir files are included in the status "show" option.
+    /// </summary>
     IncludeIgnored = 1 << 1,
+    /// <summary>
+    /// Indicates that callback should be made even on unmodified files.
+    /// </summary>
     IncludeUnmodified = 1 << 2,
+    /// <summary>
+    /// Indicates that submodules should be skipped. This only applies if there
+    /// are no pending typechanges to the submodule (either from or to another type).
+    /// </summary>
     ExcludeSubmodules = 1 << 3,
+    /// <summary>
+    /// Indicates that all files in untracked directories should be included.
+    /// Normally if an entire directory is new, then just the top-level directory
+    /// is included (with a trailing slash on the entry name). This flag says to
+    /// include all of the individual files in the directory instead.
+    /// </summary>
     RecurseUntrackedDirectories = 1 << 4,
+    /// <summary>
+    /// Indicates that the given path should be treated as a literal path,
+    /// and not as a pathspec pattern.
+    /// </summary>
     DisablePathSpecMatch = 1 << 5,
+    /// <summary>
+    /// Indicates that the contents of ignored directories should be included in the status.
+    /// This is like doing <c>git ls-files -o -i --exclude-standard</c> with core git.
+    /// </summary>
     RecurseIgnoredDirectories = 1 << 6,
+    /// <summary>
+    /// Indicates that rename detection should be processed between the head and the
+    /// index and enables the <see cref="GitStatusFlags.IndexRenamed"/> as a possible status flag.
+    /// </summary>
     RenamesHeadToIndex = 1 << 7,
+    /// <summary>
+    /// Indicates that rename detection should be run between the index and the working directory
+    /// and enabled <see cref="GitStatusFlags.WorkingTreeRenamed"/> as a possible status flag.
+    /// </summary>
     RenamesIndexToWorkDirectory = 1 << 8,
+    /// <summary>
+    /// Overrides the native case sensitivity for the file system and forces the output to be in case-sensitive order.
+    /// </summary>
     SortCaseSensitively = 1 << 9,
+    /// <summary>
+    /// Overrides the native case sensitivity for the file system and forces the output to be in case-insensitive order.
+    /// </summary>
     SortCaseInsensitively = 1 << 10,
+    /// <summary>
+    /// Indicates that rename detection should include rewritten files.
+    /// </summary>
     RenamesFromRewrites = 1 << 11,
+    /// <summary>
+    /// Bypasses the default status behavior of doing a "soft" index reload (i.e. reloading the index data if the file on disk has been modified outside libgit2).
+    /// </summary>
     NoRefresh = 1 << 12,
+    /// <summary>
+    /// Tells libgit2 to refresh the stat cache in the index for files that are unchanged but have out of date stat einformation in the index.
+    /// It will result in less work being done on subsequent calls to get status. This is mutually exclusive with the NO_REFRESH option.
+    /// </summary>
     UpdateIndex = 1 << 13,
+    /// <summary>
+    /// Normally files that cannot be opened or read are ignored as these are often transient files;
+    /// this option will return unreadable files as <see cref="GitStatusFlags.WorkingTreeUnreadable"/>
+    /// </summary>
     IncludeUnreadable = 1 << 14,
+    /// <summary>
+    /// Unreadable files will be detected and given the status untracked instead of unreadable.
+    /// </summary>
     IncludeUnreadableAsUntracked = 1 << 15,
 
+    /// <summary>
+    /// The default flags
+    /// </summary>
     Defaults = IncludeIgnored | IncludeUntracked | RecurseUntrackedDirectories
 }
 
 /// <summary>
 /// Select the files on which to report status.
 /// </summary>
+/// <remarks>
+/// With git_status_foreach_ext(), this will control which changes get callbacks. <br/>
+/// With git_status_list_new(), these will control which changes are included in the list.
+/// </remarks>
 public enum GitStatusShow
 {
+    /// <summary>
+    /// The default. This roughly matches <c>git status --porcelain</c> regarding which files are included and in what order.
+    /// </summary>
     IndexAndWorkDir,
+    /// <summary>
+    /// Only gives status based on HEAD to index comparison, not looking at working directory changes.
+    /// </summary>
     IndexOnly,
+    /// <summary>
+    /// Only gives status based on index to working directory comparison, not comparing the index to the HEAD.
+    /// </summary>
     WorkDirOnly,
 }
 
