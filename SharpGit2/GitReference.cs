@@ -240,6 +240,11 @@ public unsafe readonly partial struct GitReference(Git2.Reference* nativeHandle)
     {
         var handle = this.ThrowIfNull();
 
+        if (!Enum.IsDefined(type) || type == GitObjectType.Invalid)
+        {
+            throw new ArgumentOutOfRangeException(nameof(type));
+        }
+
         Git2.Object* result = null;
         Git2.ThrowIfError(git_reference_peel(&result, handle.NativeHandle, type));
 
@@ -259,6 +264,11 @@ public unsafe readonly partial struct GitReference(Git2.Reference* nativeHandle)
     public GitError Peel(GitObjectType type, out GitObject obj)
     {
         var handle = this.ThrowIfNull();
+
+        if (!Enum.IsDefined(type) || type == GitObjectType.Invalid)
+        {
+            throw new ArgumentOutOfRangeException(nameof(type));
+        }
 
         Git2.Object* result = null;
         var error = git_reference_peel(&result, handle.NativeHandle, type);
@@ -426,9 +436,7 @@ public unsafe readonly partial struct GitReference(Git2.Reference* nativeHandle)
     {
         const string GenericErrorMessage = "Provided reference name is invalid!";
 
-        ReadOnlySpan<char> source = referenceName;
-
-        if (!Ascii.IsValid(source)) // Potentially unnecessary, needs further research
+        if (!Ascii.IsValid(referenceName)) // Potentially unnecessary, needs further research
         {
             if (throwIfInvalid)
             {
@@ -440,9 +448,9 @@ public unsafe readonly partial struct GitReference(Git2.Reference* nativeHandle)
             }
         }
 
-        source = source.TrimStart('/');
+        referenceName = referenceName.TrimStart('/');
 
-        if (source[^1] == '/')
+        if (referenceName[^1] == '/')
         {
             if (throwIfInvalid)
             {
@@ -454,7 +462,7 @@ public unsafe readonly partial struct GitReference(Git2.Reference* nativeHandle)
             }
         }
 
-        if (source[^1] == '.')
+        if (referenceName[^1] == '.')
         {
             if (throwIfInvalid)
             {
@@ -466,7 +474,7 @@ public unsafe readonly partial struct GitReference(Git2.Reference* nativeHandle)
             }
         }
 
-        if (source.IndexOfAny(_invalidChars) >= 0 || source.IndexOfAnyInRange('\0', ' ') >= 0)
+        if (referenceName.ContainsAnyInRange('\0', ' ') || referenceName.ContainsAny(_invalidChars))
         {
             if (throwIfInvalid)
             {
@@ -478,7 +486,19 @@ public unsafe readonly partial struct GitReference(Git2.Reference* nativeHandle)
             }
         }
 
-        int globCount = source.Count('*');
+        if (referenceName.ContainsAny(_invalidSequences))
+        {
+            if (throwIfInvalid)
+            {
+                ThrowInvalidSpec("Reference name cannot contain the sequences \"..\" or \"@{\"");
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+        int globCount = referenceName.Count('*');
 
         if ((format & GitReferenceFormat.RefSpecPattern) != 0)
         {
@@ -509,23 +529,11 @@ public unsafe readonly partial struct GitReference(Git2.Reference* nativeHandle)
             }
         }
 
-        if (source.ContainsAny(_invalidSequences))
-        {
-            if (throwIfInvalid)
-            {
-                ThrowInvalidSpec("Reference name cannot contain the sequences \"..\" or \"@{\""); 
-            }
-            else
-            {
-                return false;
-            }
-        }
-
-        int segment_count = source.Count('/') + 1;
+        int segment_count = referenceName.Count('/') + 1;
 
         Span<Range> segments = segment_count > 8 ? new Range[segment_count] : stackalloc Range[8];
 
-        segment_count = source.Split(segments, '/', StringSplitOptions.RemoveEmptyEntries);
+        segment_count = referenceName.Split(segments, '/', StringSplitOptions.RemoveEmptyEntries);
 
         if (segment_count == 1)
         {
@@ -542,7 +550,7 @@ public unsafe readonly partial struct GitReference(Git2.Reference* nativeHandle)
             }
 
             if ((format & GitReferenceFormat.RefSpecShorthand) == 0
-                && !(IsAllCapsAndUnderscore(source) || ((format & GitReferenceFormat.RefSpecPattern) != 0 && source.SequenceEqual("*"))))
+                && !(IsAllCapsAndUnderscore(referenceName) || ((format & GitReferenceFormat.RefSpecPattern) != 0 && referenceName.SequenceEqual("*"))))
             {
                 if (throwIfInvalid)
                 {
@@ -560,7 +568,7 @@ public unsafe readonly partial struct GitReference(Git2.Reference* nativeHandle)
             Debug.Assert(segment_count > 1);
 
             // The first segment is checked
-            if (IsAllCapsAndUnderscore(source[segments[0]]))
+            if (IsAllCapsAndUnderscore(referenceName[segments[0]]))
             {
                 if (throwIfInvalid)
                 {
@@ -578,7 +586,7 @@ public unsafe readonly partial struct GitReference(Git2.Reference* nativeHandle)
 
         for (int i = 0; i < segments.Length; ++i)
         {
-            ReadOnlySpan<char> segment = source[segments[i]];
+            ReadOnlySpan<char> segment = referenceName[segments[i]];
 
             if (segment.EndsWith(".lock"))
             {

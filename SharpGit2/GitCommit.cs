@@ -149,6 +149,8 @@ public unsafe readonly struct GitCommit(Git2.Commit* handle) : IDisposable, IGit
     {
         var handle = this.ThrowIfNull();
 
+        Git2.ThrowIfNullArgument(mailMap);
+
         Native.GitSignature* result = null;
         Git2.ThrowIfError(git_commit_author_with_mailmap(&result, handle.NativeHandle, mailMap.NativeHandle));
 
@@ -172,6 +174,8 @@ public unsafe readonly struct GitCommit(Git2.Commit* handle) : IDisposable, IGit
     public GitSignature GetCommitter(GitMailmap mailMap)
     {
         var handle = this.ThrowIfNull();
+
+        Git2.ThrowIfNullArgument(mailMap);
 
         Native.GitSignature* result = null;
         Git2.ThrowIfError(git_commit_committer_with_mailmap(&result, handle.NativeHandle, mailMap.NativeHandle));
@@ -234,6 +238,11 @@ public unsafe readonly struct GitCommit(Git2.Commit* handle) : IDisposable, IGit
     {
         var handle = this.ThrowIfNull();
 
+        if (!Enum.IsDefined(type) || type == GitObjectType.Invalid)
+        {
+            throw new ArgumentOutOfRangeException(nameof(type));
+        }
+
         Git2.Object* result = null;
         Git2.ThrowIfError(git_object_lookup_bypath(&result, (Git2.Object*)handle.NativeHandle, path, type));
 
@@ -254,6 +263,11 @@ public unsafe readonly struct GitCommit(Git2.Commit* handle) : IDisposable, IGit
     public bool TryGetObjectByPath(string path, GitObjectType type, out GitObject obj)
     {
         var handle = this.ThrowIfNull();
+
+        if (!Enum.IsDefined(type) || type == GitObjectType.Invalid)
+        {
+            throw new ArgumentOutOfRangeException(nameof(type));
+        }
 
         Git2.Object* result = null;
         var error = git_object_lookup_bypath(&result, (Git2.Object*)handle.NativeHandle, path, type);

@@ -112,6 +112,11 @@ public unsafe readonly struct GitObject(Git2.Object* nativeHandle) : IDisposable
     {
         var handle = this.ThrowIfNull();
 
+        if (!Enum.IsDefined(type) || type == GitObjectType.Invalid)
+        {
+            throw new ArgumentOutOfRangeException(nameof(type));
+        }
+
         Git2.Object* result = null;
         Git2.ThrowIfError(git_object_peel(&result, handle.NativeHandle, type));
 
@@ -137,6 +142,16 @@ public unsafe readonly struct GitObject(Git2.Object* nativeHandle) : IDisposable
 
     public static bool IsRawContentValid(ReadOnlySpan<byte> buffer, GitObjectType type)
     {
+        if (!Enum.IsDefined(type) || type == GitObjectType.Invalid)
+        {
+            throw new ArgumentOutOfRangeException(nameof(type));
+        }
+
+        if (buffer.IsEmpty)
+        {
+            return false;
+        }
+
         int result;
 
         fixed (byte* _buffer = buffer)
@@ -161,6 +176,11 @@ public static class GitObjectTypeExtensions
 {
     public static bool IsLooseType(this GitObjectType type)
     {
+        if (!Enum.IsDefined(type) || type == GitObjectType.Invalid)
+        {
+            throw new ArgumentOutOfRangeException(nameof(type));
+        }
+
         return git_object_typeisloose(type);
     }
 }

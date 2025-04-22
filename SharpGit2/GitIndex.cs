@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
@@ -177,6 +178,8 @@ public unsafe readonly struct GitIndex(Git2.Index* nativeHandle) : IDisposable, 
     {
         var handle = this.ThrowIfNull();
 
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+
         Git2.ThrowIfError(git_index_add_bypath(handle.NativeHandle, path));
     }
 
@@ -207,6 +210,8 @@ public unsafe readonly struct GitIndex(Git2.Index* nativeHandle) : IDisposable, 
     public void Add(GitIndexEntry entry, ReadOnlySpan<byte> blobData)
     {
         var handle = this.ThrowIfNull();
+
+        ArgumentNullException.ThrowIfNull(entry);
 
         fixed (byte* pBlob = blobData)
         {
@@ -345,6 +350,10 @@ public unsafe readonly struct GitIndex(Git2.Index* nativeHandle) : IDisposable, 
     {
         var handle = this.ThrowIfNull();
 
+        ArgumentNullException.ThrowIfNull(ancestor);
+        ArgumentNullException.ThrowIfNull(our);
+        ArgumentNullException.ThrowIfNull(their);
+
         Git2.ThrowIfError(git_index_conflict_add(handle.NativeHandle, ancestor, our, their));
     }
 
@@ -375,7 +384,7 @@ public unsafe readonly struct GitIndex(Git2.Index* nativeHandle) : IDisposable, 
     /// <summary>
     /// Enumerate the conflicts in the index.
     /// </summary>
-    /// <returns>An enumerable </returns>
+    /// <returns>An enumerable that retreives all conflicts</returns>
     /// <remarks>
     /// The index must not be modified while iterating; the results are undefined.
     /// <br/><br/>
@@ -388,6 +397,15 @@ public unsafe readonly struct GitIndex(Git2.Index* nativeHandle) : IDisposable, 
         return new ConflictEnumerable(handle);
     }
 
+    /// <summary>
+    /// Enumerate the entries in the index.
+    /// </summary>
+    /// <returns>An enumerable that retreives all entries</returns>
+    /// <remarks>
+    /// The index must not be modified while iterating; the results are undefined.
+    /// <br/><br/>
+    /// <see cref="IDisposable.Dispose()"/> MUST be called on the resulting enumerator. (<see langword="foreach"/> does this automatically)
+    /// </remarks>
     public Enumerable EnumerateEntries()
     {
         var handle = this.ThrowIfNull();
@@ -404,6 +422,8 @@ public unsafe readonly struct GitIndex(Git2.Index* nativeHandle) : IDisposable, 
     {
         var handle = this.ThrowIfNull();
 
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+
         nuint idx = 0;
         var error = git_index_find(&idx, handle.NativeHandle, path);
 
@@ -418,6 +438,8 @@ public unsafe readonly struct GitIndex(Git2.Index* nativeHandle) : IDisposable, 
     public nuint? FindPrefix(string pathPrefix)
     {
         var handle = this.ThrowIfNull();
+
+        ArgumentException.ThrowIfNullOrWhiteSpace(pathPrefix);
 
         nuint idx = 0;
         var error = git_index_find_prefix(&idx, handle.NativeHandle, pathPrefix);
@@ -439,18 +461,22 @@ public unsafe readonly struct GitIndex(Git2.Index* nativeHandle) : IDisposable, 
         return GetEntry((nuint)index);
     }
     
-    public GitIndexEntry? GetEntry(nuint index)
+    public GitIndexEntry GetEntry(nuint index)
     {
-        var handle = this.ThrowIfNull();
+        var handle = this.ThrowIfNull().NativeHandle;
 
-        var ptr = git_index_get_byindex(handle.NativeHandle, index);
+        ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(index, git_index_entrycount(handle));
 
-        return ptr is null ? null : new GitIndexEntry(ptr);
+        var ptr = git_index_get_byindex(handle, index);
+
+        return new GitIndexEntry(ptr);
     }
 
     public GitIndexEntry? GetEntry(string path, GitIndexStageFlags stage)
     {
         var handle = this.ThrowIfNull();
+
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
 
         var ptr = git_index_get_bypath(handle.NativeHandle, path, stage);
 
@@ -487,12 +513,18 @@ public unsafe readonly struct GitIndex(Git2.Index* nativeHandle) : IDisposable, 
     {
         var handle = this.ThrowIfNull();
 
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+
         Git2.ThrowIfError(git_index_conflict_remove(handle.NativeHandle, path));
     }
 
     public void Remove(string path, GitIndexStageFlags stage)
     {
         var handle = this.ThrowIfNull();
+
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        if (!Enum.IsDefined(stage))
+            throw new ArgumentOutOfRangeException(nameof(stage), stage, "Invalid stage flags!");
 
         Git2.ThrowIfError(git_index_remove(handle.NativeHandle, path, stage));
     }
@@ -550,7 +582,7 @@ public unsafe readonly struct GitIndex(Git2.Index* nativeHandle) : IDisposable, 
 
         Native.GitIndexEntry* pAncestor = null, pOurs = null, pTheirs = null;
 
-        var error = git_index_conflict_get(&pAncestor, &pOurs, &pTheirs, NativeHandle, path);
+        var error = git_index_conflict_get(&pAncestor, &pOurs, &pTheirs, handle.NativeHandle, path);
 
         switch (error)
         {
@@ -625,8 +657,8 @@ public unsafe readonly struct GitIndex(Git2.Index* nativeHandle) : IDisposable, 
     {
         var handle = this.ThrowIfNull();
 
-        GitObjectID id;
-        Git2.ThrowIfError(git_index_write_tree(&id, NativeHandle));
+        GitObjectID id = default;
+        Git2.ThrowIfError(git_index_write_tree(&id, handle.NativeHandle));
 
         return id;
     }
@@ -646,7 +678,7 @@ public unsafe readonly struct GitIndex(Git2.Index* nativeHandle) : IDisposable, 
         ArgumentNullException.ThrowIfNull(repository.NativeHandle);
 
         GitObjectID id;
-        Git2.ThrowIfError(git_index_write_tree_to(&id, NativeHandle, repository.NativeHandle));
+        Git2.ThrowIfError(git_index_write_tree_to(&id, handle.NativeHandle, repository.NativeHandle));
 
         return id;
     }

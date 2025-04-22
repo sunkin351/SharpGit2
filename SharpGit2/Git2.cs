@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System.Buffers;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
@@ -154,7 +155,7 @@ public static unsafe partial class Git2
 
     public static GitDescribeResult DescribeCommit(GitObject committish, in GitDescribeOptions options)
     {
-        committish.ThrowIfNull();
+        ThrowIfNullArgument(committish);
 
         DescribeResult* result = null;
         GitError error;
@@ -217,14 +218,87 @@ public static unsafe partial class Git2
     internal static THandle ThrowIfNull<THandle>(this THandle handle) where THandle : struct, IGitHandle
     {
         if (handle.IsNull)
-            ThrowNull();
+            Throw();
 
         return handle;
+
+        static void Throw()
+        {
+            throw new NullReferenceException("Git Object Handle not set to an instance of an object!");
+        }
     }
 
-    private static void ThrowNull()
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void ThrowIfNullArgument<THandle>(THandle handle, [CallerArgumentExpression(nameof(handle))] string? paramName = null)
+        where THandle : struct, IGitHandle
     {
-        throw new NullReferenceException("Git Object Handle not set to an instance of an object!");
+        if (handle.IsNull)
+            Throw(paramName);
+
+        static void Throw(string? paramName)
+        {
+            throw new ArgumentNullException(paramName);
+        }
+    }
+
+    public static void MergeFileContent(ref GitMergeFileResult destination, in GitMergeFileInput ancestor, in GitMergeFileInput our, in GitMergeFileInput their, in GitMergeFileOptions options)
+    {
+        Native.GitMergeFileResult result = default;
+        Native.GitMergeFileInput _ancestor = new(), _our = new(), _their = new();
+
+        Native.GitMergeFileOptions _options = default;
+
+        try
+        {
+            _options.FromManaged(in options);
+
+            _ancestor.Mode = ancestor.Mode;
+            _ancestor.Path = Utf8StringMarshaller.ConvertToUnmanaged(ancestor.Path);
+
+            _our.Mode = our.Mode;
+            _our.Path = Utf8StringMarshaller.ConvertToUnmanaged(our.Path);
+
+            _their.Mode = their.Mode;
+            _their.Path = Utf8StringMarshaller.ConvertToUnmanaged(their.Path);
+
+            var ancestorSpan = ancestor.FileContent.Span;
+            var ourSpan = our.FileContent.Span;
+            var theirSpan = their.FileContent.Span;
+
+            fixed (byte* ancestorPtr = ancestorSpan, ourPtr = ourSpan, theirPtr = theirSpan)
+            {
+                _ancestor.FileContent = ancestorPtr;
+                _ancestor.ContentLength = (nuint)ancestorSpan.Length;
+
+                _our.FileContent = ourPtr;
+                _our.ContentLength = (nuint)ourSpan.Length;
+
+                _their.FileContent = theirPtr;
+                _their.ContentLength = (nuint)theirSpan.Length;
+
+                ThrowIfError(git_merge_file(&result, &_ancestor, &_our, &_their, &_options));
+            }
+
+            try
+            {
+                destination.AutoMergeable = result.AutoMergeable != 0;
+                destination.Mode = result.Mode;
+                destination.Path = Utf8StringMarshaller.ConvertToManaged(result.Path)!;
+                destination.FileContent = new ReadOnlySpan<byte>(result.FileContent, checked((int)result.ContentLength)).ToArray(); // copy into managed memory, allocates, could be improved
+            }
+            finally
+            {
+                git_merge_file_result_free(&result);
+            }
+        }
+        finally
+        {
+            _options.Free();
+
+            Utf8StringMarshaller.Free(_ancestor.Path);
+            Utf8StringMarshaller.Free(_our.Path);
+            Utf8StringMarshaller.Free(_their.Path);
+        }
     }
 
     /// <summary>

@@ -1,13 +1,42 @@
 ﻿using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 
 namespace SharpGit2
 {
     public unsafe readonly struct GitSignature
     {
-        public readonly string Name;
-        public readonly string Email;
-        public readonly DateTimeOffset When;
+        public required string Name 
+        {
+            get;
+            init
+            {
+                ArgumentException.ThrowIfNullOrWhiteSpace(value);
+                if (value.AsSpan().ContainsAny('<', '>'))
+                {
+                    throw new ArgumentException("Name cannot contain angle brackets!");
+                }
+
+                field = value.Trim();
+            }
+        }
+
+        public required string Email
+        {
+            get;
+            init
+            {
+                ArgumentException.ThrowIfNullOrWhiteSpace(value);
+                if (value.AsSpan().ContainsAny('<', '>'))
+                {
+                    throw new ArgumentException("Email cannot contain angle brackets!");
+                }
+
+                field = value.Trim();
+            }
+        }
+        
+        public DateTimeOffset When { get; init; }
 
         /// <summary>
         /// Constructs a signature from name, email, and time
@@ -19,22 +48,15 @@ namespace SharpGit2
         /// <remarks>
         /// Matches behavior with <see cref="GitNativeApi.git_signature_new(Native.GitSignature**, string, string, ulong, int)"/>
         /// </remarks>
+        [SetsRequiredMembers]
         public GitSignature(string name, string email, DateTimeOffset when)
         {
-            ArgumentException.ThrowIfNullOrWhiteSpace(name);
-            ArgumentException.ThrowIfNullOrWhiteSpace(email);
-
-            if (name.AsSpan().ContainsAny('<', '>')
-                || email.AsSpan().ContainsAny('<', '>'))
-            {
-                throw new ArgumentException("Name or Email contains angle brackets!");
-            }
-
-            Name = name.Trim();
-            Email = email.Trim();
+            Name = name;
+            Email = email;
             When = when;
         }
 
+        [SetsRequiredMembers]
         public GitSignature(in Native.GitSignature sig)
         {
             ArgumentNullException.ThrowIfNull(sig.Name);

@@ -172,6 +172,8 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
     {
         var handle = this.ThrowIfNull();
 
+        Git2.ThrowIfNullArgument(reference);
+
         Git2.AnnotatedCommit* result = null;
         Git2.ThrowIfError(git_annotated_commit_from_ref(&result, handle.NativeHandle, reference.NativeHandle));
 
@@ -696,6 +698,10 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
     {
         var handle = this.ThrowIfNull();
 
+        GitBranch.ThrowIfInvalidBranchName(branchName);
+        if (target.IsNull)
+            throw new ArgumentNullException(nameof(target), "A branch must have a target!");
+
         Git2.Reference* result = null;
         Git2.ThrowIfError(git_branch_create(&result, handle.NativeHandle, branchName, target.NativeHandle, force ? 1 : 0));
 
@@ -705,6 +711,10 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
     public GitBranch CreateBranch(string branchName, GitAnnotatedCommit target, bool force)
     {
         var handle = this.ThrowIfNull();
+
+        GitBranch.ThrowIfInvalidBranchName(branchName);
+        if (target.IsNull)
+            throw new ArgumentNullException(nameof(target), "A branch must have a target!");
 
         Git2.Reference* result = null;
         Git2.ThrowIfError(git_branch_create_from_annotated(&result, handle.NativeHandle, branchName, target.NativeHandle, force ? 1 : 0));
@@ -721,12 +731,19 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
     {
         var handle = this.ThrowIfNull();
 
+        if (!Enum.IsDefined(filter))
+            throw new ArgumentOutOfRangeException(nameof(filter));
+
         return new BranchEnumerable(handle, filter);
     }
 
     public GitBranch GetBranch(string branchName, GitBranchType type)
     {
         var handle = this.ThrowIfNull();
+
+        GitBranch.ThrowIfInvalidBranchName(branchName);
+        if (!Enum.IsDefined(type))
+            throw new ArgumentOutOfRangeException(nameof(type));
 
         Git2.Reference* result = null;
         Git2.ThrowIfError(git_branch_lookup(&result, handle.NativeHandle, branchName, type));
@@ -737,6 +754,10 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
     public bool TryGetBranch(string branchName, GitBranchType type, out GitBranch branch)
     {
         var handle = this.ThrowIfNull();
+
+        GitBranch.ThrowIfInvalidBranchName(branchName);
+        if (!Enum.IsDefined(type))
+            throw new ArgumentOutOfRangeException(nameof(type));
 
         Git2.Reference* result = null;
         var error = git_branch_lookup(&result, handle.NativeHandle, branchName, type);
@@ -796,8 +817,9 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
     {
         var handle = this.ThrowIfNull();
 
-        Native.GitBuffer buffer = default;
+        GitReference.ThrowIfInvalidReferenceName(refName, GitReferenceFormat.Normal);
 
+        Native.GitBuffer buffer = default;
         Git2.ThrowIfError(git_branch_upstream_merge(&buffer, handle.NativeHandle, refName));
 
         try
@@ -823,6 +845,8 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
         {
             throw new ArgumentException("Reference name must be a local branch!", nameof(refName));
         }
+
+        GitReference.ThrowIfInvalidReferenceName(refName, GitReferenceFormat.Normal);
 
         Native.GitBuffer buffer = default;
         var error = git_branch_upstream_name(&buffer, handle.NativeHandle, refName);
@@ -860,6 +884,8 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
         {
             throw new ArgumentException("Reference name must be a local branch!", nameof(refName));
         }
+
+        GitReference.ThrowIfInvalidReferenceName(refName, GitReferenceFormat.Normal);
 
         Native.GitBuffer buffer = default;
         var error = git_branch_upstream_remote(&buffer, handle.NativeHandle, refName);
@@ -1937,7 +1963,7 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
     /// <param name="onto">The branch to rebase onto, or <see langword="default"/> to rebase onto the given upstream</param>
     /// <param name="options">Options to specify how rebase is performed</param>
     /// <returns>The created rebase object</returns>
-    public GitRebase CreateRebase(GitAnnotatedCommit branch, GitAnnotatedCommit upstream, GitAnnotatedCommit onto, in GitRebaseOptions options)
+    public GitRebase StartRebase(GitAnnotatedCommit branch, GitAnnotatedCommit upstream, GitAnnotatedCommit onto, in GitRebaseOptions options)
     {
         var handle = this.ThrowIfNull();
 
@@ -3445,7 +3471,7 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
     {
         var handle = this.ThrowIfNull();
 
-        ArgumentException.ThrowIfNullOrEmpty(refName);
+        GitReference.ThrowIfInvalidReferenceName(refName, GitReferenceFormat.Normal);
 
         Git2.ThrowIfError(git_repository_set_head(handle.NativeHandle, refName));
     }
@@ -3454,7 +3480,7 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
     {
         var handle = this.ThrowIfNull();
 
-        ArgumentNullException.ThrowIfNull(reference.NativeHandle);
+        Git2.ThrowIfNullArgument(reference);
 
         Git2.ThrowIfError(git_repository_set_head(handle.NativeHandle, reference.NativeName));
     }

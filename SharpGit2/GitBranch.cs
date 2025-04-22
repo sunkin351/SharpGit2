@@ -294,4 +294,15 @@ public unsafe readonly struct GitBranch : IDisposable, IGitHandle
             ArrayPool<char>.Shared.Return(array);
         }
     }
+
+    internal static void ThrowIfInvalidBranchName(ReadOnlySpan<char> branchName)
+    {
+        if (!IsValidBranchName(branchName))
+            Throw(branchName);
+        
+        static void Throw(ReadOnlySpan<char> branchName)
+        {
+            throw new ArgumentException($"Invalid branch name '{branchName}'!", nameof(branchName));
+        }
+    }
 }

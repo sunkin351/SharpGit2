@@ -101,15 +101,32 @@ public unsafe readonly struct GitRebase(Git2.Rebase* nativeHandle) : IGitHandle
         }
     }
 
-    public GitRebaseOperation Next()
+    /// <summary>
+    /// Move to the next operation to apply.
+    /// </summary>
+    /// <param name="operation">The details of the operation</param>
+    /// <returns><see langword="true"/> if there's another operation to process, <see langword="false"/> otherwise.</returns>
+    public bool Next(out GitRebaseOperation operation)
     {
         var handle = this.ThrowIfNull();
 
         Native.GitRebaseOperation* nextOp = null;
+        var error = git_rebase_next(&nextOp, handle.NativeHandle);
 
-        Git2.ThrowIfError(git_rebase_next(&nextOp, handle.NativeHandle));
-
-        return new(in *nextOp);
+        if (error == GitError.OK)
+        {
+            operation = new(in *nextOp);
+            return true;
+        }
+        else if (error == GitError.IterationOver)
+        {
+            operation = default;
+            return false;
+        }
+        else
+        {
+            throw Git2.ExceptionForError(error);
+        }
     }
 
     public GitIndex GetInMemoryIndex()
@@ -155,7 +172,7 @@ public unsafe readonly struct GitRebase(Git2.Rebase* nativeHandle) : IGitHandle
         Git2.ThrowIfError(git_rebase_abort(handle.NativeHandle));
     }
 
-    public void Finish(GitSignature? committer)
+    public void Finish(GitSignature? committer = null)
     {
         var handle = this.ThrowIfNull();
 

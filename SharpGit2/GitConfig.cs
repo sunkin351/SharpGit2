@@ -26,21 +26,23 @@ public unsafe readonly struct GitConfig(Git2.Config* handle) : IDisposable, IGit
     {
         var handle = this.ThrowIfNull();
 
-        Git2.ThrowIfError(git_config_add_file_ondisk(NativeHandle, path, level, repository.NativeHandle, force ? 1 : 0));
+        Git2.ThrowIfNullArgument(repository);
+
+        Git2.ThrowIfError(git_config_add_file_ondisk(handle.NativeHandle, path, level, repository.NativeHandle, force ? 1 : 0));
     }
 
     public void DeleteEntry(string name)
     {
         var handle = this.ThrowIfNull();
 
-        Git2.ThrowIfError(git_config_delete_entry(NativeHandle, name));
+        Git2.ThrowIfError(git_config_delete_entry(handle.NativeHandle, name));
     }
 
     public void DeleteMultiVariable(string name, [StringSyntax("regex")] string regex)
     {
         var handle = this.ThrowIfNull();
 
-        Git2.ThrowIfError(git_config_delete_multivar(NativeHandle, name, regex));
+        Git2.ThrowIfError(git_config_delete_multivar(handle.NativeHandle, name, regex));
     }
 
     public Enumerable EnumerateEntries([StringSyntax("regex")] string? regex = null)
@@ -66,7 +68,7 @@ public unsafe readonly struct GitConfig(Git2.Config* handle) : IDisposable, IGit
 
         var context = new Git2.CallbackContext<ForEachCallback>(callback);
 
-        var error = git_config_foreach(NativeHandle, &_ForEachCallback, (nint)(void*)&context);
+        var error = git_config_foreach(handle.NativeHandle, &_ForEachCallback, (nint)(void*)&context);
 
         context.ExceptionInfo?.Throw();
         Git2.ThrowIfError(error);
@@ -79,7 +81,7 @@ public unsafe readonly struct GitConfig(Git2.Config* handle) : IDisposable, IGit
 
         var context = new Git2.CallbackContext<ForEachCallback>(callback);
 
-        var error = git_config_foreach_match(NativeHandle, regex, &_ForEachCallback, (nint)(void*)&context);
+        var error = git_config_foreach_match(handle.NativeHandle, regex, &_ForEachCallback, (nint)(void*)&context);
 
         context.ExceptionInfo?.Throw();
         Git2.ThrowIfError(error);
@@ -92,7 +94,7 @@ public unsafe readonly struct GitConfig(Git2.Config* handle) : IDisposable, IGit
 
         var context = new Git2.CallbackContext<ForEachCallback>(callback);
 
-        var error = git_config_get_multivar_foreach(NativeHandle, name, regex, &_ForEachCallback, (nint)(void*)&context);
+        var error = git_config_get_multivar_foreach(handle.NativeHandle, name, regex, &_ForEachCallback, (nint)(void*)&context);
 
         context.ExceptionInfo?.Throw();
         Git2.ThrowIfError(error);
@@ -123,7 +125,7 @@ public unsafe readonly struct GitConfig(Git2.Config* handle) : IDisposable, IGit
         var handle = this.ThrowIfNull();
 
         int value;
-        Git2.ThrowIfError(git_config_get_bool(&value, NativeHandle, name));
+        Git2.ThrowIfError(git_config_get_bool(&value, handle.NativeHandle, name));
 
         return value != 0;
     }
@@ -133,7 +135,7 @@ public unsafe readonly struct GitConfig(Git2.Config* handle) : IDisposable, IGit
         var handle = this.ThrowIfNull();
 
         Native.GitConfigEntry* entry = null;
-        Git2.ThrowIfError(git_config_get_entry(&entry, NativeHandle, name));
+        Git2.ThrowIfError(git_config_get_entry(&entry, handle.NativeHandle, name));
 
         try
         {
@@ -152,7 +154,7 @@ public unsafe readonly struct GitConfig(Git2.Config* handle) : IDisposable, IGit
         var handle = this.ThrowIfNull();
 
         int value;
-        Git2.ThrowIfError(git_config_get_int32(&value, NativeHandle, name));
+        Git2.ThrowIfError(git_config_get_int32(&value, handle.NativeHandle, name));
 
         return value;
     }
@@ -162,7 +164,7 @@ public unsafe readonly struct GitConfig(Git2.Config* handle) : IDisposable, IGit
         var handle = this.ThrowIfNull();
 
         long value;
-        Git2.ThrowIfError(git_config_get_int64(&value, NativeHandle, name));
+        Git2.ThrowIfError(git_config_get_int64(&value, handle.NativeHandle, name));
 
         return value;
     }
@@ -172,7 +174,7 @@ public unsafe readonly struct GitConfig(Git2.Config* handle) : IDisposable, IGit
         var handle = this.ThrowIfNull();
 
         Native.GitBuffer buffer = default;
-        Git2.ThrowIfError(git_config_get_path(&buffer, NativeHandle, name));
+        Git2.ThrowIfError(git_config_get_path(&buffer, handle.NativeHandle, name));
 
         try
         {
@@ -189,7 +191,7 @@ public unsafe readonly struct GitConfig(Git2.Config* handle) : IDisposable, IGit
         var handle = this.ThrowIfNull();
 
         Git2.Config* config = null;
-        Git2.ThrowIfError(git_config_snapshot(&config, NativeHandle));
+        Git2.ThrowIfError(git_config_snapshot(&config, handle.NativeHandle));
 
         return new(config);
     }
@@ -199,7 +201,7 @@ public unsafe readonly struct GitConfig(Git2.Config* handle) : IDisposable, IGit
         var handle = this.ThrowIfNull();
 
         Native.GitBuffer buffer = default;
-        Git2.ThrowIfError(git_config_get_string_buf(&buffer, NativeHandle, name));
+        Git2.ThrowIfError(git_config_get_string_buf(&buffer, handle.NativeHandle, name));
 
         try
         {
@@ -215,35 +217,35 @@ public unsafe readonly struct GitConfig(Git2.Config* handle) : IDisposable, IGit
     {
         var handle = this.ThrowIfNull();
 
-        Git2.ThrowIfError(git_config_set_bool(NativeHandle, name, value ? 1 : 0));
+        Git2.ThrowIfError(git_config_set_bool(handle.NativeHandle, name, value ? 1 : 0));
     }
 
     public void Set(string name, int value)
     {
         var handle = this.ThrowIfNull();
 
-        Git2.ThrowIfError(git_config_set_int32(NativeHandle, name, value));
+        Git2.ThrowIfError(git_config_set_int32(handle.NativeHandle, name, value));
     }
 
     public void Set(string name, long value)
     {
         var handle = this.ThrowIfNull();
 
-        Git2.ThrowIfError(git_config_set_int64(NativeHandle, name, value));
+        Git2.ThrowIfError(git_config_set_int64(handle.NativeHandle, name, value));
     }
 
     public void Set(string name, [StringSyntax("regex")] string regex, string value)
     {
         var handle = this.ThrowIfNull();
 
-        Git2.ThrowIfError(git_config_set_multivar(NativeHandle, name, regex, value));
+        Git2.ThrowIfError(git_config_set_multivar(handle.NativeHandle, name, regex, value));
     }
 
     public void Set(string name, string value)
     {
         var handle = this.ThrowIfNull();
 
-        Git2.ThrowIfError(git_config_set_string(NativeHandle, name, value));
+        Git2.ThrowIfError(git_config_set_string(handle.NativeHandle, name, value));
     }
 
     public GitConfig OpenLevel(GitConfigLevel level)
@@ -252,7 +254,7 @@ public unsafe readonly struct GitConfig(Git2.Config* handle) : IDisposable, IGit
 
         Git2.Config* result = null;
 
-        Git2.ThrowIfError(git_config_open_level(&result, NativeHandle, level));
+        Git2.ThrowIfError(git_config_open_level(&result, handle.NativeHandle, level));
 
         return new(result);
     }
@@ -263,7 +265,7 @@ public unsafe readonly struct GitConfig(Git2.Config* handle) : IDisposable, IGit
 
         Git2.Config* result = null;
 
-        Git2.ThrowIfError(git_config_open_global(&result, NativeHandle));
+        Git2.ThrowIfError(git_config_open_global(&result, handle.NativeHandle));
 
         return new(result);
     }
