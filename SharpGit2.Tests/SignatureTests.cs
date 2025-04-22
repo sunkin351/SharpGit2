@@ -14,7 +14,7 @@ public unsafe sealed class SignatureTests
         DateTimeOffset now = DateTimeOffset.Now;
 
         Native.GitSignature* sig = null;
-        Git2.ThrowIfError(NativeApi.git_signature_now(&sig, "Gamma_Draconis", "17joshuanewcomb@gmail.com"));
+        Git2.ThrowIfError(GitNativeApi.git_signature_now(&sig, "Your Name", "noreply@gmail.com"));
         try
         {
             var gitNow = (GitTime)now;
@@ -25,7 +25,7 @@ public unsafe sealed class SignatureTests
         }
         finally
         {
-            NativeApi.git_signature_free(sig);
+            GitNativeApi.git_signature_free(sig);
         }
 
         var now2 = (DateTimeOffset)(GitTime)now;
@@ -51,7 +51,7 @@ public unsafe sealed class SignatureTests
         sig1 = GitSignature.Now(sig1.Name, sig1.Email);
 
         string sigString = sig1.ToString();
-        Assert.Matches("[^<>]+<[^<>]+>(\\w+\\d+(\\w+[+-]\\d{4})?)?", sigString);
+        Assert.Matches("[^<>]+<[^<>]+>(\\s+\\d+(\\s+[+-]\\d{4})?)?", sigString);
 
         Assert.True(GitSignature.TryParse(sigString, out GitSignature sig2));
         Assert.Equal(sig1.Name, sig2.Name);
@@ -60,7 +60,7 @@ public unsafe sealed class SignatureTests
         Assert.Equal(sig1.When.TotalOffsetMinutes, sig2.When.TotalOffsetMinutes);
 
         Native.GitSignature* sig3 = null;
-        Git2.ThrowIfError(NativeApi.git_signature_from_buffer(&sig3, sigString));
+        Git2.ThrowIfError(GitNativeApi.git_signature_from_buffer(&sig3, sigString));
 
         try
         {
@@ -68,7 +68,7 @@ public unsafe sealed class SignatureTests
         }
         finally
         {
-            NativeApi.git_signature_free(sig3);
+            GitNativeApi.git_signature_free(sig3);
         }
 
         Assert.Equal(sig1.Name, sig2.Name);
