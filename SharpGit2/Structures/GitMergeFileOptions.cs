@@ -37,8 +37,9 @@ namespace SharpGit2.Native
             MarkerSize = 7;
         }
 
-        public void FromManaged(in SharpGit2.GitMergeFileOptions options, List<GCHandle> gchandles)
+        public void FromManaged(in SharpGit2.GitMergeFileOptions options)
         {
+            Version = 1;
             AncestorLabel = Utf8StringMarshaller.ConvertToUnmanaged(options.AncestorLabel);
             OurLabel = Utf8StringMarshaller.ConvertToUnmanaged(options.OurLabel);
             TheirLabel = Utf8StringMarshaller.ConvertToUnmanaged(options.TheirLabel);

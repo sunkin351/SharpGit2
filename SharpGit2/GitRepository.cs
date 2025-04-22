@@ -1706,7 +1706,7 @@ public unsafe readonly partial struct GitRepository(Git2.Repository* handle) : I
             _ours.FromManaged(ours);
             _theirs.FromManaged(theirs);
 
-            _options.FromManaged(in options, gchandles);
+            _options.FromManaged(in options);
 
             error = git_merge_file_from_index(&_result, handle.NativeHandle, &_ancestor, &_ours, &_theirs, &_options);
         }
