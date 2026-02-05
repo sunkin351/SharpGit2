@@ -12,20 +12,60 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		.editorconfig = .editorconfig
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpGit2.Managed", "SharpGit2.Managed\SharpGit2.Managed.csproj", "{FF68C579-DE10-4AE3-B059-00F8294516B2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpGit2.Managed.Tests", "SharpGit2.Managed.Tests\SharpGit2.Managed.Tests.csproj", "{640EF4D3-5228-4A3D-9C15-3DEB94C5184F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpGit2Benchmarks", "SharpGit2Benchmarks\SharpGit2Benchmarks.csproj", "{1D3FC712-DFA4-4B8B-B22F-D45BF055683F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
+		SHA256 GitObjectIDs Debug|Any CPU = SHA256 GitObjectIDs Debug|Any CPU
+		SHA256 GitObjectIDs Release|Any CPU = SHA256 GitObjectIDs Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{4062C17B-548D-4AB6-85CA-2C7231E65D08}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{4062C17B-548D-4AB6-85CA-2C7231E65D08}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4062C17B-548D-4AB6-85CA-2C7231E65D08}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4062C17B-548D-4AB6-85CA-2C7231E65D08}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4062C17B-548D-4AB6-85CA-2C7231E65D08}.SHA256 GitObjectIDs Debug|Any CPU.ActiveCfg = SHA256 GitObjectIDs Debug|Any CPU
+		{4062C17B-548D-4AB6-85CA-2C7231E65D08}.SHA256 GitObjectIDs Debug|Any CPU.Build.0 = SHA256 GitObjectIDs Debug|Any CPU
+		{4062C17B-548D-4AB6-85CA-2C7231E65D08}.SHA256 GitObjectIDs Release|Any CPU.ActiveCfg = SHA256 GitObjectIDs Release|Any CPU
+		{4062C17B-548D-4AB6-85CA-2C7231E65D08}.SHA256 GitObjectIDs Release|Any CPU.Build.0 = SHA256 GitObjectIDs Release|Any CPU
 		{FD211EC4-3707-4036-87BC-4CA08EC19F07}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{FD211EC4-3707-4036-87BC-4CA08EC19F07}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FD211EC4-3707-4036-87BC-4CA08EC19F07}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{FD211EC4-3707-4036-87BC-4CA08EC19F07}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FD211EC4-3707-4036-87BC-4CA08EC19F07}.SHA256 GitObjectIDs Debug|Any CPU.ActiveCfg = SHA256 GitObjectIDs Debug|Any CPU
+		{FD211EC4-3707-4036-87BC-4CA08EC19F07}.SHA256 GitObjectIDs Debug|Any CPU.Build.0 = SHA256 GitObjectIDs Debug|Any CPU
+		{FD211EC4-3707-4036-87BC-4CA08EC19F07}.SHA256 GitObjectIDs Release|Any CPU.ActiveCfg = SHA256 GitObjectIDs Release|Any CPU
+		{FD211EC4-3707-4036-87BC-4CA08EC19F07}.SHA256 GitObjectIDs Release|Any CPU.Build.0 = SHA256 GitObjectIDs Release|Any CPU
+		{FF68C579-DE10-4AE3-B059-00F8294516B2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FF68C579-DE10-4AE3-B059-00F8294516B2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FF68C579-DE10-4AE3-B059-00F8294516B2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FF68C579-DE10-4AE3-B059-00F8294516B2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FF68C579-DE10-4AE3-B059-00F8294516B2}.SHA256 GitObjectIDs Debug|Any CPU.ActiveCfg = SHA256 GitObjectIDs Debug|Any CPU
+		{FF68C579-DE10-4AE3-B059-00F8294516B2}.SHA256 GitObjectIDs Debug|Any CPU.Build.0 = SHA256 GitObjectIDs Debug|Any CPU
+		{FF68C579-DE10-4AE3-B059-00F8294516B2}.SHA256 GitObjectIDs Release|Any CPU.ActiveCfg = SHA256 GitObjectIDs Release|Any CPU
+		{FF68C579-DE10-4AE3-B059-00F8294516B2}.SHA256 GitObjectIDs Release|Any CPU.Build.0 = SHA256 GitObjectIDs Release|Any CPU
+		{640EF4D3-5228-4A3D-9C15-3DEB94C5184F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{640EF4D3-5228-4A3D-9C15-3DEB94C5184F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{640EF4D3-5228-4A3D-9C15-3DEB94C5184F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{640EF4D3-5228-4A3D-9C15-3DEB94C5184F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{640EF4D3-5228-4A3D-9C15-3DEB94C5184F}.SHA256 GitObjectIDs Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{640EF4D3-5228-4A3D-9C15-3DEB94C5184F}.SHA256 GitObjectIDs Debug|Any CPU.Build.0 = Debug|Any CPU
+		{640EF4D3-5228-4A3D-9C15-3DEB94C5184F}.SHA256 GitObjectIDs Release|Any CPU.ActiveCfg = Debug|Any CPU
+		{640EF4D3-5228-4A3D-9C15-3DEB94C5184F}.SHA256 GitObjectIDs Release|Any CPU.Build.0 = Debug|Any CPU
+		{1D3FC712-DFA4-4B8B-B22F-D45BF055683F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1D3FC712-DFA4-4B8B-B22F-D45BF055683F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1D3FC712-DFA4-4B8B-B22F-D45BF055683F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1D3FC712-DFA4-4B8B-B22F-D45BF055683F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1D3FC712-DFA4-4B8B-B22F-D45BF055683F}.SHA256 GitObjectIDs Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1D3FC712-DFA4-4B8B-B22F-D45BF055683F}.SHA256 GitObjectIDs Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1D3FC712-DFA4-4B8B-B22F-D45BF055683F}.SHA256 GitObjectIDs Release|Any CPU.ActiveCfg = Debug|Any CPU
+		{1D3FC712-DFA4-4B8B-B22F-D45BF055683F}.SHA256 GitObjectIDs Release|Any CPU.Build.0 = Debug|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
