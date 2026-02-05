@@ -6,7 +6,7 @@ using CommunityToolkit.HighPerformance.Buffers;
 using SharpGit2.Managed.Internal;
 using TerraFX.Interop.Windows;
 
-namespace SharpGit2.Managed.ODB;
+namespace SharpGit2.Managed.ReferenceDB;
 
 /// <summary>
 /// The default reference database backend, storing reference information on disk in the classic Git format.

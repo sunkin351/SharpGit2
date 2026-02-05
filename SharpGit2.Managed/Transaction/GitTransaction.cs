@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using SharpGit2.Managed.Config;
-using SharpGit2.Managed.ODB;
+using SharpGit2.Managed.ReferenceDB;
 
 namespace SharpGit2.Managed.Transaction;
 

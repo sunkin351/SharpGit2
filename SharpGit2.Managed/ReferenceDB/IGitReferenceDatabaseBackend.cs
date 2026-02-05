@@ -1,4 +1,4 @@
-﻿namespace SharpGit2.Managed.ODB;
+﻿namespace SharpGit2.Managed.ReferenceDB;
 
 [Flags]
 public enum ReferenceDatabaseBackendInitFlags

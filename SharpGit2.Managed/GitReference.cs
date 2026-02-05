@@ -9,7 +9,7 @@ using System.Text;
 using CommunityToolkit.HighPerformance.Buffers;
 
 using SharpGit2.Managed.Config;
-using SharpGit2.Managed.ODB;
+using SharpGit2.Managed.ReferenceDB;
 
 namespace SharpGit2.Managed;
 

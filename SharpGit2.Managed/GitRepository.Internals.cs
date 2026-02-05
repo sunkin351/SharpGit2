@@ -10,6 +10,7 @@ using Mono.Unix.Native;
 using SharpGit2.Managed.Config;
 using SharpGit2.Managed.Internal;
 using SharpGit2.Managed.ODB;
+using SharpGit2.Managed.ReferenceDB;
 using SharpGit2.Managed.Submodule;
 using SharpGit2.Managed.Worktree;
 
