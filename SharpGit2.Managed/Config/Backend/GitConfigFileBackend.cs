@@ -18,7 +18,7 @@ internal sealed class GitConfigFileBackend : IGitConfigBackend
 
     private readonly Lock _valuesLock = new();
 
-    private readonly Dictionary<string, ConfigMapEntryHead> _nameLookup = new();
+    private readonly Dictionary<string, ConfigMapEntryHead<ConfigListEntry>> _nameLookup = new();
     private readonly LinkedList<ConfigListEntry> _entries = new();
 
     private GitRepository? _repository;
@@ -272,7 +272,7 @@ internal sealed class GitConfigFileBackend : IGitConfigBackend
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
 
-        throw new NotImplementedException();
+        return new GitConfigSnapshotBackend(this);
     }
 
     public IEnumerator<GitConfigEntry> GetEnumerator()
@@ -575,8 +575,6 @@ internal sealed class GitConfigFileBackend : IGitConfigBackend
 
     private void AppendInternal(ConfigListEntry entry)
     {
-        Debug.Assert(_valuesLock.IsHeldByCurrentThread);
-
         ref var map_head = ref CollectionsMarshal.GetValueRefOrAddDefault(_nameLookup, entry.Name, out bool exists);
 
         map_head.Entry = entry;
@@ -967,8 +965,7 @@ internal sealed class GitConfigFileBackend : IGitConfigBackend
 
         private static bool ShouldQuoteValue(string? value)
         {
-            if (value == null
-                || value.Length == 0
+            if (string.IsNullOrEmpty(value)
                 || char.IsWhiteSpace(value[0])
                 || char.IsWhiteSpace(value[^1]))
                 return true;

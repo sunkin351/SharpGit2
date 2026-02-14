@@ -133,14 +133,14 @@ public sealed class GitReferenceDatabase : IDisposable
         return reference;
     }
     
-    internal IEnumerable<GitReference> EnumerateReferences(string glob)
+    internal IEnumerable<GitReference> EnumerateReferences(string? glob)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
 
         return this.ThrowIfBackendNotSet().EnumerateReferences(glob);
     }
 
-    internal IEnumerable<string> EnumerateReferenceNames(string glob)
+    internal IEnumerable<string> EnumerateReferenceNames(string? glob)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
 
@@ -228,7 +228,7 @@ public sealed class GitReferenceDatabase : IDisposable
         
         ArgumentNullException.ThrowIfNull(reflog);
 
-        throw new NotImplementedException();
+        this.ThrowIfBackendNotSet().ReflogWrite(reflog);
     }
 
     internal bool ShouldWriteReferenceLog(GitReference reference)

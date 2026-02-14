@@ -80,29 +80,29 @@ public sealed partial class GitRepository
 
     internal static string PrettifyPath_Directory(string path, string? @base)
     {
-        var tmp = @base != null && !Path.IsPathRooted(path) ? Path.GetFullPath(path, @base) : Path.GetFullPath(path);
+        string result = @base != null && !Path.IsPathRooted(path) ? Path.GetFullPath(path, @base) : Path.GetFullPath(path);
 
         if (OperatingSystem.IsWindows())
         {
-            if (!Path.EndsInDirectorySeparator(tmp))
+            if (!Path.EndsInDirectorySeparator(result))
             {
-                tmp = string.Create(tmp.Length + 1, tmp, (output, input) =>
+                result = string.Create(result.Length + 1, result, (output, input) =>
                 {
-                    input.AsSpan().Replace(output, '\\', '/');
+                    input.Replace(output, '\\', '/');
                     output[input.Length] = '/';
                 });
             }
             else
             {
-                tmp = tmp.Replace('\\', '/');
+                result = result.Replace('\\', '/');
             }
         }
-        else if (!Path.EndsInDirectorySeparator(tmp))
+        else if (!Path.EndsInDirectorySeparator(result))
         {
-            tmp += "/";
+            result += "/";
         }
 
-        return tmp;
+        return result;
     }
 
     private static string LookupCommonDir(ref bool separate, string repositoryPath, GitRepositoryOpenFlags flags)
@@ -182,11 +182,11 @@ public sealed partial class GitRepository
     private GitObjectDatabase ObjectDatabaseLazyInit()
     {
         var odb_path = GetObjectDatabasePath();
-        var odb = new GitObjectDatabase(this.oid_type);
+        var odb = new GitObjectDatabase(this.ObjectIdType);
 
         this.GetObjectDatabaseAlternates(odb);
 
-        odb.SetCaps(ODB.GitObjectDatabaseCapabilities.FromOwner);
+        odb.SetCaps(GitObjectDatabaseCapabilities.FromOwner);
         odb.AddDefaultBackends(odb_path, false, 0);
 
         return Interlocked.CompareExchange(ref _odbField, odb, null) ?? odb;
@@ -262,7 +262,7 @@ public sealed partial class GitRepository
         string? indexPath = this.UseEnv ? Environment.GetEnvironmentVariable("GIT_INDEX_FILE") : null;
         indexPath ??= this.GetItemPath(GitRepositoryItemType.Index);
 
-        var index = new GitIndex(indexPath, this.oid_type);
+        var index = new GitIndex(indexPath, this.ObjectIdType);
 
         index.SetCapabilities(GitIndexCapabilities.FromOwner);
 
@@ -280,11 +280,9 @@ public sealed partial class GitRepository
     private readonly object?[] configmap_cache = new object?[15];
     private GitSubmoduleCache? _submoduleCache;
 
-    private GitObjectIDType oid_type;
-
     private uint lruCounter;
 
-    internal GitRepository() : this(default(GitObjectIDType))
+    internal GitRepository() : this(GitObjectIDType.Default)
     {
     }
 
@@ -295,7 +293,7 @@ public sealed partial class GitRepository
 
         IsBare = true;
         IsWorktree = false;
-        oid_type = type == default ? GitObjectIDType.SHA1 : type;
+        ObjectIdType = type == default ? GitObjectIDType.SHA1 : type;
     }
 
     internal GitTree GetHeadTree()
@@ -345,7 +343,7 @@ public sealed partial class GitRepository
                     add_path_8dot3_name(reservedNames, gitlink);
                 }
 
-                var comparison = !this.TryConfigmapLookup(GitConfigMapItem.IgnoreCase, out bool ignoreCase) || ignoreCase
+                var comparison = this.ConfigMapLookup(GitConfigMapItem.IgnoreCase) != 0
                     ? StringComparison.OrdinalIgnoreCase
                     : StringComparison.Ordinal;
 
@@ -396,10 +394,12 @@ public sealed partial class GitRepository
         }
     }
 
-    internal bool TryConfigmapLookup(GitConfigMapItem map, out bool value)
+    internal bool TryConfigMapLookup(GitConfigMapItem map, out bool value)
     {
         throw new NotImplementedException();
     }
+
+    internal int ConfigMapLookup(GitConfigMapItem item) => this.Config.ConfigMapLookup(item);
 
     internal void FlushAttributeCache()
     {
@@ -877,19 +877,19 @@ public sealed partial class GitRepository
 
         if (!this.TryGetItemPath(GitRepositoryItemType.Info, out string? path))
         {
-            _grafts ??= new GitGrafts(oid_type, null);
-            _shallow_grafts ??= new GitGrafts(oid_type, null);
+            _grafts ??= new GitGrafts(this.ObjectIdType, null);
+            _shallow_grafts ??= new GitGrafts(this.ObjectIdType, null);
             return;
         }
 
         if (_grafts == null)
-            _grafts = GitGrafts.Open(GitPath.PosixJoin(path, "grafts"), oid_type);
+            _grafts = GitGrafts.Open(GitPath.PosixJoin(path, "grafts"), this.ObjectIdType);
         else
             _grafts.Refresh();
 
 
         if (_shallow_grafts == null)
-            _shallow_grafts = GitGrafts.Open(GitPath.PosixJoin(this.GitDirectory, "shallow"), oid_type);
+            _shallow_grafts = GitGrafts.Open(GitPath.PosixJoin(this.GitDirectory, "shallow"), this.ObjectIdType);
         else
             _shallow_grafts.Refresh();
     }
@@ -947,7 +947,7 @@ public sealed partial class GitRepository
         }
         else
         {
-            oid_type = GitObjectIDType.Default;
+            this.ObjectIdType = GitObjectIDType.Default;
         }
 
         return config;
@@ -1055,7 +1055,7 @@ public sealed partial class GitRepository
     {
         Debug.Assert(Enum.IsDefined(odb.Options_OID_Type));
 
-        return new GitRepository() { oid_type = odb.Options_OID_Type, ObjectDatabase = odb };
+        return new GitRepository() { ObjectIdType = odb.Options_OID_Type, ObjectDatabase = odb };
     }
 
     private static int? CheckRepositoryFormatVersion(GitConfig config)
@@ -1128,14 +1128,16 @@ public sealed partial class GitRepository
     {
         if (!config.TryGetEntry("extensions.objectformat", out var entry))
         {
-            this.oid_type = GitObjectIDType.Default;
+            this.ObjectIdType = GitObjectIDType.Default;
             return;
         }
 
-        if (!Enum.TryParse(entry.Value, true, out oid_type))
+        if (!Enum.TryParse<GitObjectIDType>(entry.Value, true, out var type))
         {
             throw new Git2Exception($"Unknown object format '{entry.Value}'");
         }
+
+        this.ObjectIdType = type;
     }
 
     private static GitConfig LoadGlobalConfig(bool useEnv)
@@ -1187,7 +1189,7 @@ public sealed partial class GitRepository
         if (type == GitObjectIDType.Default)
             return;
 
-        if (!this.IsEmpty() && this.oid_type != type)
+        if (!this.IsEmpty() && this.ObjectIdType != type)
             throw new InvalidOperationException("Cannot change Object ID Type of existing Repository.");
 
         var config = this.Config;
@@ -1200,9 +1202,9 @@ public sealed partial class GitRepository
          * default oid type. Clear them so that we create them with
          * the proper oid type.
          */
-        if (this.oid_type != type)
+        if (this.ObjectIdType != type)
         {
-            this.oid_type = type;
+            this.ObjectIdType = type;
             _indexField = null;
             _odbField = null;
             _refdbField = null;

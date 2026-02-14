@@ -109,7 +109,7 @@ public sealed class GitReference : IComparable<GitReference>
     {
         return this.ReferenceType switch
         {
-            GitReferenceType.Direct => new GitReference(referenceName, this._directTarget, _peel, this.DB),
+            GitReferenceType.Direct => new GitReference(referenceName, _directTarget, _peel, this.DB),
             GitReferenceType.Symbolic => new GitReference(referenceName, this.SymbolicTarget!, this.DB),
             _ => throw new InvalidOperationException("Invalid reference type!")
         };
@@ -264,7 +264,7 @@ public sealed class GitReference : IComparable<GitReference>
     
     internal static GitSignature LogSignature(GitRepository repo)
     {
-        if (repo is { IdentityName: {} name, IdentityEmail: {} email })
+        if (repo is { IdentityName: { Length: > 0 } name, IdentityEmail: { Length: > 0 } email })
             return GitSignature.Now(name, email);
 
         if (GitSignature.Default(repo) is GitSignature signature)
@@ -612,7 +612,7 @@ public sealed class GitReference : IComparable<GitReference>
     {
         GitReferenceFormat flags = GitReferenceFormat.AllowOneLevel;
 
-        if (repo.TryConfigmapLookup(GitConfigMapItem.Precompose, out bool precompose) && precompose)
+        if (repo.ConfigMapLookup(GitConfigMapItem.Precompose) != 0)
             flags |= GitReference.PrecomposeUnicodeFlag;
 
         if (!validate)

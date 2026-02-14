@@ -10,7 +10,7 @@ internal sealed class GitConfigMemoryBackend : IGitConfigBackend
     private readonly string? BackendType;
     private readonly string? OriginPath;
 
-    private readonly Dictionary<string, ConfigMapEntryHead> _nameLookup = new();
+    private readonly Dictionary<string, ConfigMapEntryHead<ConfigListEntry>> _nameLookup = new();
     private readonly LinkedList<ConfigListEntry> _entries = new();
 
     private string? _configData;

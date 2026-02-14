@@ -428,11 +428,10 @@ internal static class GitPath
 
         if (repo is not null)
         {
-            if (!protectHFS && repo.TryConfigmapLookup(GitConfigMapItem.ProtectHFS, out bool tmp))
-                protectHFS = tmp;
+            if (!protectHFS)
+                protectHFS = repo.ConfigMapLookup(GitConfigMapItem.ProtectHFS) != 0;
 
-            if (repo.TryConfigmapLookup(GitConfigMapItem.ProtectNTFS, out tmp))
-                protectNTFS = tmp;
+            protectNTFS = repo.ConfigMapLookup(GitConfigMapItem.ProtectNTFS) != 0;
         }
 
         if (protectHFS)
@@ -454,7 +453,7 @@ internal static class GitPath
         {
             bool allow = false;
 
-            if (repo is not null && !repo.TryConfigmapLookup(GitConfigMapItem.LongPaths, out allow))
+            if (repo is not null && !repo.TryConfigMapLookup(GitConfigMapItem.LongPaths, out allow))
                 allow = false;
 
             if (allow)
@@ -2016,6 +2015,7 @@ internal static class GitPath
         }
     }
 
+    [UnsupportedOSPlatform("windows")]
     private static void CopyRecursive_Unix(string source, string target, CopyDirectoryFlags flags, UnixFileMode mode)
     {
         source = Path.GetFullPath(source);
@@ -2103,5 +2103,24 @@ internal static class GitPath
     internal static bool EndsInFileName(ReadOnlySpan<char> path, ReadOnlySpan<char> filename)
     {
         return Path.GetFileName(Path.TrimEndingDirectorySeparator(path)).SequenceEqual(filename);
+    }
+
+    public static string SquashSlashes(string relativePath)
+    {
+        if (!relativePath.Contains("//")) // early return, optimization
+            return relativePath;
+
+        ReadOnlySpan<char> path = relativePath;
+        int index;
+
+        var builder = new StringBuilder(relativePath.Length);
+
+        while ((index = path.IndexOf('/')) >= 0)
+        {
+            builder.Append(path.Slice(0, index + 1));
+            path = path.Slice(index + 1).TrimStart('/');
+        }
+
+        return builder.ToString();
     }
 }

@@ -1,10 +1,13 @@
 using System.Buffers;
+using System.Collections;
 using System.Diagnostics;
-using System.IO.Enumeration;
 using System.Runtime.InteropServices;
+using System.Text;
+
 using CommunityToolkit.HighPerformance.Buffers;
+
+using SharpGit2.Managed.Config;
 using SharpGit2.Managed.Internal;
-using TerraFX.Interop.Windows;
 
 namespace SharpGit2.Managed.ReferenceDB;
 
@@ -43,7 +46,9 @@ internal sealed class GitReferenceDatabaseFileSystemBackend : IGitReferenceDatab
         }
     }
 
-    private GitRepository _repository;
+    private const string PackedRefsFile = "packed-refs";
+
+    private readonly GitRepository _repository;
     private string? _gitPath;
     private string _commonPath;
     private GitObjectIDType _objectIdType;
@@ -51,17 +56,55 @@ internal sealed class GitReferenceDatabaseFileSystemBackend : IGitReferenceDatab
     private Peeling _peelingMode;
     private GitIteratorFlags _iteratorFlags;
     private readonly Lock _lock;
+    private char[]? _packedRefsData;
+    private int _packedRefsDataLength;
     private DateTime _packedRefsStamp;
     private SortedCache _referenceCache;
     
     public GitReferenceDatabaseFileSystemBackend(GitRepository repo)
     {
-        throw new NotImplementedException();
+        _repository = repo;
+        _objectIdType = repo.ObjectIdType;
+
+        if (repo.RepositoryPath != null)
+        {
+            this._gitPath = SetupNamespace(repo, repo.RepositoryPath);
+        }
+
+        if (repo.CommonDirectory != null)
+        {
+            this._commonPath = SetupNamespace(repo, repo.CommonDirectory);
+        }
+
+        _referenceCache = new SortedCache(Path.Combine(_commonPath, PackedRefsFile));
+
+        if (repo.ConfigMapLookup(GitConfigMapItem.IgnoreCase) != 0)
+        {
+            _iteratorFlags |= GitIteratorFlags.IgnoreCase;
+        }
+
+        if (repo.ConfigMapLookup(GitConfigMapItem.Precompose) != 0)
+        {
+            _iteratorFlags |= GitIteratorFlags.PrecomposeUnicode;
+        }
+
+        _fsync = GitRepository.FSyncGitDir || repo.ConfigMapLookup(GitConfigMapItem.FSyncObjectFiles) != 0;
+
+        _iteratorFlags |= GitIteratorFlags.DescendSymlinks;
     }
 
+    private bool _disposed = false;
     public void Dispose()
     {
-        throw new NotImplementedException();
+        if (Interlocked.Exchange(ref _disposed, true))
+            return;
+
+        if (_packedRefsData != null)
+        {
+            ArrayPool<char>.Shared.Return(_packedRefsData);
+            _packedRefsData = null;
+            _packedRefsDataLength = 0;
+        }
     }
 
     public void Initialize(string? headTarget, UnixFileMode mode, ReferenceDatabaseBackendInitFlags flags)
@@ -105,17 +148,185 @@ internal sealed class GitReferenceDatabaseFileSystemBackend : IGitReferenceDatab
 
     public GitReference? Lookup(string referenceName)
     {
-        throw new NotImplementedException();
+        GitReference? reference = this.LooseLookup(referenceName);
+        
+        if (reference == null)
+        {
+            this.PackedReload();
+            
+            if (_referenceCache.TryLookup(referenceName, out var entry))
+            {
+                reference = new GitReference(referenceName, entry.Oid, entry.Peel);
+            }
+        }
+
+        return reference;
     }
 
-    public IEnumerable<GitReference> EnumerateReferences(string glob)
+    // TODO: Iterate on these enumerators more
+    private struct EnumerableCommon
     {
-        throw new NotImplementedException();
+        public readonly GitReferenceDatabaseFileSystemBackend Backend;
+        public readonly SortedCache Cache;
+        public readonly string? Glob;
+        public readonly List<string> Loose = new();
+
+        public EnumerableCommon(GitReferenceDatabaseFileSystemBackend backend, string? glob)
+        {
+            Backend = backend;
+            Glob = glob;
+            
+            string? pathPrefix = OptimizePrefix(glob);
+            
+            this.LoadPaths(backend._commonPath, false, pathPrefix);
+
+            if (backend._repository.IsWorktree)
+            {
+                this.LoadPaths(backend._gitPath!, true, pathPrefix);
+            }
+            
+            backend.PackedReload();
+            Cache = backend._referenceCache.Copy(true);
+        }
+
+        private void LoadPaths(string rootPath, bool worktree, string? pathPrefix)
+        {
+            string searchRootPath = pathPrefix != null ? Path.Combine(rootPath, pathPrefix) : rootPath;
+
+            foreach (string path in Directory.EnumerateFiles(searchRootPath, "*", SearchOption.AllDirectories))
+            {
+                if (path.EndsWith(".lock", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                string referenceName = Path.GetRelativePath(rootPath, path);
+
+                if (OperatingSystem.IsWindows())
+                    referenceName = referenceName.Replace('\\', '/');
+
+                if (worktree)
+                {
+                    if (!IsPerWorktreeRef(referenceName))
+                        continue;
+                }
+                else if (this.Backend._repository.IsWorktree && IsPerWorktreeRef(referenceName))
+                {
+                    continue;
+                }
+
+                if (this.Glob != null && WildMatch.Match(this.Glob, referenceName, 0) != WildMatch.Result.Match)
+                    continue;
+                
+                referenceName = Utilities.GetPooledString(referenceName); // deduplicate if possible
+                
+                this.Loose.Add(referenceName);
+            }
+        }
     }
 
-    public IEnumerable<string> EnumerateReferenceNames(string glob)
+    public IEnumerable<GitReference> EnumerateReferences(string? glob)
     {
-        throw new NotImplementedException();
+        return new ReferenceEnumerable(this, glob);
+    }
+
+    private sealed class ReferenceEnumerable(GitReferenceDatabaseFileSystemBackend backend, string? glob) : IEnumerable<GitReference>
+    {
+        private EnumerableCommon _common = new(backend, glob);
+
+        public IEnumerator<GitReference> GetEnumerator()
+        {
+            var seenNames = new HashSet<string>(_common.Loose.Count);
+            
+            foreach (var name in _common.Loose)
+            {
+                if (_common.Backend.LooseLookup(name) is {} reference)
+                {
+                    seenNames.Add(name);
+                
+                    yield return reference;
+                }
+            }
+
+            foreach (var (name, entry) in _common.Cache.Map)
+            {
+                if (seenNames.Contains(name))
+                    continue;
+                
+                if (_common.Glob != null && WildMatch.Match(_common.Glob, name, 0) != WildMatch.Result.Match)
+                {
+                    continue;
+                }
+
+                yield return new GitReference(name, entry.Oid, entry.Peel);
+            }
+        }
+
+        IEnumerator IEnumerable.GetEnumerator() => this.GetEnumerator();
+    }
+
+    public IEnumerable<string> EnumerateReferenceNames(string? glob)
+    {
+        return new ReferenceNameEnumerable(this, glob);
+    }
+
+    private sealed class ReferenceNameEnumerable : IEnumerable<string>
+    {
+        private EnumerableCommon _common;
+
+        public ReferenceNameEnumerable(GitReferenceDatabaseFileSystemBackend backend, string? glob)
+        {
+            _common = new EnumerableCommon(backend, glob);
+        }
+        
+        public IEnumerator<string> GetEnumerator()
+        {
+            var seenNames = new HashSet<string>(_common.Loose.Count);
+            
+            foreach (var name in _common.Loose)
+            {
+                if (_common.Backend.LooseLookup_Exists(name))
+                {
+                    seenNames.Add(name);
+                
+                    yield return name;
+                }
+            }
+
+            foreach (var name in _common.Cache.Map.Keys)
+            {
+                if (seenNames.Contains(name))
+                    continue;
+                
+                if (_common.Glob != null && WildMatch.Match(_common.Glob, name, 0) != WildMatch.Result.Match)
+                {
+                    continue;
+                }
+
+                yield return name;
+            }
+        }
+
+        IEnumerator IEnumerable.GetEnumerator() => this.GetEnumerator();
+    }
+
+    private static readonly SearchValues<char> _optimizePrefix_SearchCharacters = SearchValues.Create("?*[\\");
+
+    private static string? OptimizePrefix(string? glob)
+    {
+        if (string.IsNullOrEmpty(glob))
+            return "refs/";
+
+        ReadOnlySpan<char> span = glob;
+
+        var idx = span.IndexOfAny(_optimizePrefix_SearchCharacters);
+
+        int lastSep = (idx < 0 ? span : span.Slice(0, idx)).LastIndexOf('/');
+
+        if (lastSep < 0)
+            return "refs/";
+
+        ReadOnlySpan<char> prefix = span.Slice(0, lastSep + 1);
+        
+        return prefix.StartsWith("refs/") ? prefix.ToString() : $"refs/{prefix}";
     }
 
     public void Write(GitReference reference, bool force, GitSignature who, string? message)
@@ -168,6 +379,11 @@ internal sealed class GitReferenceDatabaseFileSystemBackend : IGitReferenceDatab
         throw new NotImplementedException();
     }
 
+    private string ReflogPath(string referenceName)
+    {
+        throw new NotImplementedException();
+    }
+
     public GitReferenceLog ReflogRead(string refname)
     {
         throw new NotImplementedException();
@@ -180,12 +396,32 @@ internal sealed class GitReferenceDatabaseFileSystemBackend : IGitReferenceDatab
 
     public void ReflogRename(string old_name, string new_name)
     {
+        string normalized = GitReference.NormalizeReferenceName(new_name, GitReferenceFormat.AllowOneLevel);
+
+        string oldPath = Path.Combine(_repository.RepositoryPath, Constants.ReflogDir, old_name);
+
+        if (!Path.Exists(oldPath))
+            return;
+        
+        string newPath = Path.Combine(_repository.RepositoryPath, Constants.ReflogDir, normalized);
+        
+        //var tempPath = LoosePath()
         throw new NotImplementedException();
     }
 
     public void ReflogDelete(string name)
     {
-        throw new NotImplementedException();
+        var path = this.ReflogPath(name);
+
+        // If a reference was moved downwards, eg refs/heads/br2 -> refs/heads/br2/new-name,
+        // refs/heads/br2 does exist, but it's a directory. That's a valid situation.
+        // Proceed only if it's a file.
+        if (File.Exists(path))
+        {
+            File.Delete(path);
+        }
+        
+        this.PruneRefs(name, Constants.ReflogDir);
     }
 
     public object Lock(string refname)
@@ -215,6 +451,33 @@ internal sealed class GitReferenceDatabaseFileSystemBackend : IGitReferenceDatab
         throw new NotImplementedException();
     }
 
+    private static string SetupNamespace(GitRepository repo, string @in)
+    {
+        if (repo.Namespace == null)
+            return @in;
+
+        StringBuilder path = new(@in);
+        if (!Path.EndsInDirectorySeparator(@in))
+            path.Append('/');
+        
+        ReadOnlySpan<char> namespaceStr = repo.Namespace;
+        foreach (var range in namespaceStr.Split('/'))
+        {
+            (int start, int length) = range.GetOffsetAndLength(namespaceStr.Length);
+
+            if (length == 0)
+                continue;
+            
+            path.Append("refs/namespaces/").Append(namespaceStr.Slice(start, length)).Append('/');
+        }
+
+        string pathStr = path.ToString();
+        
+        FileSystemHelpers.CreateDirectory(pathStr + "refs", Constants.FileModeAllPermissions);
+
+        return pathStr;
+    }
+
     private static string LoosePath(string @base, string referenceName)
     {
         string path = GitPath.PosixJoin(@base, referenceName);
@@ -240,7 +503,7 @@ internal sealed class GitReferenceDatabaseFileSystemBackend : IGitReferenceDatab
 
     private void PackedReload()
     {
-        var oidHexSize = _objectIdType.HashSize * 2;
+        int oidHexSize = _objectIdType.HexSize;
 
         if (_gitPath == null)
             return;
@@ -254,12 +517,18 @@ internal sealed class GitReferenceDatabaseFileSystemBackend : IGitReferenceDatab
             if (currentWriteTime == cache.FileTimeStamp)
                 return;
 
-            string text = File.ReadAllText(cache.Path);
+            string text;
+            using (var stream = File.OpenRead(cache.Path))
+            using (var reader = new StreamReader(stream))
+            {
+                currentWriteTime = File.GetLastWriteTimeUtc(stream.SafeFileHandle); // Possible to have changed in between now and the previous call
+                text = reader.ReadToEnd();
+            }
             
             cache.Clear(false);
 
             int scan = 0;
-            while (scan < text.Length && text[scan] == '#')
+            while ((uint)scan < (uint)text.Length && text[scan] == '#')
             {
                 scan = text.IndexOf('\n', scan);
                 
@@ -317,11 +586,15 @@ internal sealed class GitReferenceDatabaseFileSystemBackend : IGitReferenceDatab
                     cache.InsertOrUpdate(packRef);
                 }
             }
-            catch
+            catch (Exception e)
             {
+                if (e is NullReferenceException or IndexOutOfRangeException)
+                    throw; // Bug in the code, let that pass as itself
+                
                 goto parseFailed;
             }
 
+            cache.FileTimeStamp = currentWriteTime;
             return;
         
         parseFailed:
@@ -334,7 +607,7 @@ internal sealed class GitReferenceDatabaseFileSystemBackend : IGitReferenceDatab
         }
     }
 
-    private Span<char> PackedSetPeelingMode(Span<char> data)
+    private ReadOnlySpan<char> PackedSetPeelingMode(ReadOnlySpan<char> data)
     {
         const string traits_header = "# pack-refs with:";
 
@@ -384,6 +657,24 @@ internal sealed class GitReferenceDatabaseFileSystemBackend : IGitReferenceDatab
         return result;
     }
 
+
+    private static ReadOnlySpan<char> LooseParseSymbolic(ReadOnlySpan<char> fileContent, string filename)
+    {
+        if (fileContent.Length <= Constants.GitSymRef.Length || !fileContent.StartsWith(Constants.GitSymRef))
+        {
+            ThrowCorruptedLooseReference(filename);
+        }
+
+        var referenceName = fileContent.Slice(Constants.GitSymRef.Length);
+
+        if (!GitReference.IsReferenceNameValid(referenceName, GitReferenceFormat.Normal)) // Sanity check
+        {
+            ThrowCorruptedLooseReference(filename);
+        }
+        
+        return referenceName;
+    }
+    
     private static void LooseReadBuffer(IBufferWriter<char> buffer, string @base, string path)
     {
         File.ReadAllText(LoosePath(@base, path), buffer);
@@ -447,25 +738,8 @@ internal sealed class GitReferenceDatabaseFileSystemBackend : IGitReferenceDatab
             if (OperatingSystem.IsWindows())
                 referenceName = referenceName.Replace('\\', '/');
 
-            this.LooseLookupToPackFile(referenceName);
+            this.LooseLookupToPackFile(Utilities.GetPooledString(referenceName));
         }
-    }
-
-    private string LooseParseSymbolic(ReadOnlySpan<char> fileContent, string filename)
-    {
-        if (fileContent.Length <= Constants.GitSymRef.Length || !fileContent.StartsWith(Constants.GitSymRef))
-        {
-            ThrowCorruptedLooseReference(filename);
-        }
-
-        var referenceName = fileContent.Slice(Constants.GitSymRef.Length);
-
-        if (!GitReference.IsReferenceNameValid(referenceName)) // Sanity check
-        {
-            ThrowCorruptedLooseReference(filename);
-        }
-        
-        return Utilities.GetPooledString(referenceName);
     }
 
     private static bool IsPerWorktreeRef(ReadOnlySpan<char> referenceName)
@@ -476,21 +750,58 @@ internal sealed class GitReferenceDatabaseFileSystemBackend : IGitReferenceDatab
                || referenceName.StartsWith("refs/rewritten/");
     }
 
+    private bool LooseLookup_Exists(string referenceName)
+    {
+        // The original implementation validated the file if it existed,
+        // whether it returned a git reference object or not.
+        string referenceDir = IsPerWorktreeRef(referenceName) ? _gitPath! : _commonPath;
+
+        using var fileContentBuffer = new ArrayPoolBufferWriter<char>();
+
+        try
+        {
+            LooseReadBuffer(fileContentBuffer, referenceDir, referenceName);
+        }
+        catch (IOException e) when (e is FileNotFoundException or DirectoryNotFoundException)
+        {
+            return false;
+        }
+
+        var fileContent = fileContentBuffer.WrittenSpan;
+        
+        // Validate file content
+        if (fileContent.StartsWith(Constants.GitSymRef))
+        {
+            LooseParseSymbolic(fileContent.TrimEnd(), referenceName);
+        }
+        else
+        {
+            LooseParseObjectID(referenceName, fileContent, _objectIdType);
+        }
+
+        return true;
+    }
+    
     private GitReference? LooseLookup(string referenceName)
     {
         string referenceDir = IsPerWorktreeRef(referenceName) ? _gitPath! : _commonPath;
 
         using var fileContentBuffer = new ArrayPoolBufferWriter<char>();
-        
-        LooseReadBuffer(fileContentBuffer, referenceDir, referenceName);
+
+        try
+        {
+            LooseReadBuffer(fileContentBuffer, referenceDir, referenceName);
+        }
+        catch (IOException e) when (e is FileNotFoundException or DirectoryNotFoundException)
+        {
+            return null;
+        }
 
         var fileContent = fileContentBuffer.WrittenSpan;
         
         if (fileContent.StartsWith(Constants.GitSymRef))
         {
-            fileContent = fileContent.TrimEnd();
-            
-            string target = LooseParseSymbolic(fileContent, referenceName);
+            string target = Utilities.GetPooledString(LooseParseSymbolic(fileContent.TrimEnd(), referenceName));
 
             return new GitReference(referenceName, target);
         }
@@ -502,15 +813,51 @@ internal sealed class GitReferenceDatabaseFileSystemBackend : IGitReferenceDatab
         }
     }
 
+    private void PruneRefs(string referenceName, string? prefix)
+    {
+        referenceName = GitPath.SquashSlashes(referenceName);
+        
+        string relativePath;
+
+        if (referenceName.StartsWith(Constants.RefsHeadsDir))
+        {
+            relativePath = Constants.RefsHeadsDir;
+        }
+        else if (referenceName.StartsWith(Constants.RefsTagsDir))
+        {
+            relativePath = Constants.RefsTagsDir;
+        }
+        else if (referenceName.StartsWith(Constants.RefsRemotesDir))
+        {
+            relativePath = Constants.RefsRemotesDir;
+        }
+        else
+        {
+            return;
+        }
+        
+        string basePath = prefix != null ? Path.Combine(_commonPath, prefix, relativePath) : Path.Combine(_commonPath, relativePath);
+        
+        GitPath.ValidatePathLength(null, basePath);
+
+        try
+        {
+            Directory.Delete(Path.Join(basePath, referenceName.AsSpan(relativePath.Length)), true);
+        }
+        catch (DirectoryNotFoundException)
+        {
+        }
+    }
+
     private class SortedCache(string path)
     {
         public readonly ReaderWriterLockSlim Lock = new();
 
-        private readonly OrderedDictionary<string, PackRef> _map = [];
+        public readonly OrderedDictionary<string, PackRef> Map = [];
         public string Path { get; } = path;
         public DateTime FileTimeStamp;
 
-        public int Count => _map.Count;
+        public int Count => Map.Count;
         
         public SortedCache Copy(bool @lock)
         {
@@ -520,7 +867,7 @@ internal sealed class GitReferenceDatabaseFileSystemBackend : IGitReferenceDatab
                 this.Lock.EnterReadLock();
             try
             {
-                foreach (var item in _map.Values)
+                foreach (var item in Map.Values)
                 {
                     newCache.InsertOrUpdate(item);
                 }
@@ -606,7 +953,7 @@ internal sealed class GitReferenceDatabaseFileSystemBackend : IGitReferenceDatab
                 this.Lock.EnterWriteLock();
             try
             {
-                _map.Clear();
+                Map.Clear();
             }
             finally
             {
@@ -619,7 +966,7 @@ internal sealed class GitReferenceDatabaseFileSystemBackend : IGitReferenceDatab
         {
             Debug.Assert(this.Lock.IsWriteLockHeld);
 
-            _map[value.Name] = value;
+            Map[value.Name] = value;
         }
 
         public void RemoveAt(int pos)
@@ -632,7 +979,7 @@ internal sealed class GitReferenceDatabaseFileSystemBackend : IGitReferenceDatab
             this.Lock.EnterReadLock();
             try
             {
-                return _map.ContainsKey(key);
+                return Map.ContainsKey(key);
             }
             finally
             {
@@ -644,8 +991,21 @@ internal sealed class GitReferenceDatabaseFileSystemBackend : IGitReferenceDatab
         {
             throw new NotImplementedException();
         }
+
+        public bool TryLookup(string key, out PackRef value)
+        {
+            this.Lock.EnterReadLock();
+            try
+            {
+                return Map.TryGetValue(key, out value);
+            }
+            finally
+            {
+                this.Lock.ExitReadLock();
+            }
+        }
         
-        public PackRef this[int pos] => _map.GetAt(pos).Value;
+        public PackRef this[int pos] => Map.GetAt(pos).Value;
 
         public int LookupIndex(string key)
         {

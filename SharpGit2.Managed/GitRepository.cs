@@ -355,6 +355,8 @@ public sealed partial class GitRepository
     internal string? IdentityName { get; private set; }
     internal string? IdentityEmail { get; private set; }
 
+    internal GitObjectIDType ObjectIdType { get; private set; } = GitObjectIDType.Default;
+
     public void GetAttribute(GitAttributeCheckFlags flags, string pathname, string name, out Attributes.GitAttributeValue value_out)
     {
         GitAttributeOptions options = new() { Flags = flags };
@@ -637,7 +639,7 @@ public sealed partial class GitRepository
         /// <returns><see langword="true"/> if any references exist in this repository, otherwise <see langword="false"/></returns>
         public bool Any()
         {
-            throw new NotImplementedException();
+            return _database.EnumerateReferenceNames(null).Any();
         }
 
         public GitReference Create(
@@ -831,7 +833,7 @@ public sealed partial class GitRepository
 
         public IEnumerator<GitReference> GetEnumerator()
         {
-            return _database.EnumerateReferences("*").GetEnumerator();
+            return _database.EnumerateReferences(null).GetEnumerator();
         }
 
         IEnumerator IEnumerable.GetEnumerator()
@@ -841,7 +843,7 @@ public sealed partial class GitRepository
 
         public IEnumerable<string> EnumerateReferenceNames()
         {
-            throw new NotImplementedException();
+            return _database.EnumerateReferenceNames(null);
         }
 
         public bool HasLog(string referenceName)
