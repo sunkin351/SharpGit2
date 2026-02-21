@@ -74,7 +74,7 @@ internal class GitParser : IDisposable
         return _buffer.AsSpan(LineStart, LineLength);
     }
 
-    protected bool AdvanceToNextLine()
+    public bool AdvanceToNextLine()
     {
         if (this.FinalLine)
             return false;
@@ -150,12 +150,12 @@ internal class GitParser : IDisposable
         return true;
     }
     
-    protected ReadOnlySpan<char> GetRemainingLine()
+    public ReadOnlySpan<char> GetRemainingLine()
     {
         return this.GetCurrentLine().Slice(this.LinePosition);
     }
 
-    protected bool AdvanceExpected(ReadOnlySpan<char> expected)
+    public bool AdvanceExpected(ReadOnlySpan<char> expected)
     {
         var currentLine = this.GetRemainingLine();
 
@@ -168,7 +168,7 @@ internal class GitParser : IDisposable
         return false;
     }
 
-    protected bool AdvanceCount(int count)
+    public bool AdvanceCount(int count)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(count);
         Debug.Assert(this.LinePosition >= 0);
@@ -183,7 +183,7 @@ internal class GitParser : IDisposable
         return false;
     }
 
-    protected void AdvanceWhitespace()
+    public void AdvanceWhitespace()
     {
         do
         {
@@ -201,7 +201,7 @@ internal class GitParser : IDisposable
         while (this.AdvanceToNextLine()); // the entire rest of the line is whitespace, move to the next
     }
 
-    protected bool AdvanceDigit(int numberBase, out long result)
+    public bool AdvanceDigit(int numberBase, out long result)
     {
         var content = this.GetRemainingLine();
 
@@ -216,7 +216,7 @@ internal class GitParser : IDisposable
         return false;
     }
 
-    protected bool AdvanceObjectId(GitObjectIDType type, out GitObjectID result)
+    public bool AdvanceObjectId(GitObjectIDType type, out GitObjectID result)
     {
         int hexSize = type.HashSize * 2; // Extension property!
 
@@ -234,7 +234,7 @@ internal class GitParser : IDisposable
         return false;
     }
 
-    protected bool AdvanceEOL()
+    public bool AdvanceEOL()
     {
         var line = this.GetRemainingLine();
 
@@ -247,7 +247,7 @@ internal class GitParser : IDisposable
         return false;
     }
 
-    protected bool TryPeek(bool skipWhitespace, out char ch)
+    public bool TryPeek(bool skipWhitespace, out char ch)
     {
         var remainingLine = this.GetRemainingLine();
 

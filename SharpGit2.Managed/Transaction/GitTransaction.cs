@@ -71,7 +71,7 @@ public sealed class GitTransaction : IDisposable
         }
         catch
         {
-            this.RefDB.Unlock(node.Payload, false, false, null, null, null);
+            this.RefDB.Unlock(node.Payload, false, false, null, default, null);
             throw;
         }
     }
@@ -181,10 +181,10 @@ public sealed class GitTransaction : IDisposable
         switch (node)
         {
             case { Remove: true }:
-                db.Unlock(node.Payload, 2, false, reference, node.Signature, node.Message);
+                db.Unlock(node.Payload, 2, false, reference, node.Signature.Value, node.Message);
                 break;
             case { RefType: GitReferenceType.Direct or GitReferenceType.Symbolic }:
-                db.Unlock(node.Payload, true, node.RefLog == null, reference, node.Signature, node.Message);
+                db.Unlock(node.Payload, true, node.RefLog == null, reference, node.Signature.Value, node.Message);
                 break;
             default:
                 throw new InvalidOperationException();
@@ -217,13 +217,14 @@ public sealed class GitTransaction : IDisposable
         {
             if (node.RefLog != null)
             {
+                Debug.Assert(this.RefDB.Backend != null);
                 this.RefDB.Backend.ReflogWrite(node.RefLog);
             }
 
             if (node.RefType == GitReferenceType.Invalid)
             {
                 // The ref was locked but not modified
-                this.RefDB.Unlock(node.Payload, false, false, null, null, null);
+                this.RefDB.Unlock(node.Payload, false, false, null, default, null);
                 node.Committed = true;
             }
             else

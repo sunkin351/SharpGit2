@@ -10,9 +10,14 @@ public enum GitIndexCapabilities
     NoSymlinks = 4,
 }
 
-public sealed class GitIndex
+public sealed class GitIndex : IDisposable
 {
     internal GitIndex(string path, GitObjectIDType type)
+    {
+        throw new NotImplementedException();
+    }
+
+    public void Dispose()
     {
         throw new NotImplementedException();
     }

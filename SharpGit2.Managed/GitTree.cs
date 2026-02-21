@@ -1,7 +1,7 @@
 ﻿using System.Collections.Immutable;
 using System.Text;
 
-using SharpGit2.Managed.ODB;
+using SharpGit2.Managed.ObjectDB;
 
 namespace SharpGit2.Managed;
 

@@ -10,4 +10,6 @@ public sealed class GitTag : GitObject
     internal GitTag(in GitObjectID oid, GitRepository repository) : base(in oid, repository)
     {
     }
+
+    public ref readonly GitObjectID Target => throw new NotImplementedException();
 }

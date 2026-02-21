@@ -5,7 +5,7 @@ using System.Runtime.CompilerServices;
 using SharpGit2.Managed.Attributes;
 using SharpGit2.Managed.Config;
 using SharpGit2.Managed.Internal;
-using SharpGit2.Managed.ODB;
+using SharpGit2.Managed.ObjectDB;
 using SharpGit2.Managed.ReferenceDB;
 using SharpGit2.Managed.Submodule;
 using SharpGit2.Managed.Worktree;
@@ -150,7 +150,7 @@ public struct GitRepositoryInitOptions
     public GitObjectIDType ObjectIDType { get; set; }
 }
 
-public sealed partial class GitRepository
+public sealed partial class GitRepository : IDisposable
 {
     public static GitRepository Open(string repoPath)
     {
@@ -314,6 +314,18 @@ public sealed partial class GitRepository
     private string GitLink { get; set; }
 
     public string? WorkingDirectory { get; private set; }
+
+    private volatile bool _disposed = false;
+    public void Dispose()
+    {
+        if (Interlocked.Exchange(ref _disposed, true))
+            return;
+        
+        Interlocked.Exchange(ref _configField, null)?.Dispose();
+        Interlocked.Exchange(ref _refdbField, null)?.Dispose();
+        Interlocked.Exchange(ref _indexField, null)?.Dispose();
+        Interlocked.Exchange(ref _odbField, null)?.Dispose();
+    }
 
     public void SetWorkingDirectory(string workingDirectory, bool updateGitLink)
     {

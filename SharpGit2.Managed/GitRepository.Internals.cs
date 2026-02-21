@@ -9,7 +9,7 @@ using Mono.Unix.Native;
 
 using SharpGit2.Managed.Config;
 using SharpGit2.Managed.Internal;
-using SharpGit2.Managed.ODB;
+using SharpGit2.Managed.ObjectDB;
 using SharpGit2.Managed.ReferenceDB;
 using SharpGit2.Managed.Submodule;
 using SharpGit2.Managed.Worktree;
@@ -316,7 +316,7 @@ public sealed partial class GitRepository
         throw new NotImplementedException();
     }
 
-    internal bool IsPathStringValid(ReadOnlySpan<char> path, ushort file_mode, uint flags)
+    internal bool IsPathStringValid(ReadOnlySpan<char> path, UnixFileMode file_mode, GitPath.ValidationFlags flags)
     {
         throw new NotImplementedException();
     }

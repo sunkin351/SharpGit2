@@ -32,3 +32,14 @@ public class Git2ConfigException : Git2Exception
     {
     }
 }
+
+public class Git2ReferenceException : Git2Exception
+{
+    public Git2ReferenceException(string message) : base(message)
+    {
+    }
+
+    public Git2ReferenceException(string message, Exception innerException) : base(message, innerException)
+    {
+    }
+}

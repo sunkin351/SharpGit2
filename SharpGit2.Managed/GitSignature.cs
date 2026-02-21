@@ -4,7 +4,7 @@ using System.Text.RegularExpressions;
 
 namespace SharpGit2.Managed;
 
-public readonly partial struct GitSignature
+public readonly partial struct GitSignature : ISpanFormattable, IEquatable<GitSignature>
 {
     public string Name { get; }
 
@@ -106,7 +106,7 @@ public readonly partial struct GitSignature
                 if (offset2 > 14 * 60) // validate the combined offset
                     goto Fail;
 
-                time = time.ToOffset(new TimeSpan(0, int.CopySign(offset2, offset), 0));
+                time = time.ToOffset(new TimeSpan(0, offset < 0 ? -offset2 : offset2, 0));
             }
         }
 
@@ -147,6 +147,48 @@ public readonly partial struct GitSignature
         return ToString(true);
     }
 
+    public string ToString(string? format, IFormatProvider? formatProvider)
+    {
+        return this.ToString(format == "tc");
+    }
+
+    public bool TryFormat(Span<char> destination, out int charsWritten, ReadOnlySpan<char> format = default, IFormatProvider? provider = null)
+    {
+        bool includeTimecode = format is "tc";
+        
+        if (!destination.TryWrite($"{Name} <{Email}>", out int totalWritten))
+            goto bufferTooSmall;
+        
+        if (includeTimecode)
+        {
+            int offset = When.TotalOffsetMinutes, written;
+            Span<char> remainingBuffer = destination.Slice(totalWritten);
+
+            if (offset != 0)
+            {
+                char sign = offset < 0 ? '-' : '+';
+                var (hours, minutes) = Math.DivRem(Math.Abs(offset), 60);
+
+                if (!remainingBuffer.TryWrite($" {When.ToUnixTimeSeconds()} {sign}{hours:00}{minutes:00}", out written))
+                    goto bufferTooSmall;
+            }
+            else
+            {
+                if (!remainingBuffer.TryWrite($" {When.ToUnixTimeSeconds()}", out written))
+                    goto bufferTooSmall;
+            }
+
+            totalWritten += written;
+        }
+
+        charsWritten = totalWritten;
+        return true;
+        
+    bufferTooSmall:
+        charsWritten = 0;
+        return false;
+    }
+
     public string ToString(bool includeTimecode)
     {
         if (!this.IsValid)
@@ -183,4 +225,19 @@ public readonly partial struct GitSignature
     }
 
     public bool IsValid => !string.IsNullOrWhiteSpace(this.Name) && !string.IsNullOrWhiteSpace(this.Email);
+
+    public bool Equals(GitSignature other)
+    {
+        return this.Name == other.Name && this.Email == other.Email && this.When.Equals(other.When);
+    }
+
+    public override bool Equals(object? obj)
+    {
+        return obj is GitSignature other && this.Equals(other);
+    }
+
+    public override int GetHashCode()
+    {
+        return HashCode.Combine(this.Name, this.Email, this.When);
+    }
 }

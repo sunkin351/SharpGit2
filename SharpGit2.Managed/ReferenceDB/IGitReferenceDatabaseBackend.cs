@@ -73,6 +73,5 @@ public interface IGitReferenceDatabaseBackend : IDisposable
 
     object Lock(string referenceName);
 
-    void Unlock(object payload, bool success, bool update_reflog, GitReference? reference, GitSignature? who, string? message);
-    void Unlock(object payload, int success, bool update_reflog, GitReference? reference, GitSignature? who, string? message);
+    void Unlock(object payload, int success, bool update_reflog, GitReference? reference, GitSignature signature, string? message);
 }

@@ -1,4 +1,5 @@
 ﻿using System.Buffers;
+using System.IO.Enumeration;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.Marshalling;
@@ -17,9 +18,7 @@ namespace SharpGit2.Managed.Internal;
 /// </summary>
 internal static partial class FileSystemHelpers
 {
-    public const UnixFileMode AllPerms = UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute
-        | UnixFileMode.GroupRead | UnixFileMode.GroupWrite | UnixFileMode.GroupExecute
-        | UnixFileMode.OtherRead | UnixFileMode.OtherWrite | UnixFileMode.OtherExecute;
+    public const UnixFileMode AllPerms = Constants.FileModeAllPermissions;
 
     public static void CreateDirectory(string path, UnixFileMode mode)
     {
@@ -90,7 +89,9 @@ internal static partial class FileSystemHelpers
                 if (result != Windows.INVALID_FILE_ATTRIBUTES)
                 {
                     attributes = (FileAttributes)result;
-                    mode = ((FileAttributes)result & FileAttributes.ReadOnly) != 0 ? (UnixFileMode)0x16D /*All perms RX*/ : (UnixFileMode)0x1ff /*All perms RWX*/;
+                    mode = ((FileAttributes)result & FileAttributes.ReadOnly) != 0
+                        ? (UnixFileMode)0x16D /*All perms RX*/
+                        : (UnixFileMode)0x1ff /*All perms RWX*/;
                     return true;
                 }
             }
@@ -161,7 +162,12 @@ internal static partial class FileSystemHelpers
     [ThreadStatic]
     private static FileStreamOptions? _temporaryFileOptions;
 
-    public static FileStream CreateTemporary(string filename, UnixFileMode mode, out string path, FileShare share = FileShare.None, FileOptions options = FileOptions.None)
+    public static FileStream CreateTemporary(
+        string filename,
+        UnixFileMode mode,
+        out string path,
+        FileShare share = FileShare.None,
+        FileOptions options = FileOptions.None)
     {
         var streamOptions = _temporaryFileOptions ??= new FileStreamOptions()
         {
@@ -194,6 +200,102 @@ internal static partial class FileSystemHelpers
         }
 
         throw new Git2OSException("Failed to create temporary file!");
+    }
+
+    /// <summary>
+    /// Fails if files are found. Will only delete empty directory trees.
+    /// 
+    /// </summary>
+    /// <returns></returns>
+    public static bool DeleteDirectoryRecursive(string path)
+    {
+        bool noFiles = true;
+        try
+        {
+            foreach (var (childPath, flag) in new FileSystemEnumerable<(string, bool)>(path, (ref entry) =>
+                     {
+                         bool flag = !IsSymbolicLink(ref entry) && entry.IsDirectory; // treat symbolic links as files
+                         return (entry.ToFullPath(), flag);
+                     }, GetCompatible(null)))
+            {
+                noFiles &= flag;
+
+                if (flag)
+                {
+                    noFiles &= DeleteDirectoryRecursive(childPath);
+                }
+            }
+
+            if (noFiles)
+            {
+                try
+                {
+                    Directory.Delete(path);
+                }
+                catch (IOException e) when (e.HResult == HResult_ENotEmpty)
+                {
+                    // Someone created a file here before we could delete the directory.
+                    noFiles = false;
+                }
+            }
+        }
+        catch (DirectoryNotFoundException) // Someone deleted it before we could, ignore
+        {
+        }
+
+        return noFiles;
+    }
+
+    private static int HResult_ENotEmpty => OperatingSystem.IsWindows() ? -2147024751 : 39;
+
+    [UnsafeAccessor(UnsafeAccessorKind.StaticMethod, Name = "get_Compatible")]
+    private static extern EnumerationOptions GetCompatible(EnumerationOptions? options);
+
+    [UnsafeAccessor(UnsafeAccessorKind.Method, Name = "get_IsSymbolicLink")]
+    private static extern bool IsSymbolicLink(ref FileSystemEntry entry);
+
+    [ThreadStatic]
+    private static FileStreamOptions? _makeTemporary_Options;
+    
+    public static void MakeTemporary(ref string filename, UnixFileMode mode)
+    {
+        var options = _makeTemporary_Options ??= new FileStreamOptions()
+        {
+            Mode = FileMode.CreateNew,
+            Access = FileAccess.ReadWrite,
+            Share = FileShare.None
+        };
+
+        if (!OperatingSystem.IsWindows())
+            options.UnixCreateMode = mode;
+        
+        Span<char> rand = stackalloc char[16];
+        var builder = new StringBuilder(filename).Append("_git2_");
+        int length = builder.Length;
+        
+        int tries = 32;
+        while (tries-- > 0)
+        {
+            Random.Shared.GetHexString(rand, true);
+
+            builder.Length = length;
+            builder.Append(rand);
+
+            try
+            {
+                string tpath = builder.ToString();
+                
+                var stream = new FileStream(tpath, options);
+                stream.Dispose();
+
+                filename = tpath;
+            }
+            catch (IOException e)// when (e.HResult == )
+            {
+            }
+        }
+        
+        throw new Git2Exception($"Failed to create temporary file! Filename: '{builder}'");
     }
 
     private static unsafe class Win32

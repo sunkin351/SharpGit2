@@ -1,4 +1,6 @@
-﻿namespace SharpGit2.Managed.ReferenceDB;
+﻿using System.Diagnostics.CodeAnalysis;
+
+namespace SharpGit2.Managed.ReferenceDB;
 
 internal struct GitReferenceLogEntry
 {
@@ -21,13 +23,24 @@ public sealed class GitReferenceLog
         get;
         set
         {
-            ArgumentNullException.ThrowIfNull(value);
+            GitReference.ThrowIfInvalidReferenceName(value, GitReferenceFormat.Normal);
             field = value;
         }
     }
 
-    internal GitObjectIDType OidType;
+    internal GitObjectIDType ObjectIdType;
     internal readonly List<GitReferenceLogEntry> Entries = new();
+
+    public GitReferenceLog()
+    {
+    }
+
+    [SetsRequiredMembers]
+    internal GitReferenceLog(string referenceName, GitObjectIDType objectIdType)
+    {
+        this.ReferenceName = referenceName;
+        ObjectIdType = objectIdType;
+    }
 
     internal GitReferenceLog Duplicate()
     {

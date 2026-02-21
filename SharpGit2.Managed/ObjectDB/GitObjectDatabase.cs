@@ -2,14 +2,14 @@
 using SharpGit2.Managed.Cache;
 using SharpGit2.Managed.CommitGraph;
 
-namespace SharpGit2.Managed.ODB;
+namespace SharpGit2.Managed.ObjectDB;
 
 internal enum GitObjectDatabaseCapabilities
 {
     FromOwner = -1,
 }
 
-public sealed class GitObjectDatabase
+public sealed class GitObjectDatabase : IDisposable
 {
     private readonly Lock Lock = new();
 
@@ -44,4 +44,8 @@ public sealed class GitObjectDatabase
     }
 
 
+    public void Dispose()
+    {
+        throw new NotImplementedException();
+    }
 }

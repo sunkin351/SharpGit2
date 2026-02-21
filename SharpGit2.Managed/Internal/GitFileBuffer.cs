@@ -32,6 +32,7 @@ internal sealed class GitFileBuffer : IDisposable
 
     private readonly FileStream _fileStream;
     private readonly Stream _writeStream;
+    private bool _fsync;
 
     public bool DidRename { get; private set; }
     private bool _disposed = false;
@@ -134,13 +135,13 @@ internal sealed class GitFileBuffer : IDisposable
                         ArrayPool<byte>.Shared.Return(array);
                     }
                 }
-                
             }
         }
 
         this._writeStream = compressionOptions != null
             ? new DeflateStream(this._fileStream, compressionOptions, leaveOpen: true)
             : this._fileStream;
+        _fsync = (flags & Flags.FSync) != 0;
     }
 
     public void Dispose()
@@ -218,6 +219,9 @@ internal sealed class GitFileBuffer : IDisposable
 
             temp.Position = 0;
             temp.CopyTo(stream);
+            
+            if (_fsync)
+                stream.Flush(true);
         }
 
         this.DidRename = true;

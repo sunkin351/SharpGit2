@@ -19,14 +19,15 @@ public enum GitObjectIDType : byte
 #if !GIT_EXPERIMENTAL_SHA256
 
 [StructLayout(LayoutKind.Sequential)]
-public unsafe record struct GitObjectID : IEquatable<GitObjectID>, IComparable<GitObjectID>
+public unsafe record struct GitObjectID : IComparable<GitObjectID>, ISpanFormattable
 {
     internal const int MaxHexSize = SHA1.HashSizeInBytes * 2;
     
     public IdByteArray Id;
 
-    public GitObjectID(ReadOnlySpan<byte> idBytes)
+    public GitObjectID(ReadOnlySpan<byte> idBytes, GitObjectIDType type)
     {
+        ArgumentOutOfRangeException.ThrowIfNotEqual(type, GitObjectIDType.SHA1);
         ArgumentOutOfRangeException.ThrowIfNotEqual(idBytes.Length, SHA1.HashSizeInBytes);
 
         idBytes.CopyTo(this.Id);
@@ -49,6 +50,16 @@ public unsafe record struct GitObjectID : IEquatable<GitObjectID>, IComparable<G
     public readonly override string ToString()
     {
         return Convert.ToHexStringLower(this.Id);
+    }
+
+    public readonly string ToString(string? format, IFormatProvider? formatProvider)
+    {
+        return this.ToString();
+    }
+
+    public readonly bool TryFormat(Span<char> destination, out int charsWritten, ReadOnlySpan<char> format = default, IFormatProvider? provider = null)
+    {
+        return Convert.TryToHexStringLower(this.Id, destination, out charsWritten);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

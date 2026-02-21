@@ -36,7 +36,10 @@ internal static class Constants
     public const string ReflogDir = "logs/";
     
     public const UnixFileMode RefsDirMode = FileModeAllPermissions;
-    public const UnixFileMode RefsFileMode = FileModeReadWritePermissions; //0666
+    public const UnixFileMode RefsFileMode = FileModeReadWritePermissions;
+
+    public const UnixFileMode ReflogDirMode = FileModeAllPermissions;
+    public const UnixFileMode ReflogMode = FileModeReadWritePermissions;
 
     public const string RenamedRefFile = RefsDir + "RENAMED-REF";
 

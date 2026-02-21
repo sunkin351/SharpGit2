@@ -302,14 +302,12 @@ public sealed class GitReferenceDatabase : IDisposable
         return this.ThrowIfBackendNotSet().Lock(referenceName);
     }
 
-    internal void Unlock(object payload, bool success, bool updateReflog, GitReference? reference, GitSignature? signature, string? message)
+    internal void Unlock(object payload, bool success, bool updateReflog, GitReference? reference, GitSignature signature, string? message)
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
-        
-        this.ThrowIfBackendNotSet().Unlock(payload, success, updateReflog, reference, signature, message);
+        this.Unlock(payload, success ? 1 : 0, updateReflog, reference, signature, message);
     }
 
-    internal void Unlock(object payload, int success, bool updateReflog, GitReference? reference, GitSignature? signature, string? message)
+    internal void Unlock(object payload, int success, bool updateReflog, GitReference? reference, GitSignature signature, string? message)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         

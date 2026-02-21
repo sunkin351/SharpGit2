@@ -207,45 +207,42 @@ internal static partial class Utilities
         }
     }
 
-    //extension(Path)
-    //{
-    //    public static void GetFullPath(ReadOnlySpan<char> path, IBufferWriter<char> buffer)
-    //    {
-    //        if (path.IsEmpty)
-    //            throw new ArgumentException("Cannot normalize empty path!", nameof(path));
+    extension(IOException e)
+    {
+        public bool FileAlreadyExists
+        {
+            get
+            {
+                if (OperatingSystem.IsWindows())
+                {
+                    return (uint)e.HResult is 0x80070050 or 0x800700B7;
+                }
 
-    //        if (path.Contains('\0'))
-    //            throw new ArgumentException("Null character in path!", nameof(path));
+                return e.HResult == 17;
+            }
+        }
 
+        public bool FileInUse
+        {
+            get
+            {
+                if (OperatingSystem.IsWindows())
+                {
+                    return (uint)e.HResult is 0x80070020 or 0x80070021;
+                }
 
-    //    }
-
-    //    public static void GetFullPath(ReadOnlySpan<char> path, ReadOnlySpan<char> basePath, IBufferWriter<char> buffer)
-    //    {
-    //        if (!Path.IsPathFullyQualified(basePath))
-    //            throw new ArgumentException("Base path is not fully qualified!", nameof(basePath));
-
-    //        if (path.Contains('\0') || basePath.Contains('\0'))
-    //            throw new ArgumentException("Null character in path!");
-
-    //        if (Path.IsPathFullyQualified(path))
-    //        {
-    //            GetFullPath(path, buffer);
-    //        }
-    //        else
-    //        {
-    //            //Path.GetFullPath()
-    //        }
-    //    }
-    //}
+                return e.HResult == 11;
+            }
+        }
+    }
 
     extension(Interlocked)
     {
         public static void Write<T>(ref T location1, T value)
             where T : class
         {
-            // Attempt to guarentee the write is immediately visible to all observers.
-            // A guarentee of Interlocked.Exchange()
+            // Attempt to guarantee this write is immediately visible to all observers.
+            // A guarantee of Interlocked.Exchange()
             _ = Interlocked.Exchange(ref location1, value);
         }
     }
