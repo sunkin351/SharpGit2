@@ -21,11 +21,14 @@ public enum GitObjectIDType : byte
 [StructLayout(LayoutKind.Sequential)]
 public unsafe record struct GitObjectID : IComparable<GitObjectID>, ISpanFormattable
 {
-    internal const int MaxHexSize = SHA1.HashSizeInBytes * 2;
+    public static int MaxHexSize => SHA1.HashSizeInBytes * 2;
+    public static int MaxByteSize => SHA1.HashSizeInBytes;
+
+    public static GitObjectID Zero => default;
     
     public IdByteArray Id;
 
-    public GitObjectID(ReadOnlySpan<byte> idBytes, GitObjectIDType type)
+    public GitObjectID(GitObjectIDType type, ReadOnlySpan<byte> idBytes)
     {
         ArgumentOutOfRangeException.ThrowIfNotEqual(type, GitObjectIDType.SHA1);
         ArgumentOutOfRangeException.ThrowIfNotEqual(idBytes.Length, SHA1.HashSizeInBytes);
@@ -38,7 +41,24 @@ public unsafe record struct GitObjectID : IComparable<GitObjectID>, ISpanFormatt
     {
         return ((ReadOnlySpan<byte>)this.Id).SequenceEqual(other.Id);
     }
+    
+    public static bool Equals(in GitObjectID first, in GitObjectID second)
+    {
+        ref byte f = ref Unsafe.As<IdByteArray, byte>(ref Unsafe.AsRef(in first.Id));
+        ref byte s = ref Unsafe.As<IdByteArray, byte>(ref Unsafe.AsRef(in second.Id));
 
+        if (Vector128.IsHardwareAccelerated)
+        {
+            var cmp = Vector128.LoadUnsafe(ref f, 0) ^ Vector128.LoadUnsafe(ref s, 0);
+            cmp |= Vector128.LoadUnsafe(ref f, 4u) ^ Vector128.LoadUnsafe(ref s, 4u);
+            return Vector128.EqualsAll(cmp, Vector128<byte>.Zero);
+        }
+        
+        return Unsafe.ReadUnaligned<ulong>(ref f) == Unsafe.ReadUnaligned<ulong>(ref s)
+            && Unsafe.ReadUnaligned<ulong>(ref Unsafe.Add(ref f, 8)) == Unsafe.ReadUnaligned<ulong>(ref Unsafe.Add(ref s, 8))
+            && Unsafe.ReadUnaligned<uint>(ref Unsafe.Add(ref f, 16)) == Unsafe.ReadUnaligned<uint>(ref Unsafe.Add(ref s, 16));
+    }
+    
     public readonly override int GetHashCode()
     {
         return CommunityToolkit.HighPerformance.Helpers.HashCode<byte>.Combine(this.Id);
@@ -197,6 +217,9 @@ public unsafe record struct GitObjectID : IComparable<GitObjectID>, ISpanFormatt
     internal const int SHA256HexSize = SHA256.HashSizeInBytes * 2;
 
     public static int MaxHexSize => SHA256HexSize;
+    public static int MaxByteSize => SHA256.HashSizeInBytes;
+
+    public static GitObjectID Zero => default;
 
     public GitObjectIDType Type;
     public IdByteArray Id;
@@ -223,16 +246,50 @@ public unsafe record struct GitObjectID : IComparable<GitObjectID>, ISpanFormatt
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public readonly bool Equals(GitObjectID other)
     {
-        if (this.Type != other.Type)
+        return Equals(in this, in other);
+    }
+
+    public static bool Equals(in GitObjectID first, in GitObjectID second)
+    {
+        if (first.Type != second.Type)
             return false;
-
-        // Let's assume any bytes beyond the end of an SHA1 hash are garbage, and ignore them
-        int size = this.Type.HashSize;
-
-        var left = ((ReadOnlySpan<byte>)this.Id).Slice(0, size);
-        var right = ((ReadOnlySpan<byte>)other.Id).Slice(0, size);
         
-        return left.SequenceEqual(right);
+        ref byte firstRef = ref Unsafe.As<IdByteArray, byte>(ref Unsafe.AsRef(in first.Id));
+        ref byte secondRef = ref Unsafe.As<IdByteArray, byte>(ref Unsafe.AsRef(in second.Id));
+
+        switch (first.Type)
+        {
+            case GitObjectIDType.SHA1:
+                if (Vector128.IsHardwareAccelerated)
+                {
+                    var cmp = Vector128.LoadUnsafe(ref firstRef, 0) ^ Vector128.LoadUnsafe(ref secondRef, 0);
+                    cmp |= Vector128.LoadUnsafe(ref firstRef, 4u) ^ Vector128.LoadUnsafe(ref secondRef, 4u);
+                    return Vector128.EqualsAll(cmp, Vector128<byte>.Zero);
+                }
+                
+                return Unsafe.ReadUnaligned<ulong>(ref firstRef) == Unsafe.ReadUnaligned<ulong>(ref secondRef)
+                   && Unsafe.ReadUnaligned<ulong>(ref Unsafe.Add(ref firstRef, 8)) == Unsafe.ReadUnaligned<ulong>(ref Unsafe.Add(ref secondRef, 8))
+                   && Unsafe.ReadUnaligned<uint>(ref Unsafe.Add(ref firstRef, 16)) == Unsafe.ReadUnaligned<uint>(ref Unsafe.Add(ref secondRef, 16));
+            case GitObjectIDType.SHA256:
+                if (Vector256.IsHardwareAccelerated)
+                {
+                    return Vector256.LoadUnsafe(ref firstRef) == Vector256.LoadUnsafe(ref secondRef);
+                }
+                
+                if (Vector128.IsHardwareAccelerated)
+                {
+                    var cmp = Vector128.LoadUnsafe(ref firstRef, 0) ^ Vector128.LoadUnsafe(ref secondRef, 0);
+                    cmp |= Vector128.LoadUnsafe(ref firstRef, 16u) ^ Vector128.LoadUnsafe(ref secondRef, 16u);
+                    return Vector128.EqualsAll(cmp, Vector128<byte>.Zero);
+                }
+                
+                return Unsafe.ReadUnaligned<ulong>(ref firstRef) == Unsafe.ReadUnaligned<ulong>(ref secondRef)
+                   && Unsafe.ReadUnaligned<ulong>(ref Unsafe.Add(ref firstRef, 8)) == Unsafe.ReadUnaligned<ulong>(ref Unsafe.Add(ref secondRef, 8))
+                   && Unsafe.ReadUnaligned<ulong>(ref Unsafe.Add(ref firstRef, 16)) == Unsafe.ReadUnaligned<ulong>(ref Unsafe.Add(ref secondRef, 16))
+                   && Unsafe.ReadUnaligned<ulong>(ref Unsafe.Add(ref firstRef, 24)) == Unsafe.ReadUnaligned<ulong>(ref Unsafe.Add(ref secondRef, 24));
+        }
+
+        return false;
     }
 
     public readonly override string ToString()
@@ -252,7 +309,7 @@ public unsafe record struct GitObjectID : IComparable<GitObjectID>, ISpanFormatt
         return this.ToString();
     }
 
-    public readonly bool TryFormat(Span<char> destination, out int charsWritten, ReadOnlySpan<char> format, IFormatProvider? provider)
+    public readonly bool TryFormat(Span<char> destination, out int charsWritten, ReadOnlySpan<char> format = default, IFormatProvider? provider = null)
     {
         ReadOnlySpan<byte> idSpan = this.Id;
 
@@ -354,9 +411,10 @@ public unsafe record struct GitObjectID : IComparable<GitObjectID>, ISpanFormatt
         }
     }
 
-    public static GitObjectID Parse(ReadOnlySpan<char> hexString)
+    public static GitObjectID Parse(ReadOnlySpan<char> hexString, GitObjectIDType type = GitObjectIDType.Default)
     {
-        if (hexString.Length is not SHA1HexSize and not SHA256HexSize)
+        int hexSize = type.HexSize;
+        if (hexString.Length != hexSize)
         {
             throw new ArgumentException("Invalid Hex String Length!");
         }
@@ -376,17 +434,40 @@ public unsafe record struct GitObjectID : IComparable<GitObjectID>, ISpanFormatt
         return result;
     }
 
-    public static bool TryParsePrefix(ReadOnlySpan<char> hexString, out GitObjectID id, out ushort nibblePrefixLength)
+    public static bool TryParse(
+        ReadOnlySpan<char> hexString,
+        out GitObjectID id,
+        GitObjectIDType type = GitObjectIDType.Default)
     {
-        if (hexString.Length > MaxHexSize)
+        id = default;
+        
+        int hexSize = type.HexSize;
+        if (hexString.Length != hexSize)
         {
-            throw new ArgumentException("Invalid Hex String Length!");
+            id = default;
+            return false;
         }
 
+        id.Type = type;
+        var status = Convert.FromHexString(hexString, id.Id, out var consumed, out var written);
+
+        if (status == OperationStatus.InvalidData)
+        {
+            id = default;
+            return false;
+        }
+        
+        Debug.Assert(status == OperationStatus.Done && consumed == hexString.Length && written is SHA1.HashSizeInBytes or SHA256.HashSizeInBytes);
+
+        return true;
+    }
+
+    public static bool TryParsePrefix(ReadOnlySpan<char> hexString, out GitObjectID id, out ushort nibblePrefixLength)
+    {
         id = default;
         nibblePrefixLength = 0;
 
-        if (hexString.IsEmpty)
+        if (hexString.IsEmpty || hexString.Length > MaxHexSize)
         {
             return false;
         }
