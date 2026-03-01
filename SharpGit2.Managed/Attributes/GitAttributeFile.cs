@@ -318,9 +318,11 @@ internal sealed class GitAttributeFile
 
     public static GitAttributeFile LoadStandalone(string path)
     {
+        path = Path.GetFullPath(path);
+        
         var text = File.ReadAllText(path);
 
-        var file = new GitAttributeFile(null, new Source() { Type = SourceType.File });
+        var file = new GitAttributeFile(null, new Source(SourceType.File, path));
 
         ParseBuffer(null, file, text, true);
 

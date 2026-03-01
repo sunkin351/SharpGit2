@@ -11,9 +11,36 @@ internal struct GitAttributeRule
     public GitAttributeFNMatch Match;
     public Dictionary<string, string> Assigns;
 
+    public GitAttributeValue GetValueForAssign(string assignName)
+    {
+        if (Assigns.TryGetValue(assignName, out var value))
+        {
+            Debug.Assert(value != null);
+
+            if (ReferenceEquals(value, Constants.attribute_internal_true))
+                return GitAttributeValue.True;
+
+            if (ReferenceEquals(value, Constants.attribute_internal_false))
+                return GitAttributeValue.False;
+            
+            if (ReferenceEquals(value, Constants.attribute_internal_unset))
+                return GitAttributeValue.Unspecified;
+            
+            return (GitAttributeValue)value;
+        }
+
+        return GitAttributeValue.Unspecified;
+    }
+
     private static readonly StringPool _attributeNamePool = new StringPool(256);
 
-    internal static bool TryParse(ReadOnlySpan<char> input, GitAttributeFNMatchFlags flags, string? context, GitRepository? repo, out int consumed, out GitAttributeRule rule)
+    internal static bool TryParse(
+        ReadOnlySpan<char> input,
+        GitAttributeFNMatchFlags flags,
+        string? context,
+        GitRepository? repo,
+        out int consumed,
+        out GitAttributeRule rule)
     {
         rule = default;
 

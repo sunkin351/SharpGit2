@@ -28,4 +28,22 @@
       <ProjectReference Include="..\SharpGit2.Managed\SharpGit2.Managed.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <None Update="Resources\Attributes\attr0">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="Resources\Attributes\attr1">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="Resources\Attributes\attr2">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="Resources\Attributes\attr3">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="Resources\Attributes\attr4">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+    </ItemGroup>
+
 </Project>

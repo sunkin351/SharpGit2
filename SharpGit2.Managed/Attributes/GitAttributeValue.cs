@@ -1,5 +1,8 @@
-﻿namespace SharpGit2.Managed.Attributes;
+﻿using System.Diagnostics;
 
+namespace SharpGit2.Managed.Attributes;
+
+[DebuggerDisplay("{this.DebuggerDisplay()}")]
 public readonly record struct GitAttributeValue
 {
     public readonly ValueType Type;
@@ -10,34 +13,7 @@ public readonly record struct GitAttributeValue
         Type = type;
         String = value;
     }
-
-    public static GitAttributeValue Create(ValueType type, string? value)
-    {
-        switch (type)
-        {
-            case ValueType.Unspecified:
-            case ValueType.True:
-            case ValueType.False:
-                if (!string.IsNullOrEmpty(value))
-                {
-                    throw new ArgumentException($"Invalid attribute value, type {type} doesn't allow a string.");
-                }
-
-                break;
-            case ValueType.String:
-                if (string.IsNullOrEmpty(value))
-                {
-                    throw new ArgumentException($"Invalid attribute value, type {type} must have a string.");
-                }
-
-                break;
-            default:
-                throw new ArgumentOutOfRangeException(nameof(type));
-        }
-
-        return new GitAttributeValue(type, value);
-    }
-
+    
     public bool IsUnspecified => Type == ValueType.Unspecified;
 
     public bool IsTrue => Type == ValueType.True;
@@ -46,11 +22,30 @@ public readonly record struct GitAttributeValue
 
     public bool IsString => Type == ValueType.String;
 
+    public static GitAttributeValue Unspecified => new(ValueType.Unspecified, null);
+    public static GitAttributeValue True => new(ValueType.True, null);
+    public static GitAttributeValue False => new(ValueType.False, null);
+    
+    public static implicit operator GitAttributeValue(string? value)
+    {
+        return new GitAttributeValue(value == null ? ValueType.Unspecified : ValueType.String, value);
+    }
+
+    public static implicit operator GitAttributeValue(bool value)
+    {
+        return new GitAttributeValue(value ? ValueType.True : ValueType.False, null);
+    }
+
     public enum ValueType
     {
         Unspecified,
         True,
         False,
         String
+    }
+
+    private string DebuggerDisplay()
+    {
+        return this.Type == ValueType.String ? $"\"{this.String!}\"" : this.Type.ToString();
     }
 }
