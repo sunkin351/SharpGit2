@@ -705,50 +705,45 @@ internal static partial class Utilities
 
                 Vector512<byte> c0 = Vector512.Create((byte)0x1f),
                     c1 = Vector512.Create((byte)0x7f),
-                    c2 = Vector512.Create((byte)'\t'),
-                    c3 = Vector512.Create((byte)'\f'),
-                    c4 = Vector512.Create((byte)'\v'),
-                    c5 = Vector512.Create((byte)'\b'),
-                    c6 = Vector512.Create((byte)0x1b),
-                    c7 = Vector512.Create((byte)'\r'),
-                    c8 = Vector512.Create((byte)'\n');
+                    c2 = Vector512.Create((byte)8),
+                    c3 = Vector512.Create((byte)(13 - 8)),
+                    escapeConst = Vector512.Create((byte)'\e'),
+                    crConst = Vector512.Create((byte)'\r'),
+                    lfConst = Vector512.Create((byte)'\n');
             
-                Vector512<byte> mask1, mask2, charData;
+                Vector512<byte> charData, printableVec, crVec, lfVec, crlfVec, zeroVec;
 
                 while (Unsafe.IsAddressLessThan(ref reference, ref minusOneVec))
                 {
                     charData = Vector512.LoadUnsafe(ref reference);
 
-                    mask1 = Vector512.GreaterThan(charData, c0);
-                    mask1 = Vector512.AndNot(mask1, Vector512.Equals(charData, c1));
+                    printableVec = Vector512.GreaterThan(charData, c0);
+                    printableVec = Vector512.AndNot(printableVec, Vector512.Equals(charData, c1));
 
-                    mask1 |= Vector512.Equals(charData, c2);
-                    mask1 |= Vector512.Equals(charData, c3);
-                    mask1 |= Vector512.Equals(charData, c4);
-                    mask1 |= Vector512.Equals(charData, c5);
-                    mask1 |= Vector512.Equals(charData, c6);
+                    crVec = Vector512.Equals(charData, crConst);
+                    cr += Vector512.CountWhereAllBitsSet(crVec);
+                    
+                    lfVec = Vector512.Equals(charData, lfConst);
+                    lf += Vector512.CountWhereAllBitsSet(lfVec);
 
-                    printable += Vector512.CountWhereAllBitsSet(mask1);
+                    printableVec |= Vector512.AndNot(
+                        Vector512.LessThanOrEqual(charData - c2, c3),
+                        crVec | lfVec)
+                        | Vector512.Equals(charData, escapeConst);
+                    
+                    printable += Vector512.CountWhereAllBitsSet(printableVec);
 
-                    mask2 = Vector512.Equals(charData, c7);
-                    cr += Vector512.CountWhereAllBitsSet(mask2);
-
-                    mask1 |= mask2;
+                    printableVec |= crVec | lfVec;
 
                     // The way the condition of this loop is coded, there will always be at least one additional byte
                     // ahead of the current read. So this should always be safe.
-                    mask2 &= Vector512.Equals(c8, Vector512.LoadUnsafe(ref reference, 1u));
-                    crlf += Vector512.CountWhereAllBitsSet(mask2);
+                    crlfVec = crVec & Vector512.Equals(lfConst, Vector512.LoadUnsafe(ref reference, 1u));
+                    crlf += Vector512.CountWhereAllBitsSet(crlfVec);
                 
-                    mask2 = Vector512.Equals(charData, c8);
-                    lf += Vector512.CountWhereAllBitsSet(mask2);
+                    zeroVec = Vector512.Equals(charData, Vector512<byte>.Zero);
+                    nul += Vector512.CountWhereAllBitsSet(zeroVec);
 
-                    mask1 |= mask2;
-                
-                    mask2 = Vector512.Equals(charData, Vector512<byte>.Zero);
-                    nul += Vector512.CountWhereAllBitsSet(mask2);
-
-                    nonprintable += Vector512.CountWhereAllBitsSet(~mask1);
+                    nonprintable += Vector512.CountWhereAllBitsSet(~printableVec);
                 
                     reference = ref Unsafe.Add(ref reference, Vector512<byte>.Count);
                 }
@@ -760,39 +755,36 @@ internal static partial class Utilities
 
                 charData = Vector512.LoadUnsafe(ref minusOneVec);
             
-                mask1 = Vector512.GreaterThan(charData, c0);
-                mask1 = Vector512.AndNot(mask1, Vector512.Equals(charData, c1));
+                printableVec = Vector512.GreaterThan(charData, c0);
+                printableVec = Vector512.AndNot(printableVec, Vector512.Equals(charData, c1));
 
-                mask1 |= Vector512.Equals(charData, c2);
-                mask1 |= Vector512.Equals(charData, c3);
-                mask1 |= Vector512.Equals(charData, c4);
-                mask1 |= Vector512.Equals(charData, c5);
-                mask1 |= Vector512.Equals(charData, c6);
-            
-                printable += Vector512.CountWhereAllBitsSet(mask1 & resultMask);
-            
-                var cr_mask = mask2 = Vector512.Equals(charData, c7);
-                cr += Vector512.CountWhereAllBitsSet(mask2 & resultMask);
+                crVec = Vector512.Equals(charData, crConst);
+                cr += Vector512.CountWhereAllBitsSet(crVec & resultMask);
+                    
+                lfVec = Vector512.Equals(charData, lfConst);
+                lf += Vector512.CountWhereAllBitsSet(lfVec & resultMask);
 
-                mask1 |= mask2;
-                
-                mask2 = Vector512.Equals(charData, c8);
-                lf += Vector512.CountWhereAllBitsSet(mask2 & resultMask);
+                printableVec |= Vector512.AndNot(
+                             Vector512.LessThanOrEqual(charData - c2, c3),
+                             crVec | lfVec)
+                         | Vector512.Equals(charData, escapeConst);
+                    
+                printable += Vector512.CountWhereAllBitsSet(printableVec & resultMask);
 
-                mask1 |= mask2;
+                printableVec |= crVec | lfVec;
 
-                // shuffle the entire vector over by 1 byte, zeroing the last byte
-                cr_mask &= Vector512.Shuffle(mask2,
-                    Vector512.Create(1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16,
-                                            17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32,
-                                            33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48,
-                                            49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, byte.MaxValue));
-                crlf += Vector512.CountWhereAllBitsSet(cr_mask & resultMask);
+                // shuffle the entire vector over by 1 byte, zeroing the last bytes
+                crlfVec = crVec & Vector512.Shuffle(lfVec,
+                        Vector512.Create(1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16,
+                            17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32,
+                            33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48,
+                            49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, byte.MaxValue));
+                crlf += Vector512.CountWhereAllBitsSet(crlfVec & resultMask);
 
-                mask2 = Vector512.Equals(charData, Vector512<byte>.Zero);
-                nul += Vector512.CountWhereAllBitsSet(mask2 & resultMask);
+                zeroVec = Vector512.Equals(charData, Vector512<byte>.Zero);
+                nul += Vector512.CountWhereAllBitsSet(zeroVec & resultMask);
 
-                nonprintable += Vector512.CountWhereAllBitsSet(~mask1 & resultMask);
+                nonprintable += Vector512.CountWhereAllBitsSet(~printableVec & resultMask);
             }
             else if (Vector256.IsHardwareAccelerated && data.Length >= Vector256<byte>.Count)
             {
@@ -800,50 +792,45 @@ internal static partial class Utilities
 
                 Vector256<byte> c0 = Vector256.Create((byte)0x1f),
                     c1 = Vector256.Create((byte)0x7f),
-                    c2 = Vector256.Create((byte)'\t'),
-                    c3 = Vector256.Create((byte)'\f'),
-                    c4 = Vector256.Create((byte)'\v'),
-                    c5 = Vector256.Create((byte)'\b'),
-                    c6 = Vector256.Create((byte)0x1b),
-                    c7 = Vector256.Create((byte)'\r'),
-                    c8 = Vector256.Create((byte)'\n');
+                    c2 = Vector256.Create((byte)8),
+                    c3 = Vector256.Create((byte)(13 - 8)),
+                    escapeConst = Vector256.Create((byte)'\e'),
+                    crConst = Vector256.Create((byte)'\r'),
+                    lfConst = Vector256.Create((byte)'\n');
             
-                Vector256<byte> mask1, mask2, charData;
+                Vector256<byte> charData, printableVec, crVec, lfVec, crlfVec, zeroVec;
 
                 while (Unsafe.IsAddressLessThan(ref reference, ref minusOneVec))
                 {
                     charData = Vector256.LoadUnsafe(ref reference);
 
-                    mask1 = Vector256.GreaterThan(charData, c0);
-                    mask1 = Vector256.AndNot(mask1, Vector256.Equals(charData, c1));
+                    printableVec = Vector256.GreaterThan(charData, c0);
+                    printableVec = Vector256.AndNot(printableVec, Vector256.Equals(charData, c1));
 
-                    mask1 |= Vector256.Equals(charData, c2);
-                    mask1 |= Vector256.Equals(charData, c3);
-                    mask1 |= Vector256.Equals(charData, c4);
-                    mask1 |= Vector256.Equals(charData, c5);
-                    mask1 |= Vector256.Equals(charData, c6);
+                    crVec = Vector256.Equals(charData, crConst);
+                    cr += Vector256.CountWhereAllBitsSet(crVec);
+                    
+                    lfVec = Vector256.Equals(charData, lfConst);
+                    lf += Vector256.CountWhereAllBitsSet(lfVec);
 
-                    printable += Vector256.CountWhereAllBitsSet(mask1);
+                    printableVec |= Vector256.AndNot(
+                        Vector256.LessThanOrEqual(charData - c2, c3),
+                        crVec | lfVec)
+                        | Vector256.Equals(charData, escapeConst);
+                    
+                    printable += Vector256.CountWhereAllBitsSet(printableVec);
 
-                    mask2 = Vector256.Equals(charData, c7);
-                    cr += Vector256.CountWhereAllBitsSet(mask2);
-
-                    mask1 |= mask2;
+                    printableVec |= crVec | lfVec;
 
                     // The way the condition of this loop is coded, there will always be at least one additional byte
                     // ahead of the current read. So this should always be safe.
-                    mask2 &= Vector256.Equals(c8, Vector256.LoadUnsafe(ref reference, 1u));
-                    crlf += Vector256.CountWhereAllBitsSet(mask2);
+                    crlfVec = crVec & Vector256.Equals(lfConst, Vector256.LoadUnsafe(ref reference, 1u));
+                    crlf += Vector256.CountWhereAllBitsSet(crlfVec);
                 
-                    mask2 = Vector256.Equals(charData, c8);
-                    lf += Vector256.CountWhereAllBitsSet(mask2);
+                    zeroVec = Vector256.Equals(charData, Vector256<byte>.Zero);
+                    nul += Vector256.CountWhereAllBitsSet(zeroVec);
 
-                    mask1 |= mask2;
-                
-                    mask2 = Vector256.Equals(charData, Vector256<byte>.Zero);
-                    nul += Vector256.CountWhereAllBitsSet(mask2);
-
-                    nonprintable += Vector256.CountWhereAllBitsSet(~mask1);
+                    nonprintable += Vector256.CountWhereAllBitsSet(~printableVec);
                 
                     reference = ref Unsafe.Add(ref reference, Vector256<byte>.Count);
                 }
@@ -855,37 +842,34 @@ internal static partial class Utilities
 
                 charData = Vector256.LoadUnsafe(ref minusOneVec);
             
-                mask1 = Vector256.GreaterThan(charData, c0);
-                mask1 = Vector256.AndNot(mask1, Vector256.Equals(charData, c1));
+                printableVec = Vector256.GreaterThan(charData, c0);
+                printableVec = Vector256.AndNot(printableVec, Vector256.Equals(charData, c1));
 
-                mask1 |= Vector256.Equals(charData, c2);
-                mask1 |= Vector256.Equals(charData, c3);
-                mask1 |= Vector256.Equals(charData, c4);
-                mask1 |= Vector256.Equals(charData, c5);
-                mask1 |= Vector256.Equals(charData, c6);
-            
-                printable += Vector256.CountWhereAllBitsSet(mask1 & resultMask);
-            
-                var crlf_mask = mask2 = Vector256.Equals(charData, c7);
-                cr += Vector256.CountWhereAllBitsSet(mask2 & resultMask);
+                crVec = Vector256.Equals(charData, crConst);
+                cr += Vector256.CountWhereAllBitsSet(crVec & resultMask);
+                    
+                lfVec = Vector256.Equals(charData, lfConst);
+                lf += Vector256.CountWhereAllBitsSet(lfVec & resultMask);
 
-                mask1 |= mask2;
-                
-                mask2 = Vector256.Equals(charData, c8);
-                lf += Vector256.CountWhereAllBitsSet(mask2 & resultMask);
+                printableVec |= Vector256.AndNot(
+                             Vector256.LessThanOrEqual(charData - c2, c3),
+                             crVec | lfVec)
+                         | Vector256.Equals(charData, escapeConst);
+                    
+                printable += Vector256.CountWhereAllBitsSet(printableVec & resultMask);
 
-                mask1 |= mask2;
+                printableVec |= crVec | lfVec;
 
-                // shuffle the entire vector over by 1 byte, zeroing the last byte
-                crlf_mask &= Vector256.Shuffle(mask2,
-                    Vector256.Create(1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16,
-                                            17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, byte.MaxValue));
-                crlf += Vector256.CountWhereAllBitsSet(crlf_mask & resultMask);
+                // shuffle the entire vector over by 1 byte, zeroing the last bytes
+                crlfVec = crVec & Vector256.Shuffle(lfVec,
+                        Vector256.Create(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
+                            17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, byte.MaxValue));
+                crlf += Vector256.CountWhereAllBitsSet(crlfVec & resultMask);
 
-                mask2 = Vector256.Equals(charData, Vector256<byte>.Zero);
-                nul += Vector256.CountWhereAllBitsSet(mask2 & resultMask);
+                zeroVec = Vector256.Equals(charData, Vector256<byte>.Zero);
+                nul += Vector256.CountWhereAllBitsSet(zeroVec & resultMask);
 
-                nonprintable += Vector256.CountWhereAllBitsSet(~mask1 & resultMask);
+                nonprintable += Vector256.CountWhereAllBitsSet(~printableVec & resultMask);
             }
             else
             {
@@ -893,50 +877,45 @@ internal static partial class Utilities
 
                 Vector128<byte> c0 = Vector128.Create((byte)0x1f),
                     c1 = Vector128.Create((byte)0x7f),
-                    c2 = Vector128.Create((byte)'\t'),
-                    c3 = Vector128.Create((byte)'\f'),
-                    c4 = Vector128.Create((byte)'\v'),
-                    c5 = Vector128.Create((byte)'\b'),
-                    c6 = Vector128.Create((byte)0x1b),
-                    c7 = Vector128.Create((byte)'\r'),
-                    c8 = Vector128.Create((byte)'\n');
+                    c2 = Vector128.Create((byte)8),
+                    c3 = Vector128.Create((byte)(13 - 8)),
+                    escapeConst = Vector128.Create((byte)'\e'),
+                    crConst = Vector128.Create((byte)'\r'),
+                    lfConst = Vector128.Create((byte)'\n');
             
-                Vector128<byte> mask1, mask2, charData;
+                Vector128<byte> charData, printableVec, crVec, lfVec, crlfVec, zeroVec;
 
                 while (Unsafe.IsAddressLessThan(ref reference, ref minusOneVec))
                 {
                     charData = Vector128.LoadUnsafe(ref reference);
 
-                    mask1 = Vector128.GreaterThan(charData, c0);
-                    mask1 = Vector128.AndNot(mask1, Vector128.Equals(charData, c1));
+                    printableVec = Vector128.GreaterThan(charData, c0);
+                    printableVec = Vector128.AndNot(printableVec, Vector128.Equals(charData, c1));
 
-                    mask1 |= Vector128.Equals(charData, c2);
-                    mask1 |= Vector128.Equals(charData, c3);
-                    mask1 |= Vector128.Equals(charData, c4);
-                    mask1 |= Vector128.Equals(charData, c5);
-                    mask1 |= Vector128.Equals(charData, c6);
+                    crVec = Vector128.Equals(charData, crConst);
+                    cr += Vector128.CountWhereAllBitsSet(crVec);
+                    
+                    lfVec = Vector128.Equals(charData, lfConst);
+                    lf += Vector128.CountWhereAllBitsSet(lfVec);
 
-                    printable += Vector128.CountWhereAllBitsSet(mask1);
+                    printableVec |= Vector128.AndNot(
+                        Vector128.LessThanOrEqual(charData - c2, c3),
+                        crVec | lfVec)
+                        | Vector128.Equals(charData, escapeConst);
+                    
+                    printable += Vector128.CountWhereAllBitsSet(printableVec);
 
-                    mask2 = Vector128.Equals(charData, c7);
-                    cr += Vector128.CountWhereAllBitsSet(mask2);
-
-                    mask1 |= mask2;
+                    printableVec |= crVec | lfVec;
 
                     // The way the condition of this loop is coded, there will always be at least one additional byte
                     // ahead of the current read. So this should always be safe.
-                    mask2 &= Vector128.Equals(c8, Vector128.LoadUnsafe(ref reference, 1u));
-                    crlf += Vector128.CountWhereAllBitsSet(mask2);
+                    crlfVec = crVec & Vector128.Equals(lfConst, Vector128.LoadUnsafe(ref reference, 1u));
+                    crlf += Vector128.CountWhereAllBitsSet(crlfVec);
                 
-                    mask2 = Vector128.Equals(charData, c8);
-                    lf += Vector128.CountWhereAllBitsSet(mask2);
+                    zeroVec = Vector128.Equals(charData, Vector128<byte>.Zero);
+                    nul += Vector128.CountWhereAllBitsSet(zeroVec);
 
-                    mask1 |= mask2;
-                
-                    mask2 = Vector128.Equals(charData, Vector128<byte>.Zero);
-                    nul += Vector128.CountWhereAllBitsSet(mask2);
-
-                    nonprintable += Vector128.CountWhereAllBitsSet(~mask1);
+                    nonprintable += Vector128.CountWhereAllBitsSet(~printableVec);
                 
                     reference = ref Unsafe.Add(ref reference, Vector128<byte>.Count);
                 }
@@ -948,36 +927,33 @@ internal static partial class Utilities
 
                 charData = Vector128.LoadUnsafe(ref minusOneVec);
             
-                mask1 = Vector128.GreaterThan(charData, c0);
-                mask1 = Vector128.AndNot(mask1, Vector128.Equals(charData, c1));
+                printableVec = Vector128.GreaterThan(charData, c0);
+                printableVec = Vector128.AndNot(printableVec, Vector128.Equals(charData, c1));
 
-                mask1 |= Vector128.Equals(charData, c2);
-                mask1 |= Vector128.Equals(charData, c3);
-                mask1 |= Vector128.Equals(charData, c4);
-                mask1 |= Vector128.Equals(charData, c5);
-                mask1 |= Vector128.Equals(charData, c6);
-            
-                printable += Vector128.CountWhereAllBitsSet(mask1 & resultMask);
-            
-                var cr_mask = mask2 = Vector128.Equals(charData, c7);
-                cr += Vector128.CountWhereAllBitsSet(mask2 & resultMask);
+                crVec = Vector128.Equals(charData, crConst);
+                cr += Vector128.CountWhereAllBitsSet(crVec & resultMask);
+                    
+                lfVec = Vector128.Equals(charData, lfConst);
+                lf += Vector128.CountWhereAllBitsSet(lfVec & resultMask);
 
-                mask1 |= mask2;
-                
-                mask2 = Vector128.Equals(charData, c8);
-                lf += Vector128.CountWhereAllBitsSet(mask2 & resultMask);
+                printableVec |= Vector128.AndNot(
+                     Vector128.LessThanOrEqual(charData - c2, c3),
+                     crVec | lfVec)
+                    | Vector128.Equals(charData, escapeConst);
+                    
+                printable += Vector128.CountWhereAllBitsSet(printableVec & resultMask);
 
-                mask1 |= mask2;
+                printableVec |= crVec | lfVec;
 
                 // shuffle the entire vector over by 1 byte, zeroing the last bytes
-                cr_mask &= Vector128.Shuffle(mask2,
+                crlfVec = crVec & Vector128.Shuffle(lfVec,
                         Vector128.Create(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, byte.MaxValue));
-                crlf += Vector128.CountWhereAllBitsSet(cr_mask & resultMask);
+                crlf += Vector128.CountWhereAllBitsSet(crlfVec & resultMask);
 
-                mask2 = Vector128.Equals(charData, Vector128<byte>.Zero);
-                nul += Vector128.CountWhereAllBitsSet(mask2 & resultMask);
+                zeroVec = Vector128.Equals(charData, Vector128<byte>.Zero);
+                nul += Vector128.CountWhereAllBitsSet(zeroVec & resultMask);
 
-                nonprintable += Vector128.CountWhereAllBitsSet(~mask1 & resultMask);
+                nonprintable += Vector128.CountWhereAllBitsSet(~printableVec & resultMask);
             }
         }
         else
