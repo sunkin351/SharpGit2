@@ -1,4 +1,5 @@
 ﻿using System.Buffers;
+using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using System.Runtime.CompilerServices;
@@ -1002,5 +1003,446 @@ internal static partial class Utilities
         stats.CRLF = crlf;
 
         return cr != crlf || nul > 0 || (printable >> 7) < nonprintable;
+    }
+
+    public static bool IsBinaryData(ReadOnlySpan<byte> data)
+    {
+        DetectByteOrderMark(data, out int bomBytes);
+        data = data.Slice(bomBytes);
+
+        int printable = 0, nonprintable = 0;
+
+        if (Vector128.IsHardwareAccelerated && data.Length >= Vector128<byte>.Count)
+        {
+            ref byte reference = ref MemoryMarshal.GetReference(data);
+
+            if (Vector512.IsHardwareAccelerated && data.Length >= Vector512<byte>.Count)
+            {
+                ref byte minusOneVec = ref Unsafe.Add(ref reference, data.Length - Vector512<byte>.Count);
+
+                Vector512<byte> c0 = Vector512.Create((byte)0x1f),
+                    c1 = Vector512.Create((byte)0x7f),
+                    c2 = Vector512.Create((byte)'\b'),
+                    c3 = Vector512.Create((byte)'\f'),
+                    c4 = Vector512.Create((byte)'\e'),
+                    c5 = Vector512.Create((byte)9),
+                    c6 = Vector512.Create((byte)(13 - 9));
+                
+                Vector512<byte> charVec, printableMask;
+                
+                while (Unsafe.IsAddressLessThan(ref reference, ref minusOneVec))
+                {
+                    charVec = Vector512.LoadUnsafe(ref reference);
+
+                    if (Vector512.Any(charVec, (byte)0))
+                        return true;
+
+                    printableMask = Vector512.GreaterThan(charVec, c0);
+                    printableMask = Vector512.AndNot(printableMask, Vector512.Equals(charVec, c1));
+                    
+                    printableMask |= Vector512.Equals(charVec, c2)
+                        | Vector512.Equals(charVec, c3)
+                        | Vector512.Equals(charVec, c4);
+
+                    printable += Vector512.CountWhereAllBitsSet(printableMask);
+
+                    printableMask |= Vector512.LessThanOrEqual(charVec - c5, c6);
+                    
+                    nonprintable += Vector512.CountWhereAllBitsSet(~printableMask);
+
+                    reference = ref Unsafe.Add(ref reference, Vector512<byte>.Count);
+                }
+                
+                int remaining = data.Length % Vector512<byte>.Count;
+                var resultMask = remaining == 0
+                    ? Vector512<byte>.AllBitsSet
+                    : Vector512.GreaterThanOrEqual(Vector512<byte>.Indices, Vector512.Create((byte)(Vector512<byte>.Count - remaining)));
+                
+                charVec = Vector512.LoadUnsafe(ref minusOneVec);
+
+                if (Vector512.Any(charVec, (byte)0))
+                    return true;
+
+                printableMask = Vector512.GreaterThan(charVec, c0);
+                printableMask = Vector512.AndNot(printableMask, Vector512.Equals(charVec, c1));
+                    
+                printableMask |= Vector512.Equals(charVec, c2)
+                               | Vector512.Equals(charVec, c3)
+                               | Vector512.Equals(charVec, c4);
+                printable += Vector512.CountWhereAllBitsSet(printableMask & resultMask);
+
+                printableMask |= Vector512.LessThanOrEqual(charVec - c5, c6);
+                    
+                nonprintable += Vector512.CountWhereAllBitsSet(~printableMask & resultMask);
+            }
+            else if (Vector256.IsHardwareAccelerated && data.Length >= Vector256<byte>.Count)
+            {
+                ref byte minusOneVec = ref Unsafe.Add(ref reference, data.Length - Vector256<byte>.Count);
+
+                Vector256<byte> c0 = Vector256.Create((byte)0x1f),
+                    c1 = Vector256.Create((byte)0x7f),
+                    c2 = Vector256.Create((byte)'\b'),
+                    c3 = Vector256.Create((byte)'\f'),
+                    c4 = Vector256.Create((byte)'\e'),
+                    c5 = Vector256.Create((byte)9),
+                    c6 = Vector256.Create((byte)(13 - 9));
+                
+                Vector256<byte> charVec, printableMask;
+                
+                while (Unsafe.IsAddressLessThan(ref reference, ref minusOneVec))
+                {
+                    charVec = Vector256.LoadUnsafe(ref reference);
+
+                    if (Vector256.Any(charVec, (byte)0))
+                        return true;
+
+                    printableMask = Vector256.GreaterThan(charVec, c0);
+                    printableMask = Vector256.AndNot(printableMask, Vector256.Equals(charVec, c1));
+                    
+                    printableMask |= Vector256.Equals(charVec, c2)
+                        | Vector256.Equals(charVec, c3)
+                        | Vector256.Equals(charVec, c4);
+
+                    printable += Vector256.CountWhereAllBitsSet(printableMask);
+
+                    printableMask |= Vector256.LessThanOrEqual(charVec - c5, c6);
+                    
+                    nonprintable += Vector256.CountWhereAllBitsSet(~printableMask);
+
+                    reference = ref Unsafe.Add(ref reference, Vector256<byte>.Count);
+                }
+                
+                int remaining = data.Length % Vector256<byte>.Count;
+                var resultMask = remaining == 0
+                    ? Vector256<byte>.AllBitsSet
+                    : Vector256.GreaterThanOrEqual(Vector256<byte>.Indices, Vector256.Create((byte)(Vector256<byte>.Count - remaining)));
+                
+                charVec = Vector256.LoadUnsafe(ref minusOneVec);
+
+                if (Vector256.Any(charVec, (byte)0))
+                    return true;
+
+                printableMask = Vector256.GreaterThan(charVec, c0);
+                printableMask = Vector256.AndNot(printableMask, Vector256.Equals(charVec, c1));
+                    
+                printableMask |= Vector256.Equals(charVec, c2)
+                                 | Vector256.Equals(charVec, c3)
+                                 | Vector256.Equals(charVec, c4);
+                printable += Vector256.CountWhereAllBitsSet(printableMask & resultMask);
+
+                printableMask |= Vector256.LessThanOrEqual(charVec - c5, c6);
+                    
+                nonprintable += Vector256.CountWhereAllBitsSet(~printableMask & resultMask);
+            }
+            else
+            {
+                ref byte minusOneVec = ref Unsafe.Add(ref reference, data.Length - Vector128<byte>.Count);
+
+                Vector128<byte> c0 = Vector128.Create((byte)0x1f),
+                    c1 = Vector128.Create((byte)0x7f),
+                    c2 = Vector128.Create((byte)'\b'),
+                    c3 = Vector128.Create((byte)'\f'),
+                    c4 = Vector128.Create((byte)'\e'),
+                    c5 = Vector128.Create((byte)9),
+                    c6 = Vector128.Create((byte)(13 - 9));
+                
+                Vector128<byte> charVec, printableMask;
+                
+                while (Unsafe.IsAddressLessThan(ref reference, ref minusOneVec))
+                {
+                    charVec = Vector128.LoadUnsafe(ref reference);
+
+                    if (Vector128.Any(charVec, (byte)0))
+                        return true;
+
+                    printableMask = Vector128.GreaterThan(charVec, c0);
+                    printableMask = Vector128.AndNot(printableMask, Vector128.Equals(charVec, c1));
+                    
+                    printableMask |= Vector128.Equals(charVec, c2)
+                        | Vector128.Equals(charVec, c3)
+                        | Vector128.Equals(charVec, c4);
+
+                    printable += Vector128.CountWhereAllBitsSet(printableMask);
+
+                    printableMask |= Vector128.LessThanOrEqual(charVec - c5, c6);
+                    
+                    nonprintable += Vector128.CountWhereAllBitsSet(~printableMask);
+
+                    reference = ref Unsafe.Add(ref reference, Vector128<byte>.Count);
+                }
+                
+                int remaining = data.Length % Vector128<byte>.Count;
+                var resultMask = remaining == 0
+                    ? Vector128<byte>.AllBitsSet
+                    : Vector128.GreaterThanOrEqual(Vector128<byte>.Indices, Vector128.Create((byte)(Vector128<byte>.Count - remaining)));
+                
+                charVec = Vector128.LoadUnsafe(ref minusOneVec);
+
+                if (Vector128.Any(charVec, (byte)0))
+                    return true;
+
+                printableMask = Vector128.GreaterThan(charVec, c0);
+                printableMask = Vector128.AndNot(printableMask, Vector128.Equals(charVec, c1));
+                    
+                printableMask |= Vector128.Equals(charVec, c2)
+                               | Vector128.Equals(charVec, c3)
+                               | Vector128.Equals(charVec, c4);
+                
+                printable += Vector128.CountWhereAllBitsSet(printableMask & resultMask);
+
+                printableMask |= Vector128.LessThanOrEqual(charVec - c5, c6);
+                    
+                nonprintable += Vector128.CountWhereAllBitsSet(~printableMask & resultMask);
+            }
+        }
+        else
+        {
+            for (int i = 0; i < data.Length; ++i)
+            {
+                byte c = data[i];
+
+                if (c == 0)
+                    return true;
+
+                if ((c > 0x1f && c != 0x7f) || c == '\b' || c == '\e' || c == '\f')
+                    printable += 1;
+                else if (c is not (byte)'\t' and not (byte)'\n' and not (byte)'\f' and not (byte)'\r' and not (byte)'\v')
+                    nonprintable += 1;
+            }
+        }
+
+        return (printable >> 7) < nonprintable;
+    }
+
+    public static bool TryFromCrlfToLf(ReadOnlySpan<byte> input, Span<byte> output, out int written)
+    {
+        if (input.Length / 2 > output.Length) // If we assume every pair is a crlf pair...
+        {
+            written = 0;
+            return false;
+        }
+        
+        // TODO: Combine the IndexOf and CopyTo operations in a manual vectorized loop.
+        // As it stands, this will likely only be a little faster than the original
+        // because it's able to skip over CR that isn't followed by LF
+        int idx = input.IndexOf("\r\n"u8);
+        int written0 = 0;
+
+        while (idx >= 0)
+        {
+            if (idx + 1 > output.Length)
+            {
+                written = 0;
+                return false;
+            }
+
+            if (idx > 0)
+                input.Slice(0, idx).CopyTo(output);
+            
+            output[idx] = (byte)'\n';
+
+            written0 += idx + 1;
+
+            output = output.Slice(idx + 1);
+            input = input.Slice(idx + 2);
+            idx = input.IndexOf("\r\n"u8);
+        }
+
+        if (input.IsEmpty || input.TryCopyTo(output))
+        {
+            written = written0 + input.Length;
+            return true;
+        }
+
+        written = 0;
+        return false;
+    }
+
+    public static void FromLfToCrlf(ReadOnlySpan<byte> input, IBufferWriter<byte> writer)
+    {
+        int idx = IndexOfLFWithoutCR(input);
+
+        while (idx >= 0)
+        {
+            if (idx > 0)
+                writer.Write(input[..idx]);
+
+            var output = writer.GetSpan(2);
+            output[0] = (byte)'\r';
+            output[1] = (byte)'\n';
+            writer.Advance(2);
+
+            input = input[(idx + 1)..];
+            idx = IndexOfLFWithoutCR(input);
+        }
+
+        if (input.IsEmpty)
+        {
+            return;
+        }
+
+        writer.Write(input);
+        return;
+        
+        static int IndexOfLFWithoutCR(ReadOnlySpan<byte> input)
+        {
+            if (input.IsEmpty)
+                return -1;
+            
+            if (input.StartsWith((byte)'\n'))
+                return 0;
+
+            if (Vector128.IsHardwareAccelerated && input.Length >= Vector128<byte>.Count)
+            {
+                ref byte reference = ref MemoryMarshal.GetReference(input);
+                nuint length = (nuint)input.Length, position = 0, minusOneVec;
+
+                if (Vector512.IsHardwareAccelerated && length >= (nuint)Vector512<byte>.Count)
+                {
+                    minusOneVec = length - (nuint)Vector512<byte>.Count;
+
+                    Vector512<byte> cr = Vector512.Create((byte)'\r'),
+                        lf = Vector512.Create((byte)'\n'),
+                        v0, v1;
+                    
+                    while (position < minusOneVec)
+                    {
+                        v0 = Vector512.Equals(cr, Vector512.LoadUnsafe(ref reference, position));
+                        v1 = Vector512.Equals(lf, Vector512.LoadUnsafe(ref reference, position + 1u));
+
+                        v0 = Vector512.AndNot(v1, v0);
+
+                        if (Vector512.AnyWhereAllBitsSet(v0))
+                        {
+                            return (int)position + Vector512.IndexOfWhereAllBitsSet(v0) + 1;
+                        }
+
+                        position += (nuint)Vector512<byte>.Count;
+                    }
+                    
+                    v0 = Vector512.LoadUnsafe(ref reference, minusOneVec);
+                    v1 = Vector512.Shuffle(v0,
+                        Vector512.Create(1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16,
+                            17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32,
+                            33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48,
+                            49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, byte.MaxValue));
+
+                    v0 = Vector512.Equals(v0, cr);
+                    v1 = Vector512.Equals(v1, lf);
+
+                    v0 = Vector512.AndNot(v1, v0);
+
+                    if (Vector512.AnyWhereAllBitsSet(v0))
+                    {
+                        return (int)minusOneVec + Vector512.IndexOfWhereAllBitsSet(v0) + 1;
+                    }
+                }
+                else if (Vector256.IsHardwareAccelerated && length >= (nuint)Vector256<byte>.Count)
+                {
+                    minusOneVec = length - (nuint)Vector256<byte>.Count;
+
+                    Vector256<byte> cr = Vector256.Create((byte)'\r'),
+                        lf = Vector256.Create((byte)'\n'),
+                        v0, v1;
+                    
+                    while (position < minusOneVec)
+                    {
+                        v0 = Vector256.Equals(cr, Vector256.LoadUnsafe(ref reference, position));
+                        v1 = Vector256.Equals(lf, Vector256.LoadUnsafe(ref reference, position + 1u));
+
+                        v0 = Vector256.AndNot(v1, v0);
+
+                        if (Vector256.AnyWhereAllBitsSet(v0))
+                        {
+                            return (int)position + Vector256.IndexOfWhereAllBitsSet(v0) + 1;
+                        }
+
+                        position += (nuint)Vector256<byte>.Count;
+                    }
+                    
+                    v0 = Vector256.LoadUnsafe(ref reference, minusOneVec);
+                    v1 = Vector256.Shuffle(v0,
+                        Vector256.Create(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
+                            17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, byte.MaxValue));
+
+                    v0 = Vector256.Equals(v0, cr);
+                    v1 = Vector256.Equals(v1, lf);
+
+                    v0 = Vector256.AndNot(v1, v0);
+
+                    if (Vector256.AnyWhereAllBitsSet(v0))
+                    {
+                        return (int)minusOneVec + Vector256.IndexOfWhereAllBitsSet(v0) + 1;
+                    }
+                }
+                else
+                {
+                    minusOneVec = (nuint)(input.Length - Vector128<byte>.Count);
+
+                    Vector128<byte> cr = Vector128.Create((byte)'\r'),
+                        lf = Vector128.Create((byte)'\n'),
+                        v0, v1;
+                    
+                    while (position < minusOneVec)
+                    {
+                        v0 = Vector128.Equals(cr, Vector128.LoadUnsafe(ref reference, position));
+                        v1 = Vector128.Equals(lf, Vector128.LoadUnsafe(ref reference, position + 1u));
+
+                        v0 = Vector128.AndNot(v1, v0);
+
+                        if (Vector128.AnyWhereAllBitsSet(v0))
+                        {
+                            return (int)position + Vector128.IndexOfWhereAllBitsSet(v0) + 1;
+                        }
+
+                        position += (nuint)Vector128<byte>.Count;
+                    }
+                    
+                    v0 = Vector128.LoadUnsafe(ref reference, minusOneVec);
+                    v1 = Vector128.Shuffle(v0,
+                        Vector128.Create(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, byte.MaxValue));
+                    
+                    v0 = Vector128.Equals(v0, cr);
+                    v1 = Vector128.Equals(v1, lf);
+
+                    v0 = Vector128.AndNot(v1, v0);
+
+                    if (Vector128.AnyWhereAllBitsSet(v0))
+                    {
+                        return (int)minusOneVec + Vector128.IndexOfWhereAllBitsSet(v0) + 1;
+                    }
+                }
+            }
+            else
+            {
+                int nextStart = 1, idx;
+
+                while ((idx = input.Slice(nextStart).IndexOf((byte)'\n')) >= 0)
+                {
+                    nextStart += idx;
+
+                    if (input[nextStart - 1] != '\r')
+                        return nextStart;
+                }
+            }
+            
+            return -1;
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static TTo[] SelectToArray<TFrom, TTo>(this ImmutableArray<TFrom> collection, Func<TFrom, TTo> func)
+    {
+        if (collection.IsDefaultOrEmpty)
+            return [];
+        
+        var resultArray = new TTo[collection.Length];
+
+        for (int i = 0; i < collection.Length; ++i)
+        {
+            resultArray[i] = func(collection[i]);
+        }
+
+        return resultArray;
     }
 }
