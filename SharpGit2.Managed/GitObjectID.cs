@@ -19,7 +19,7 @@ public enum GitObjectIDType : byte
 #if !GIT_EXPERIMENTAL_SHA256
 
 [StructLayout(LayoutKind.Sequential)]
-public unsafe record struct GitObjectID : IComparable<GitObjectID>, ISpanFormattable
+public struct GitObjectID : IComparable<GitObjectID>, IUtf8SpanFormattable
 {
     public static int MaxHexSize => SHA1.HashSizeInBytes * 2;
     public static int MaxByteSize => SHA1.HashSizeInBytes;
@@ -77,9 +77,22 @@ public unsafe record struct GitObjectID : IComparable<GitObjectID>, ISpanFormatt
         return this.ToString();
     }
 
-    public readonly bool TryFormat(Span<char> destination, out int charsWritten, ReadOnlySpan<char> format = default, IFormatProvider? provider = null)
+    public readonly bool TryFormat(
+        Span<char> destination,
+        out int charsWritten,
+        ReadOnlySpan<char> format = default,
+        IFormatProvider? provider = null)
     {
         return Convert.TryToHexStringLower(this.Id, destination, out charsWritten);
+    }
+
+    public readonly bool TryFormat(
+        Span<byte> utf8Destination,
+        out int charsWritten,
+        ReadOnlySpan<char> format = default,
+        IFormatProvider? provider = null)
+    {
+        return Convert.TryToHexStringLower(this.Id, utf8Destination, out charsWritten);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -92,8 +105,6 @@ public unsafe record struct GitObjectID : IComparable<GitObjectID>, ISpanFormatt
     {
         get
         {
-            Debug.Assert(sizeof(IdByteArray) == 20);
-            
             ref byte reference = ref Unsafe.As<IdByteArray, byte>(ref Unsafe.AsRef(in this.Id));
 
             if (Vector128.IsHardwareAccelerated)
@@ -211,7 +222,7 @@ public unsafe record struct GitObjectID : IComparable<GitObjectID>, ISpanFormatt
 #else
 
 [StructLayout(LayoutKind.Sequential)]
-public unsafe record struct GitObjectID : IComparable<GitObjectID>, ISpanFormattable
+public record struct GitObjectID : IComparable<GitObjectID>, IUtf8SpanFormattable
 {
     internal const int SHA1HexSize = SHA1.HashSizeInBytes * 2;
     internal const int SHA256HexSize = SHA256.HashSizeInBytes * 2;
@@ -309,7 +320,11 @@ public unsafe record struct GitObjectID : IComparable<GitObjectID>, ISpanFormatt
         return this.ToString();
     }
 
-    public readonly bool TryFormat(Span<char> destination, out int charsWritten, ReadOnlySpan<char> format = default, IFormatProvider? provider = null)
+    public readonly bool TryFormat(
+        Span<char> destination,
+        out int charsWritten,
+        ReadOnlySpan<char> format = default,
+        IFormatProvider? provider = null)
     {
         ReadOnlySpan<byte> idSpan = this.Id;
 
@@ -319,6 +334,22 @@ public unsafe record struct GitObjectID : IComparable<GitObjectID>, ISpanFormatt
             idSpan = idSpan.Slice(0, SHA1.HashSizeInBytes);
 
         return Convert.TryToHexStringLower(idSpan, destination, out charsWritten);
+    }
+
+    public bool TryFormat(
+        Span<byte> utf8Destination,
+        out int bytesWritten,
+        ReadOnlySpan<char> format = default,
+        IFormatProvider? provider = null)
+    {
+        ReadOnlySpan<byte> idSpan = this.Id;
+
+        Debug.Assert(this.Type is GitObjectIDType.SHA1 or GitObjectIDType.SHA256);
+
+        if (this.Type != GitObjectIDType.SHA256)
+            idSpan = idSpan.Slice(0, SHA1.HashSizeInBytes);
+
+        return Convert.TryToHexStringLower(idSpan, utf8Destination, out bytesWritten);
     }
 
     public readonly override int GetHashCode()
