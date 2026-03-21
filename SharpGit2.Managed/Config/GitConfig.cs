@@ -13,13 +13,6 @@ namespace SharpGit2.Managed.Config;
 
 public sealed partial class GitConfig : IEnumerable<GitConfigEntry>, IDisposable
 {
-    public enum Result
-    {
-        Found,
-        NotFound,
-        CouldNotParse,
-    }
-
     internal const string FileNameProgramData = "config";
     internal const string FileNameSystem = "gitconfig";
     internal const string FileNameGlobal = ".gitconfig";
@@ -328,7 +321,7 @@ public sealed partial class GitConfig : IEnumerable<GitConfigEntry>, IDisposable
 
     public void Dispose()
     {
-        if (_disposed)
+        if (Interlocked.Exchange(ref _disposed, true))
             return;
         
         foreach (ref var backend in _backendArray.AsSpan())
@@ -345,7 +338,6 @@ public sealed partial class GitConfig : IEnumerable<GitConfigEntry>, IDisposable
         
         _readers.Clear();
         _writers.Clear();
-        _disposed = true;
     }
 
     public void AddFileOnDisk(string path, GitConfigLevel level, GitRepository? repo, bool force)

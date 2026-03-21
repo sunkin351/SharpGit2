@@ -540,7 +540,7 @@ internal sealed class GitReferenceDatabaseFileSystemBackend : IGitReferenceDatab
         if (reference.ReferenceType != GitReferenceType.Direct)
             return false;
 
-        return reference.DirectTarget == oldTarget;
+        return GitObjectID.Equals(in reference.DirectTarget, in oldTarget);
     }
 
     private bool DoesOldValueMatch(string referenceName, string oldTarget)
@@ -1259,7 +1259,7 @@ internal sealed class GitReferenceDatabaseFileSystemBackend : IGitReferenceDatab
 
                 var oid = LooseParseObjectID(@lock.PathOriginal!, fileData.WrittenSpan, _objectIdType);
 
-                if (oid != packref.Oid)
+                if (!GitObjectID.Equals(in oid, in packref.Oid))
                     continue; // If the ref moved since we packed it, we must not delete it
 
                 try

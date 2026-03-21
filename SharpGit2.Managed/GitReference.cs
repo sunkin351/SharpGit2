@@ -37,7 +37,7 @@ public sealed class GitReference : IComparable<GitReference>
 
     public GitRepository Owner => this.ThrowIfDatabaseIsNull().Repository;
 
-    internal GitReferenceDatabase? DB { get; set; }
+    internal GitReferenceDatabase? Database { get; set; }
     public string ReferenceName { get; }
 
     public GitReferenceType ReferenceType { get; }
@@ -61,7 +61,7 @@ public sealed class GitReference : IComparable<GitReference>
                                 && this.ReferenceName == Constants.GitHeadFile
                                 && this.Owner.References.LookupResolved(this.SymbolicTarget!) == null;
 
-    internal GitReference(string referenceName, GitObjectID target, GitObjectID? peel, GitReferenceDatabase? db = null)
+    internal GitReference(string referenceName, GitObjectID target, GitObjectID? peel, GitReferenceDatabase? database = null)
     {
         Debug.Assert(!string.IsNullOrWhiteSpace(referenceName));
         
@@ -69,10 +69,10 @@ public sealed class GitReference : IComparable<GitReference>
         this.ReferenceType = GitReferenceType.Direct;
         _directTarget = target;
         _peel = peel.GetValueOrDefault();
-        this.DB = db;
+        this.Database = database;
     }
 
-    internal GitReference(string referenceName, string symbolicTarget, GitReferenceDatabase? db = null)
+    internal GitReference(string referenceName, string symbolicTarget, GitReferenceDatabase? database = null)
     {
         Debug.Assert(!string.IsNullOrWhiteSpace(referenceName));
         Debug.Assert(!string.IsNullOrWhiteSpace(symbolicTarget));
@@ -80,7 +80,7 @@ public sealed class GitReference : IComparable<GitReference>
         this.ReferenceName = referenceName;
         this.ReferenceType = GitReferenceType.Symbolic;
         this.SymbolicTarget = symbolicTarget;
-        this.DB = db;
+        this.Database = database;
     }
     
     public int CompareTo(GitReference? other)
@@ -110,8 +110,8 @@ public sealed class GitReference : IComparable<GitReference>
     {
         return this.ReferenceType switch
         {
-            GitReferenceType.Direct => new GitReference(referenceName, _directTarget, _peel, this.DB),
-            GitReferenceType.Symbolic => new GitReference(referenceName, this.SymbolicTarget!, this.DB),
+            GitReferenceType.Direct => new GitReference(referenceName, _directTarget, _peel, this.Database),
+            GitReferenceType.Symbolic => new GitReference(referenceName, this.SymbolicTarget!, this.Database),
             _ => throw new InvalidOperationException("Invalid reference type!")
         };
     }
@@ -121,7 +121,7 @@ public sealed class GitReference : IComparable<GitReference>
         if (this.ReferenceName == "HEAD")
             throw new InvalidOperationException("Cannot delete HEAD!");
 
-        var database = this.DB
+        var database = this.Database
             ?? throw new InvalidOperationException("Reference was not initialized properly! (Not associated with a reference database)");
 
         if (this.ReferenceType == GitReferenceType.Direct)
@@ -147,7 +147,7 @@ public sealed class GitReference : IComparable<GitReference>
         if (this.ReferenceType != GitReferenceType.Direct)
             throw new InvalidOperationException("Cannot set OID on a symbolic reference!");
 
-        var database = this.DB ??
+        var database = this.Database ??
                        throw new InvalidOperationException(
                            "Reference was not initialized properly! (Not associated with a reference database)");
         
@@ -164,11 +164,11 @@ public sealed class GitReference : IComparable<GitReference>
         if (this.ReferenceType != GitReferenceType.Symbolic)
             throw new InvalidOperationException("Cannot set symbolic target on a direct reference!");
 
-        var database = this.DB ??
+        var database = this.Database ??
                        throw new InvalidOperationException(
                            "Reference was not initialized properly! (Not associated with a reference database)");
         
-        return this.DB.Repository.References.CreateMatching(
+        return database.Repository.References.CreateMatching(
             this.ReferenceName,
             symbolicTarget,
             true,
@@ -259,7 +259,7 @@ public sealed class GitReference : IComparable<GitReference>
 
     private GitReferenceDatabase ThrowIfDatabaseIsNull()
     {
-        return this.DB ?? throw new InvalidOperationException(
+        return this.Database ?? throw new InvalidOperationException(
             "Reference was not initialized properly! (Not associated with a reference database, this is a bug inside SharpGit2)");
     }
     

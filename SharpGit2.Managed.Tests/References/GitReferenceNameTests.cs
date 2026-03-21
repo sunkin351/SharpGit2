@@ -1,4 +1,4 @@
-namespace SharpGit2.Managed.Tests;
+namespace SharpGit2.Managed.Tests.References;
 
 public class GitReferenceNameTests
 {

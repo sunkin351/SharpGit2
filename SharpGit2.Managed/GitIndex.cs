@@ -43,10 +43,30 @@ public sealed class GitIndex : IDisposable
     {
         throw new NotImplementedException();
     }
+
+    public bool TryGetByPath(string path, int stage, out GitIndexEntry entry)
+    {
+        throw new NotImplementedException();
+    }
 }
 
 [PublicAPI]
 public sealed class GitIndexEntry
 {
+    public DateTime CreationTime;
+    public DateTime ModifiedTime;
+
+    public uint Device;
+    public uint INode;
+    public uint Mode;
+    public uint Uid;
+    public uint Gid;
+    public uint FileSize;
+    
     public GitObjectID Id;
+
+    public ushort Flags;
+    public ushort FlagsExtended;
+
+    public string Path;
 }

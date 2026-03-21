@@ -43,24 +43,23 @@ public struct GitObjectID : IComparable<GitObjectID>, IUtf8SpanFormattable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public readonly bool Equals(GitObjectID other)
     {
-        return ((ReadOnlySpan<byte>)this.Id).SequenceEqual(other.Id);
+        return Equals(in this, in other);
     }
     
-    public static bool Equals(in GitObjectID first, in GitObjectID second)
+    public static bool Equals(ref readonly GitObjectID first, ref readonly GitObjectID second)
     {
-        ref byte f = ref Unsafe.As<IdByteArray, byte>(ref Unsafe.AsRef(in first.Id));
-        ref byte s = ref Unsafe.As<IdByteArray, byte>(ref Unsafe.AsRef(in second.Id));
-
         if (Vector128.IsHardwareAccelerated)
         {
-            var cmp = Vector128.LoadUnsafe(ref f, 0) ^ Vector128.LoadUnsafe(ref s, 0);
-            cmp |= Vector128.LoadUnsafe(ref f, 4u) ^ Vector128.LoadUnsafe(ref s, 4u);
+            ref byte firstRef = ref Unsafe.As<IdByteArray, byte>(ref Unsafe.AsRef(in first.Id));
+            ref byte secondRef = ref Unsafe.As<IdByteArray, byte>(ref Unsafe.AsRef(in second.Id));
+        
+            var cmp = Vector128.LoadUnsafe(ref firstRef, 0) ^ Vector128.LoadUnsafe(ref secondRef, 0);
+            cmp |= Vector128.LoadUnsafe(ref firstRef, 4u) ^ Vector128.LoadUnsafe(ref secondRef, 4u);
             return Vector128.EqualsAll(cmp, Vector128<byte>.Zero);
         }
         
-        return Unsafe.ReadUnaligned<ulong>(ref f) == Unsafe.ReadUnaligned<ulong>(ref s)
-            && Unsafe.ReadUnaligned<ulong>(ref Unsafe.Add(ref f, 8)) == Unsafe.ReadUnaligned<ulong>(ref Unsafe.Add(ref s, 8))
-            && Unsafe.ReadUnaligned<uint>(ref Unsafe.Add(ref f, 16)) == Unsafe.ReadUnaligned<uint>(ref Unsafe.Add(ref s, 16));
+        // Intrinsic, will result in the optimal codegen for any given hardware
+        return ((ReadOnlySpan<byte>)first.Id).SequenceEqual(second.Id);
     }
     
     public readonly override int GetHashCode()

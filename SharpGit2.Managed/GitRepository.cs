@@ -346,7 +346,7 @@ public sealed partial class GitRepository : IDisposable
         {
             var config = this.Config;
             
-            bool necessary = WriteGitlink(path, this.GitDirectory, false);
+            bool necessary = WriteGitlink(path, GitDirectory, false);
 
             if (necessary)
             {
@@ -375,14 +375,14 @@ public sealed partial class GitRepository : IDisposable
 
     internal GitObjectIDType ObjectIdType { get; private set; } = GitObjectIDType.Default;
 
-    public void GetAttribute(GitAttributeCheckFlags flags, string pathname, string name, out Attributes.GitAttributeValue value_out)
+    public void GetAttribute(GitAttributeCheckFlags flags, string pathname, string name, out GitAttributeValue value_out)
     {
         GitAttributeOptions options = new() { Flags = flags };
 
         GetAttribute(in options, pathname, name, out value_out);
     }
 
-    public void GetAttribute(in GitAttributeOptions options, string pathname, string name, out Attributes.GitAttributeValue value_out)
+    public void GetAttribute(in GitAttributeOptions options, string pathname, string name, out GitAttributeValue value_out)
     {
         ArgumentNullException.ThrowIfNull(pathname);
         ArgumentNullException.ThrowIfNull(name);
@@ -402,40 +402,48 @@ public sealed partial class GitRepository : IDisposable
         value_out = default;
     }
 
-    public void GetAttributes(GitAttributeCheckFlags flags, string pathname, ReadOnlySpan<string> names, Span<Attributes.GitAttributeValue> values_out)
+    public int GetAttributes(GitAttributeCheckFlags flags, string pathname, ReadOnlySpan<string> names, Span<GitAttributeValue> values_out)
     {
         GitAttributeOptions options = new() { Flags = flags };
 
-        GetAttributes(in options, pathname, names, values_out);
+        return this.GetAttributes(in options, pathname, names, values_out);
     }
 
-    public void GetAttributes(in GitAttributeOptions options, string pathname, ReadOnlySpan<string> names, Span<Attributes.GitAttributeValue> values_out)
+    public int GetAttributes(in GitAttributeOptions options, string pathname, ReadOnlySpan<string> names, Span<GitAttributeValue> values_out)
     {
-        GetAttributesWithSession(null, in options, pathname, names, values_out);
+        return this.GetAttributesWithSession(null, in options, pathname, names, values_out);
     }
 
-    internal void GetAttributesWithSession(GitAttributeSession? session, in GitAttributeOptions options, string pathname, ReadOnlySpan<string> names, Span<Attributes.GitAttributeValue> values_out)
+    internal int GetAttributesWithSession(GitAttributeSession? session, in GitAttributeOptions options, string pathname, ReadOnlySpan<string> names, Span<GitAttributeValue> values_out)
     {
         ArgumentNullException.ThrowIfNull(pathname);
         ArgumentOutOfRangeException.ThrowIfNotEqual(values_out.Length, names.Length);
 
         if (names.IsEmpty)
-            return;
+            return 0;
 
         values_out.Clear();
 
         var path = new GitAttributePath(pathname, this.WorkingDirectory, dirFlag: this.IsBare ? false : null);
-        var files = CollectAttributeFiles(session, in options, pathname);
+        var files = this.CollectAttributeFiles(session, in options, pathname);
 
         Span<bool> foundAttributes = names.Length <= 32 ? stackalloc bool[names.Length] : new bool[names.Length];
 
+        int foundAttributeCount = 0;
         foreach (var file in files)
         {
             file.LookupMany(in path, names, values_out, foundAttributes);
 
-            if (foundAttributes.Count(false) == 0)
-                break;
+            // We count false values because true values can be any value that isn't 0, whereas false can only be 0.
+            foundAttributeCount = foundAttributes.Count(false);
+            
+            if (foundAttributeCount == 0)
+                return foundAttributes.Length;
+
+            foundAttributeCount = foundAttributes.Length - foundAttributeCount;
         }
+        
+        return foundAttributeCount;
     }
 
     /// <summary>

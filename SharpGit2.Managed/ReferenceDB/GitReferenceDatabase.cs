@@ -74,7 +74,7 @@ public sealed class GitReferenceDatabase : IDisposable
 
         var reference = this.ThrowIfBackendNotSet().Lookup(referenceName);
 
-        reference?.DB = this;
+        reference?.Database = this;
 
         return reference;
     }
@@ -128,7 +128,7 @@ public sealed class GitReferenceDatabase : IDisposable
 
         var reference = this.ThrowIfBackendNotSet().Rename(referenceName, newName, force, signature, logMessage);
 
-        reference.DB = this;
+        reference.Database = this;
 
         return reference;
     }
@@ -155,7 +155,7 @@ public sealed class GitReferenceDatabase : IDisposable
         if (string.IsNullOrWhiteSpace(signature.Name) || string.IsNullOrWhiteSpace(signature.Email)) // was `default` used?
             throw new ArgumentException("Invalid signature!");
 
-        reference.DB = this;
+        reference.Database = this;
         
         this.ThrowIfBackendNotSet().Write(reference, force, signature, logMessage);
     }
@@ -168,7 +168,7 @@ public sealed class GitReferenceDatabase : IDisposable
         if (string.IsNullOrWhiteSpace(signature.Name) || string.IsNullOrWhiteSpace(signature.Email)) // was `default` used?
             throw new ArgumentException("Invalid signature!");
 
-        reference.DB = this;
+        reference.Database = this;
         
         this.ThrowIfBackendNotSet().Write(reference, force, signature, logMessage, in oldId);
     }
@@ -181,7 +181,7 @@ public sealed class GitReferenceDatabase : IDisposable
         if (string.IsNullOrWhiteSpace(signature.Name) || string.IsNullOrWhiteSpace(signature.Email)) // was `default` used?
             throw new ArgumentException("Invalid signature!");
 
-        reference.DB = this;
+        reference.Database = this;
 
         this.ThrowIfBackendNotSet().Write(reference, force, signature, logMessage, oldTarget);
     }
@@ -320,7 +320,8 @@ public sealed class GitReferenceDatabase : IDisposable
         if (Interlocked.Exchange(ref _disposed, true))
             return;
 
-        this.Backend = null;
+        _backend?.Dispose();
+        _backend = null;
     }
 
     private IGitReferenceDatabaseBackend ThrowIfBackendNotSet()

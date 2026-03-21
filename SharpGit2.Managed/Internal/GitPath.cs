@@ -1449,6 +1449,7 @@ internal static class GitPath
         }
     }
 
+    [Flags]
     public enum PathOwnerType
     {
         None = 0,

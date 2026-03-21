@@ -58,11 +58,11 @@ internal static partial class Utilities
 
         static int Decode(char c)
         {
-            return char.IsBetween(c, '0', '9') ? c - '0' : 10 + ((c | 0x20) - 'a'); // regex guarentees the character will be within these ranges
+            return unchecked(char.IsBetween(c, '0', '9') ? c - '0' : 10 + ((c | 0x20) - 'a')); // regex guarantees the character will be within these ranges
         }
     }
 
-    [GeneratedRegex("\\%[0-9a-fA-F]{2}", RegexOptions.None)]
+    [GeneratedRegex(@"\%[0-9a-fA-F]{2}", RegexOptions.None)]
     private static partial Regex PercentRegex();
     #endregion
 
@@ -94,8 +94,7 @@ internal static partial class Utilities
         bool neg = false;
         if (input[p] is '+' or '-')
         {
-            if (input[p] == '-')
-                neg = true;
+            neg = input[p] == '-';
 
             p += 1;
 
@@ -263,6 +262,18 @@ internal static partial class Utilities
         }
 
         public int HexSize => type.HashSize * 2;
+
+        public HashAlgorithmName GetHashAlgorithmName()
+        {
+            return type switch
+            {
+                GitObjectIDType.SHA1 => HashAlgorithmName.SHA1,
+#if GIT_EXPERIMENTAL_SHA256
+                GitObjectIDType.SHA256 => HashAlgorithmName.SHA256,
+#endif
+                _ => throw new ArgumentOutOfRangeException(nameof(type))
+            };
+        }
     }
 
     private sealed class StringBuilderSegment : ReadOnlySequenceSegment<char>
@@ -416,7 +427,7 @@ internal static partial class Utilities
                     goto Fail;
             }
 
-            if (targetSpan.StartsWith("\\??\\Volume{")) // if path is volume
+            if (targetSpan.StartsWith(@"\??\Volume{")) // if path is volume
             {
                 goto Fail;
             }

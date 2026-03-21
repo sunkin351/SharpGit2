@@ -50,7 +50,7 @@ internal interface ICacheableObject
 [PublicAPI]
 public abstract class GitObject : IEquatable<GitObject>, ICacheableObject
 {
-    internal GitObjectID Oid;
+    internal readonly GitObjectID Oid;
     internal GitCacheStore Store;
 
     public GitRepository Repository { get; }

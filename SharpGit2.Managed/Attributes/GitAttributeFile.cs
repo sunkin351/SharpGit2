@@ -111,14 +111,14 @@ internal sealed class GitAttributeFile
             {
                 var id = AttributeFileOidFromIndex(repo, this.EntryInstance!.Path);
 
-                return this.cache_data_oid != id;
+                return !GitObjectID.Equals(in this.cache_data_oid, in id);
             }    
 
             case SourceType.Head:
-                return this.cache_data_oid != repo.GetHeadTree().ObjectID;
+                return !GitObjectID.Equals(in this.cache_data_oid, in repo.GetHeadTree().ObjectID);
 
             case SourceType.Commit:
-                return this.cache_data_oid != repo.LookupCommit(in source.CommitId).GetTree().ObjectID;
+                return !GitObjectID.Equals(in this.cache_data_oid, in repo.LookupCommit(in source.CommitId).GetTree().ObjectID);
 
             default:
                 throw new InvalidOperationException($"Invalid file source {this.SourceInstance.Type}");
