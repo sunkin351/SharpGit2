@@ -73,9 +73,14 @@ internal sealed class GitGrafts
                 newChecksum.CopyTo(this.PathChecksum);
             }
         }
-        catch (FileNotFoundException)
+        catch (IOException e)
         {
             _commits.Clear();
+
+            if (e is not FileNotFoundException and not DirectoryNotFoundException)
+            {
+                throw;
+            }
         }
     }
 
