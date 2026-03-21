@@ -1,7 +1,10 @@
 ﻿using System.Collections.Immutable;
 
+using JetBrains.Annotations;
+
 namespace SharpGit2.Managed;
 
+[PublicAPI]
 public sealed class GitCommit : GitObject
 {
     internal override GitObjectType ObjectType => GitObjectType.Commit;

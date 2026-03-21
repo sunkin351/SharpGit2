@@ -1,5 +1,8 @@
-﻿namespace SharpGit2.Managed;
+﻿using JetBrains.Annotations;
 
+namespace SharpGit2.Managed;
+
+[PublicAPI]
 public sealed class GitBlob : GitObject
 {
     internal override GitObjectType ObjectType => GitObjectType.Blob;

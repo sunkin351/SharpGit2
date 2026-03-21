@@ -2,6 +2,9 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
+
+using JetBrains.Annotations;
+
 using SharpGit2.Managed.Attributes;
 using SharpGit2.Managed.Config;
 using SharpGit2.Managed.Internal;
@@ -12,7 +15,7 @@ using SharpGit2.Managed.Worktree;
 
 namespace SharpGit2.Managed;
 
-[Flags]
+[Flags, PublicAPI]
 public enum GitRepositoryOpenFlags : uint
 {
     /// <summary>
@@ -68,7 +71,7 @@ public enum GitRepositoryOpenFlags : uint
 }
 
 
-[Flags]
+[Flags, PublicAPI]
 public enum GitRepositoryInitFlags : uint
 {
     /// <summary>
@@ -111,6 +114,7 @@ public enum GitRepositoryInitFlags : uint
     RelativeGitlink = 1 << 6
 }
 
+[PublicAPI]
 public enum GitRepositoryItemType
 {
     GitDir,
@@ -131,6 +135,7 @@ public enum GitRepositoryItemType
     _Last
 }
 
+[PublicAPI]
 public struct GitRepositoryInitOptions
 {
     public GitRepositoryInitFlags Flags { get; set; }
@@ -150,6 +155,7 @@ public struct GitRepositoryInitOptions
     public GitObjectIDType ObjectIDType { get; set; }
 }
 
+[PublicAPI]
 public sealed partial class GitRepository : IDisposable
 {
     public static GitRepository Open(string repoPath)

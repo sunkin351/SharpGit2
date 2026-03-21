@@ -5,8 +5,11 @@ using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
 using System.Security.Cryptography;
 
+using JetBrains.Annotations;
+
 namespace SharpGit2.Managed;
 
+[PublicAPI]
 public enum GitObjectIDType : byte
 {
     SHA1 = 1,
@@ -18,6 +21,7 @@ public enum GitObjectIDType : byte
 
 #if !GIT_EXPERIMENTAL_SHA256
 
+[PublicAPI]
 [StructLayout(LayoutKind.Sequential)]
 public struct GitObjectID : IComparable<GitObjectID>, IUtf8SpanFormattable
 {
@@ -221,6 +225,7 @@ public struct GitObjectID : IComparable<GitObjectID>, IUtf8SpanFormattable
 
 #else
 
+[PublicAPI]
 [StructLayout(LayoutKind.Sequential)]
 public record struct GitObjectID : IComparable<GitObjectID>, IUtf8SpanFormattable
 {

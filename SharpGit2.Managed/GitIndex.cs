@@ -1,15 +1,18 @@
-﻿namespace SharpGit2.Managed;
+﻿using JetBrains.Annotations;
 
-[Flags]
+namespace SharpGit2.Managed;
+
+[Flags, PublicAPI]
 public enum GitIndexCapabilities
 {
     FromOwner = -1,
 
     IgnoreCase = 1,
-    NoFilemode = 2,
+    NoFileMode = 2,
     NoSymlinks = 4,
 }
 
+[PublicAPI]
 public sealed class GitIndex : IDisposable
 {
     internal GitIndex(string path, GitObjectIDType type)
@@ -42,7 +45,8 @@ public sealed class GitIndex : IDisposable
     }
 }
 
-public struct GitIndexEntry
+[PublicAPI]
+public sealed class GitIndexEntry
 {
     public GitObjectID Id;
 }

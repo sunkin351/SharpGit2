@@ -7,7 +7,7 @@ using System.Runtime.Intrinsics;
 using System.Text;
 
 using CommunityToolkit.HighPerformance.Buffers;
-
+using JetBrains.Annotations;
 using SharpGit2.Managed.Config;
 using SharpGit2.Managed.ReferenceDB;
 
@@ -20,7 +20,7 @@ public enum GitReferenceType
     Symbolic
 }
 
-[Flags]
+[Flags, PublicAPI]
 public enum GitReferenceFormat
 {
     Normal = 0,
@@ -29,6 +29,7 @@ public enum GitReferenceFormat
     RefSpecShorthand = 1 << 2,
 }
 
+[PublicAPI]
 public sealed class GitReference : IComparable<GitReference>
 {
     internal const GitReferenceFormat PrecomposeUnicodeFlag = (GitReferenceFormat)(1 << 16);

@@ -105,6 +105,7 @@ public sealed partial class GitConfig : IEnumerable<GitConfigEntry>, IDisposable
         }
     }
 
+    // ReSharper disable once StringLiteralTypo
     private static readonly SearchValues<char> _allowedCharacters = SearchValues.Create("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-");
 
     internal static string NormalizeName(ReadOnlySpan<char> name)

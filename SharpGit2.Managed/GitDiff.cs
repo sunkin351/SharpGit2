@@ -2,9 +2,11 @@
 using System.Collections.Immutable;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
+using JetBrains.Annotations;
 
 namespace SharpGit2.Managed;
 
+[PublicAPI]
 internal enum GitDiffOrigin
 {
     Unknown = 0,
@@ -18,6 +20,7 @@ internal enum GitDiffOrigin
 /// the deflated binary delta between the two sides (whichever is
 /// smaller).
 /// </summary>
+[PublicAPI]
 public enum GitDiffBinaryType
 {
     /// <summary>
@@ -34,7 +37,7 @@ public enum GitDiffBinaryType
     Delta
 }
 
-[Flags]
+[Flags, PublicAPI]
 public enum GitDiffFindFlags
 {
     FindByConfig = 0,
@@ -65,7 +68,7 @@ public enum GitDiffFindFlags
 /// new sides of the delta.  Values outside of this public range should be
 /// considered reserved for internal or future use.
 /// </remarks>
-[Flags]
+[Flags, PublicAPI]
 public enum GitDiffFlags : uint
 {
     /// <summary>
@@ -94,13 +97,14 @@ public enum GitDiffFlags : uint
     ValidSize = 1 << 4,
 }
 
-[Flags]
+[Flags, PublicAPI]
 public enum GitDiffFormatEmailFlags
 {
     None = 0,
     ExcludeSubjectPatchMarker = 1,
 }
 
+[PublicAPI]
 public enum GitDiffFormatType : uint
 {
     Patch = 1,
@@ -111,6 +115,7 @@ public enum GitDiffFormatType : uint
     PatchID = 6
 }
 
+[PublicAPI]
 public enum GitDiffLineType : byte
 {
     Context = (byte)' ',
@@ -128,7 +133,7 @@ public enum GitDiffLineType : byte
 /// Flags for diff options.  A combination of these flags can be passed
 /// in via the `flags` value in the `git_diff_options`.
 /// </summary>
-[Flags]
+[Flags, PublicAPI]
 public enum GitDiffOptionFlags : uint
 {
     /// <summary>
@@ -293,6 +298,7 @@ public enum GitDiffOptionFlags : uint
     ShowBinary = 1 << 30,
 }
 
+[PublicAPI]
 public enum GitDiffStatsFormat
 {
     None = 0,
@@ -313,6 +319,7 @@ public enum GitDiffStatsFormat
 /// in the option flags (otherwise type changes will be split into ADDED /
 /// DELETED pairs).
 /// </remarks>
+[PublicAPI]
 public enum GitDeltaType
 {
     /// <summary>
@@ -371,6 +378,7 @@ public enum GitDeltaType
     Conflicted
 }
 
+[PublicAPI]
 public struct GitDiffFile
 {
     public GitObjectID Id;
@@ -381,6 +389,7 @@ public struct GitDiffFile
     public ushort IdAbbreviation;
 }
 
+[PublicAPI]
 public sealed class GitDiffDelta
 {
     public GitDeltaType Status { get; }
@@ -434,6 +443,7 @@ public sealed class GitDiffDelta
     }
 }
 
+[PublicAPI]
 public sealed class GitDiff : IEnumerable<GitDiffDelta>
 {
     private readonly GitDiffOrigin Type;

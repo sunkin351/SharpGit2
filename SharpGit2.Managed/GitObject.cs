@@ -1,7 +1,9 @@
-﻿using SharpGit2.Managed.Cache;
+﻿using JetBrains.Annotations;
+using SharpGit2.Managed.Cache;
 
 namespace SharpGit2.Managed;
 
+[PublicAPI]
 public enum GitObjectType : short
 {
     /// <summary>
@@ -45,6 +47,7 @@ internal interface ICacheableObject
     GitObjectType ObjectType { get; }
 }
 
+[PublicAPI]
 public abstract class GitObject : IEquatable<GitObject>, ICacheableObject
 {
     internal GitObjectID Oid;
